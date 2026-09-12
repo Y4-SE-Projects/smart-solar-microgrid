@@ -1,0 +1,36 @@
+### ===== C# / .NET Web API =====
+API/bin/
+API/obj/
+API/*.user
+API/appsettings.Development.json
+API/appsettings.json
+*.pdb
+
+### ===== Web App (Node/React or plain Bootstrap/Tailwind) =====
+Web/node_modules/
+Web/dist/
+Web/build/
+Web/.env
+Web/!.env.example
+
+### ===== Android / Mobile App =====
+Mobile/*.iml
+Mobile/.gradle/
+Mobile/local.properties
+Mobile/.idea/
+Mobile/build/
+Mobile/app/build/
+Mobile/app/release/
+Mobile/*.apk
+Mobile/*.aab
+Mobile/captures/
+Mobile/.externalNativeBuild/
+Mobile/.cxx/
+
+### ===== General / Cross-platform =====
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.vs/
+*.env
