@@ -44,7 +44,14 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowedAll");
+app.UseCors("AllowAll");
+
+app.Use(async (context, next) =>
+{
+    var source = context.Request.Headers["X-Client-Type"].FirstOrDefault() ?? "UNKNOWN";
+    Console.WriteLine($"[{DateTime.Now:HH:mm:ss}] [{source}] {context.Request.Method} {context.Request.Path}");
+    await next();
+});
 
 app.MapControllers();
 
