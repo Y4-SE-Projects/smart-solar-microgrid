@@ -1,11 +1,14 @@
 using API.Settings;
 using API.Data;
+using API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // MongoDB configuration
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
 builder.Services.AddSingleton<MongoDbContext>();
+
+builder.Services.AddScoped<ReservationOperationsService>();
 
 // Controllers
 builder.Services.AddControllers();
