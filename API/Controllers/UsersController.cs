@@ -1,11 +1,8 @@
-/*
- * File: UsersController.cs
- * Purpose: Minimal authentication endpoints — register and login — so the
- *          team can obtain real JWT tokens for Swagger/Postman testing.
- *          Profile, deactivation, and reactivation endpoints (the rest of
- *          Member 1's scope) come in a later pass.
- * Author: <your name / IT number>
+/* File: UsersController.cs
+ * Purpose: Minimal authentication endpoints.
+ * Author: IT23218512
  */
+
 using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -26,8 +23,8 @@ namespace API.Controllers
             _tokenService = tokenService;
         }
 
-        // Registers a new user. Prosumers register with NIC; Backoffice/
-        // GridOperator register with Username. Rejects duplicate NIC/username.
+        // Registers a new user. Prosumers register with NIC; Backoffice / GridOperator register with Username. 
+        // Rejects duplicate NIC/username.
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
@@ -78,8 +75,7 @@ namespace API.Controllers
             return Ok(new { success = true, message = "Registration successful." });
         }
 
-        // Logs a user in with NIC (Prosumer) or Username (Backoffice/GridOperator)
-        // plus password, and returns a signed JWT on success.
+        // Logs a user in with NIC (Prosumer) or Username (Backoffice/GridOperator) plus password, and returns a signed JWT on success.
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
