@@ -6,6 +6,9 @@ namespace API.Services
 {
     public class ReservationOperationsService
     {
+        private const int MaximumCreationWindowDays = 7;
+        private const int MinimumNoticeHours = 12;
+
         private readonly IMongoCollection<EnergyReservation> _reservations;
 
         public ReservationOperationsService(MongoDbContext context)
@@ -23,14 +26,78 @@ namespace API.Services
                 .ToListAsync();
         }
 
+        public async Task<EnergyReservation?> GetReservationByIdAsync(string reservationId)
+        {
+            // Retriews one reservation using its public reservation identifier
+            return await _reservations
+                .Find(r => r.ReservationId == reservationId)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<List<EnergyReservation>> GetPendingReservationAsync(string nic)
         {
+            // Returns only Pending reservations belonging to the specified prosumer
             return await _reservations
                 .Find(r =>
                     r.ProsumerNic == nic &&
                     r.Status == "Pending")
                 .SortByDescending(r => r.CreatedAt)
                 .ToListAsync();
+        }
+
+        public async Task<(long PendingCount, long ApprovedFutureCount)> GetDashboardCountsAsync(string nic)
+        {
+            var UtcNow = DateTime.UtcNow;
+
+            var pendingCountTask = _reservations.CountDocumentsAsync(
+                r => r.ProsumerNic == nic && 
+                r.Status == "Pending"
+            );
+
+            var approvedFutureCountTask = _reservations.CountDocumentsAsync(
+                r => r.ProsumerNic == nic && 
+                r.Status == "Pending" && 
+                r.ScheduledTime > UtcNow
+            );
+
+            var counts = await Task.WhenAll(
+                pendingCountTask,
+                approvedFutureCountTask
+            );
+
+            return (
+                PendingCount: counts[0],
+                ApprovedFutureCount: counts[1]
+            );
+        }
+
+        public static void ValidateCreationScheduledTime(DateTime scheduledTime, DateTime utcNow)
+        {
+            // Ensures new reservation is no more than seven days away
+            if (scheduledTime <= utcNow)
+            {
+                throw new ArgumentException(
+                    "Scheduled time must be in the future",
+                    nameof(scheduledTime)
+                );
+            }
+
+            if (scheduledTime > utcNow.AddDays(MaximumCreationWindowDays))
+            {
+                throw new ArgumentException(
+                    "Reservation must be scheduled within 7 days of creation.",
+                    nameof(scheduledTime)
+                );
+            }
+        }
+
+        private static void ValidateMinimumNotice(DateTime scheduledTime, DateTime utcNow)
+        {
+            // Ensures and update or cancellation has at least twelve hours of notice
+            if (scheduledTime < utcNow.AddHours(MinimumNoticeHours))
+            {
+                throw new InvalidOperationException("Reservation updates and cancellations require at least 12 hours' notice.");
+            }
         }
 
         public async Task<EnergyReservation?> UpdateReservationStatusAsync(
