@@ -1,3 +1,8 @@
+/*
+* File: ReservationOperationsController.cs
+* Purpose: Handles reservation lifecycle and operational HTTP requests.
+*/
+
 using API.Services;
 using API.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -136,6 +141,220 @@ namespace API.Controllers
                     {
                         success = false,
                         message = "Reservation creation failed."
+                    });
+            }
+        }
+
+        [Authorize(Roles = Roles.Prosumer + ", " + Roles.GridOperator)]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateReservation(string id, [FromBody] UpdateReservationRequest ? request)
+        {
+            // Resolves the authenticated actor and delefates the protected update to the service
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Reservation ID is required."
+                });
+            }
+
+            if (request == null)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Reservation update request is required."
+                });
+            }
+
+            string? authenticatedProsumerNic = null;
+            var isGridOperator = User.IsInRole(Roles.GridOperator);
+
+            if (User.IsInRole(Roles.Prosumer))
+            {
+                authenticatedProsumerNic = User.FindFirst("nic")?.Value;
+
+                if (string.IsNullOrWhiteSpace(authenticatedProsumerNic))
+                {
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        message = "The authenticated Prosumer NIC is missing."
+                    });
+                }
+
+                authenticatedProsumerNic = authenticatedProsumerNic.Trim();
+            }
+            else if (!isGridOperator)
+            {
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    new
+                    {
+                        success = false,
+                        message = "This role is not authorized to update reservations."
+                    }
+                );
+            }
+
+            try
+            {
+                var reservation = await _service.UpdateReservationAsync(
+                    id.Trim(),
+                    request,
+                    authenticatedProsumerNic,
+                    isGridOperator
+                );
+
+                if (reservation == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Reservation not found."
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Reservation updated successfully.",
+                    data = reservation
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    new
+                    {
+                        success = false,
+                        message = ex.Message
+                    }
+                );
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message = "Reservation update failed."
+                    }
+                );
+            }
+        }
+
+        [Authorize(Roles = Roles.Prosumer + "," + Roles.GridOperator)]
+        [HttpPut("{id}/cancel")]
+        public async Task<IActionResult> CancelReservation(string id)
+        {
+            // Resolves the authenticated actor and delegates the protected cancellation to the service
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Reservation ID is required."
+                });
+            }
+
+            string? authenticatedProsumerNic = null;
+            var isGridOperator = User.IsInRole(Roles.GridOperator);
+
+            if (User.IsInRole(Roles.Prosumer))
+            {
+                authenticatedProsumerNic = User.FindFirst("nic")?.Value;
+
+                if (string.IsNullOrWhiteSpace(authenticatedProsumerNic))
+                {
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        message = "The authenticated Prosumer NIC is missing."
+                    });
+                }
+
+                authenticatedProsumerNic = authenticatedProsumerNic.Trim();
+            }
+            else if (!isGridOperator)
+            {
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    new
+                    {
+                        success = false,
+                        message = "This role is not authorized to cancel reservations."
+                    });
+            }
+
+            try
+            {
+                var reservation = await _service.CancelReservationAsync(
+                    id.Trim(),
+                    authenticatedProsumerNic,
+                    isGridOperator);
+
+                if (reservation == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = "Reservation not found."
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Reservation cancelled successfully.",
+                    data = reservation
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    new
+                    {
+                        success = false,
+                        message = ex.Message
+                    });
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message = "Reservation cancellation failed."
                     });
             }
         }
