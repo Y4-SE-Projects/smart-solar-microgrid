@@ -1,3 +1,8 @@
+/*
+* File: UpdateReservationRequest.cs
+* Purpose: Defines the editable scheduling fields for updating an energy reservation.    
+*/
+
 namespace API.DTOs
 {
     public class UpdateReservationRequest
