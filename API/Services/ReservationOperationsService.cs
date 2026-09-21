@@ -1,3 +1,8 @@
+/*
+* File: ReservationOperationsService.cs
+* Purpose: Handles shared reservation queries, validation, and lifecycle operations.
+*/
+
 using API.Data;
 using API.DTOs;
 using API.Models;
@@ -166,6 +171,429 @@ namespace API.Services
                 throw;
             }
         }
+
+        public async Task<EnergyReservation?> UpdateReservationAsync(
+            string reservationId,
+            UpdateReservationRequest request,
+            string? authenticatedProsumerNic,
+            bool isGridOperator)
+        {
+            // Validates authorization and safely updates editable reservation scheduling fields
+            ArgumentNullException.ThrowIfNull(request);
+
+            if (string.IsNullOrWhiteSpace(reservationId))
+            {
+                throw new ArgumentException(
+                    "Reservation ID is required.",
+                    nameof(reservationId));
+            }
+
+            if (string.IsNullOrWhiteSpace(request.StationId))
+            {
+                throw new ArgumentException(
+                    "Station ID is required.",
+                    nameof(request.StationId));
+            }
+
+            if (string.IsNullOrWhiteSpace(request.SlotId))
+            {
+                throw new ArgumentException(
+                    "Slot ID is required.",
+                    nameof(request.SlotId));
+            }
+
+            var reservation = await GetReservationByIdAsync(
+                reservationId.Trim());
+
+            if (reservation == null)
+            {
+                return null;
+            }
+
+            if (!isGridOperator)
+            {
+                if (string.IsNullOrWhiteSpace(authenticatedProsumerNic) ||
+                    !string.Equals(
+                        reservation.ProsumerNic,
+                        authenticatedProsumerNic,
+                        StringComparison.Ordinal))
+                {
+                    throw new UnauthorizedAccessException(
+                        "A Prosumer may update only their own reservation.");
+                }
+            }
+
+            if (!string.Equals(
+                    reservation.Status,
+                    "Pending",
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "Only Pending reservations can be updated.");
+            }
+
+            var utcNow = DateTime.UtcNow;
+
+            ValidateMinimumNotice(
+                reservation.ScheduledTime,
+                utcNow);
+
+            var scheduledTimeUtc = request.ScheduledTime.Kind switch
+            {
+                DateTimeKind.Utc => request.ScheduledTime,
+                DateTimeKind.Local =>
+                    request.ScheduledTime.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(
+                    request.ScheduledTime,
+                    DateTimeKind.Utc)
+            };
+
+            if (scheduledTimeUtc <= utcNow)
+            {
+                throw new ArgumentException(
+                    "Scheduled time must be in the future.",
+                    nameof(request.ScheduledTime));
+            }
+
+            var requestedStationId = request.StationId.Trim();
+            var requestedSlotId = request.SlotId.Trim();
+
+            var station = await GetStationStateAsync(
+                requestedStationId);
+
+            if (!station.Exists)
+            {
+                throw new KeyNotFoundException(
+                    "Selected station was not found.");
+            }
+
+            if (!station.IsActive)
+            {
+                throw new InvalidOperationException(
+                    "Selected station is inactive.");
+            }
+
+            var slot = await GetSlotStateAsync(requestedSlotId);
+
+            if (!slot.Exists)
+            {
+                throw new KeyNotFoundException(
+                    "Selected slot was not found.");
+            }
+
+            if (string.IsNullOrWhiteSpace(slot.StationId) ||
+                !string.Equals(
+                    slot.StationId,
+                    requestedStationId,
+                    StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    "Selected slot does not belong to the selected station.",
+                    nameof(request.SlotId));
+            }
+
+            ValidateScheduledTimeAgainstSlot(
+                scheduledTimeUtc,
+                slot.StartTime,
+                slot.EndTime);
+
+            var slotChanged = !string.Equals(
+                reservation.SlotId,
+                requestedSlotId,
+                StringComparison.Ordinal);
+
+            if (slotChanged && !slot.IsAvailable)
+            {
+                throw new InvalidOperationException(
+                    "Selected replacement slot is unavailable.");
+            }
+
+            var replacementSlotClaimed = false;
+
+            if (slotChanged)
+            {
+                replacementSlotClaimed =
+                    await TryClaimAvailableSlotAsync(
+                        requestedSlotId,
+                        requestedStationId);
+
+                if (!replacementSlotClaimed)
+                {
+                    throw new InvalidOperationException(
+                        "Selected replacement slot is no longer available.");
+                }
+            }
+
+            var updatedAt = DateTime.UtcNow;
+
+            var reservationFilter =
+                Builders<EnergyReservation>.Filter.And(
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.ReservationId,
+                        reservation.ReservationId),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.Status,
+                        reservation.Status),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.StationId,
+                        reservation.StationId),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.SlotId,
+                        reservation.SlotId),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.UpdatedAt,
+                        reservation.UpdatedAt));
+
+            var reservationUpdate =
+                Builders<EnergyReservation>.Update
+                    .Set(r => r.StationId, requestedStationId)
+                    .Set(r => r.SlotId, requestedSlotId)
+                    .Set(r => r.ScheduledTime, scheduledTimeUtc)
+                    .Set(r => r.UpdatedAt, updatedAt);
+
+            EnergyReservation? updatedReservation;
+
+            try
+            {
+                updatedReservation =
+                    await _reservations.FindOneAndUpdateAsync(
+                        reservationFilter,
+                        reservationUpdate,
+                        new FindOneAndUpdateOptions<EnergyReservation>
+                        {
+                            ReturnDocument = ReturnDocument.After
+                        });
+
+                if (updatedReservation == null)
+                {
+                    throw new InvalidOperationException(
+                        "The reservation changed before the update could be completed.");
+                }
+            }
+            catch
+            {
+                if (replacementSlotClaimed)
+                {
+                    var replacementSlotReleased =
+                        await ReleaseSlotAsync(
+                            requestedSlotId,
+                            requestedStationId);
+
+                    if (!replacementSlotReleased)
+                    {
+                        throw new InvalidOperationException(
+                            "Reservation update failed and the replacement slot could not be released.");
+                    }
+                }
+
+                throw;
+            }
+
+            if (slotChanged)
+            {
+                var oldSlotReleased = await ReleaseSlotAsync(
+                    reservation.SlotId,
+                    reservation.StationId);
+
+                if (!oldSlotReleased)
+                {
+                    throw new InvalidOperationException(
+                        "Reservation was updated, but its previous slot could not be released.");
+                }
+            }
+
+            return updatedReservation;
+        }
+
+        public async Task<EnergyReservation?> CancelReservationAsync(
+            string reservationId,
+            string? authenticatedProsumerNic,
+            bool isGridOperator)
+        {
+            // Validates authorization and safely cancels the reservation before releasing its slot
+            if (string.IsNullOrWhiteSpace(reservationId))
+            {
+                throw new ArgumentException(
+                    "Reservation ID is required.",
+                    nameof(reservationId));
+            }
+
+            var reservation = await GetReservationByIdAsync(
+                reservationId.Trim());
+
+            if (reservation == null)
+            {
+                return null;
+            }
+
+            if (!isGridOperator)
+            {
+                if (string.IsNullOrWhiteSpace(authenticatedProsumerNic) ||
+                    !string.Equals(
+                        reservation.ProsumerNic,
+                        authenticatedProsumerNic,
+                        StringComparison.Ordinal))
+                {
+                    throw new UnauthorizedAccessException(
+                        "A Prosumer may cancel only their own reservation.");
+                }
+            }
+
+            if (string.Equals(
+                    reservation.Status,
+                    "Cancelled",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "The reservation is already cancelled.");
+            }
+
+            if (string.Equals(
+                    reservation.Status,
+                    "Completed",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "A completed reservation cannot be cancelled.");
+            }
+
+            if (string.Equals(
+                    reservation.Status,
+                    "Declined",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException(
+                    "A declined reservation cannot be cancelled.");
+            }
+
+            var isCancellableState =
+                string.Equals(
+                    reservation.Status,
+                    "Pending",
+                    StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(
+                    reservation.Status,
+                    "Approved",
+                    StringComparison.OrdinalIgnoreCase);
+
+            if (!isCancellableState)
+            {
+                throw new InvalidOperationException(
+                    $"A reservation with status '{reservation.Status}' cannot be cancelled.");
+            }
+
+            var cancelledAt = DateTime.UtcNow;
+
+            ValidateMinimumNotice(
+                reservation.ScheduledTime,
+                cancelledAt);
+
+            var associatedSlot = await GetSlotStateAsync(
+                reservation.SlotId);
+
+            if (!associatedSlot.Exists ||
+                string.IsNullOrWhiteSpace(associatedSlot.StationId) ||
+                !string.Equals(
+                    associatedSlot.StationId,
+                    reservation.StationId,
+                    StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    "The reservation's associated slot could not be validated.");
+            }
+
+            var cancellationFilter =
+                Builders<EnergyReservation>.Filter.And(
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.ReservationId,
+                        reservation.ReservationId),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.Status,
+                        reservation.Status),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.StationId,
+                        reservation.StationId),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.SlotId,
+                        reservation.SlotId),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.UpdatedAt,
+                        reservation.UpdatedAt));
+
+            var cancellationUpdate =
+                Builders<EnergyReservation>.Update
+                    .Set(r => r.Status, "Cancelled")
+                    .Set(r => r.UpdatedAt, cancelledAt);
+
+            var cancelledReservation =
+                await _reservations.FindOneAndUpdateAsync(
+                    cancellationFilter,
+                    cancellationUpdate,
+                    new FindOneAndUpdateOptions<EnergyReservation>
+                    {
+                        ReturnDocument = ReturnDocument.After
+                    });
+
+            if (cancelledReservation == null)
+            {
+                throw new InvalidOperationException(
+                    "The reservation changed before cancellation could be completed.");
+            }
+
+            if (associatedSlot.IsAvailable)
+            {
+                return cancelledReservation;
+            }
+
+            var slotReleased = await ReleaseSlotAsync(
+                reservation.SlotId,
+                reservation.StationId);
+
+            if (slotReleased)
+            {
+                return cancelledReservation;
+            }
+
+            var slotAfterReleaseAttempt = await GetSlotStateAsync(
+                reservation.SlotId);
+
+            if (slotAfterReleaseAttempt.Exists &&
+                slotAfterReleaseAttempt.IsAvailable)
+            {
+                return cancelledReservation;
+            }
+
+            var rollbackFilter =
+                Builders<EnergyReservation>.Filter.And(
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.ReservationId,
+                        reservation.ReservationId),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.Status,
+                        "Cancelled"),
+                    Builders<EnergyReservation>.Filter.Eq(
+                        r => r.UpdatedAt,
+                        cancelledAt));
+
+            var rollbackUpdate =
+                Builders<EnergyReservation>.Update
+                    .Set(r => r.Status, reservation.Status)
+                    .Set(r => r.UpdatedAt, reservation.UpdatedAt);
+
+            var rollbackResult = await _reservations.UpdateOneAsync(
+                rollbackFilter,
+                rollbackUpdate);
+
+            if (rollbackResult.ModifiedCount != 1)
+            {
+                throw new InvalidOperationException(
+                    "The reservation was cancelled, but its slot could not be released and the reservation state could not be restored.");
+            }
+
+            throw new InvalidOperationException(
+                "Cancellation failed because the associated slot could not be released.");
+        }
+
 
         public async Task<List<EnergyReservation>> GetPendingReservationAsync(string nic)
         {
