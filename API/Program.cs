@@ -86,7 +86,7 @@ var app = builder.Build();
 try
 {
     var mongoContext = app.Services.GetRequiredService<MongoDbContext>();
-    mongoContext.GetCollection<object>("Users").Database
+    mongoContext.GetCollection<object>(MongoCollectionNames.Users).Database
         .RunCommand<MongoDB.Bson.BsonDocument>(new MongoDB.Bson.BsonDocument("ping", 1));
     Console.WriteLine("MongoDB connections successful!");
 }
@@ -120,7 +120,7 @@ app.MapGet("/api/health/mongo", (MongoDbContext context) =>
 {
     try
     {
-        context.GetCollection<object>("Users").Database
+        context.GetCollection<object>(MongoCollectionNames.Users).Database
             .RunCommand<MongoDB.Bson.BsonDocument>(new MongoDB.Bson.BsonDocument("ping", 1));
         return Results.Ok(new { success = true, message = "MongoDB connected." });
     }
