@@ -1,7 +1,3 @@
-/* File: Program.cs
- * Purpose: Application entry point.
- */
- 
 using API.Settings;
 using API.Data;
 using API.Services;
@@ -16,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
 builder.Services.AddSingleton<MongoDbContext>();
 
+builder.Services.AddScoped<ReservationOperationsService>();
 // JWT configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.AddSingleton<JwtTokenService>();
@@ -113,7 +110,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-// Order matters: Authentication before Authorization, both before endpoints are mapped.
+
 app.UseAuthentication();
 app.UseAuthorization();
 
