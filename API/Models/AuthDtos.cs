@@ -3,7 +3,6 @@
  * (Kept separate from User.cs because these describe what the client sends/receives over HTTP, not what's stored in MongoDB.)
  * Author: IT23218512
  */
-
 namespace API.Models
 {
     // Body for POST /api/users/register
@@ -44,5 +43,26 @@ namespace API.Models
         public string Identifier { get; set; } = string.Empty;
 
         public string FullName { get; set; } = string.Empty;
+    }
+
+    // Body for PUT /api/users/{nic} — a Prosumer editing their own profile.
+    // Nic and Role are deliberately absent: neither can be changed here.
+    public class UpdateProfileRequest
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+    }
+
+    // Safe shape returned by profile-related endpoints. 
+    // Deliberately excludes PasswordHash — that should never leave the server.
+    public class UserProfileResponse
+    {
+        public string Nic { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }
