@@ -1,5 +1,7 @@
 using API.Data;
+using API.DTOs;
 using API.Models;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace API.Services
@@ -9,12 +11,16 @@ namespace API.Services
         private const int MaximumCreationWindowDays = 7;
         private const int MinimumNoticeHours = 12;
 
+        private readonly MongoDbContext _context;
         private readonly IMongoCollection<EnergyReservation> _reservations;
+        private readonly UserService _userService;
 
-        public ReservationOperationsService(MongoDbContext context)
+        public ReservationOperationsService(MongoDbContext context, UserService userService)
         {
-            // Gets the EnergyReservation collection from the shared MongoDB context
-            _reservations = context.GetCollection<EnergyReservation>("EnergyReservation");
+            // Stores shared dependencies context and gets the EnergyReservation collection
+            _context = context;
+            _userService = userService;
+            _reservations = context.GetCollection<EnergyReservation>(MongoCollectionNames.EnergyReservation);
         }
 
         public async Task<List<EnergyReservation>> GetProsumerHistoryAsync(string nic)
@@ -32,6 +38,133 @@ namespace API.Services
             return await _reservations
                 .Find(r => r.ReservationId == reservationId)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<EnergyReservation> CreateReservationAsync(
+            CreateReservationRequest request,
+            string effectiveProsumerNic)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            if (string.IsNullOrWhiteSpace(effectiveProsumerNic))
+            {
+                throw new ArgumentException("Prosumer NIC is required", nameof(effectiveProsumerNic));
+            }
+
+            if (string.IsNullOrWhiteSpace(request.StationId))
+            {
+                throw new ArgumentException("Station ID is required", nameof(request.StationId));
+            }
+            
+            if (string.IsNullOrWhiteSpace(request.SlotId))
+            {
+                throw new ArgumentException("Slot ID is required", nameof(request.SlotId));
+            }
+
+            var prosumerNic = effectiveProsumerNic.Trim();
+            var stationId = request.StationId.Trim();
+            var slotId = request.SlotId.Trim();
+
+            var activeProsumer = await _userService.FindActiveProsumerByNicAsync(prosumerNic);
+
+            if (activeProsumer == null)
+            {
+                var existingUser = await _userService.FindByNicAsync(prosumerNic);
+
+                if (existingUser == null || existingUser.Role != Roles.Prosumer)
+                {
+                    throw new KeyNotFoundException("Target Prosumer was not found.");
+                }
+
+                if (!existingUser.IsActive)
+                {
+                    throw new InvalidOperationException("Target account is inactive");
+                }
+
+                throw new InvalidOperationException("Target prosumer not available for reservation creation.");
+            }
+
+            var station = await GetStationStateAsync(stationId);
+
+            if (!station.Exists)
+            {
+                throw new KeyNotFoundException("Selected station was not found.");
+            }
+
+            if (!station.IsActive)
+            {
+                throw new InvalidOperationException("Selected station is inactive.");
+            }
+
+            var slot = await GetSlotStateAsync(slotId);
+
+            if (!slot.Exists)
+            {
+                throw new KeyNotFoundException("Selected slot was not found.");
+            }
+
+            if (string.IsNullOrWhiteSpace(slot.StationId) ||
+                !string.Equals(
+                    slot.StationId,
+                    stationId,
+                    StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Selected slot does not belong to the selected station.",
+                    nameof(request.SlotId));
+            }
+
+            if (!slot.IsAvailable)
+            {
+                throw new InvalidOperationException("Selected slot is unavailable.");
+            }
+
+            var utcNow = DateTime.UtcNow;
+            var scheduledTimeUtc = request.ScheduledTime.Kind switch
+            {
+                DateTimeKind.Utc => request.ScheduledTime,
+                DateTimeKind.Local => request.ScheduledTime.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(request.ScheduledTime, DateTimeKind.Utc)
+            };
+
+            ValidateCreationScheduledTime(scheduledTimeUtc, utcNow);
+
+            ValidateScheduledTimeAgainstSlot(scheduledTimeUtc, slot.StartTime, slot.EndTime);
+
+            var reservarion = new EnergyReservation
+            {
+                ReservationId = $"RES={Guid.NewGuid():N}",
+                ProsumerNic = prosumerNic,
+                StationId = stationId,
+                SlotId = slotId,
+                ScheduledTime = scheduledTimeUtc,
+                Status = "Pending",
+                QrCodeData = null,
+                CreatedAt = utcNow,
+                UpdatedAt = utcNow
+            };
+
+            var slotClaimed = await TryClaimAvailableSlotAsync(slotId, stationId);
+
+            if (!slotClaimed)
+            {
+                throw new InvalidOperationException("Selected slot is no longer available.");
+            }
+
+            try
+            {
+                await _reservations.InsertOneAsync(reservarion);
+                return reservarion;
+            }
+            catch
+            {
+                var slotReleased = await ReleaseSlotAsync(slotId, stationId);  
+
+                if (!slotReleased)
+                {
+                    throw new InvalidOperationException("Reservation creation failed and the claimed slot could not be released.");
+                } 
+                throw;
+            }
         }
 
         public async Task<List<EnergyReservation>> GetPendingReservationAsync(string nic)
@@ -98,6 +231,137 @@ namespace API.Services
             {
                 throw new InvalidOperationException("Reservation updates and cancellations require at least 12 hours' notice.");
             }
+        }
+
+        private async Task<(bool Exists, bool IsActive)> GetStationStateAsync(string stationId)
+        {
+            // Reads the temporary station dependency through the shared MongoDB context
+            var stations = _context.GetCollection<BsonDocument>(MongoCollectionNames.SolarStationInfo);
+
+            var station = await stations
+                .Find(Builders<BsonDocument>.Filter.Eq("stationId", stationId))
+                .FirstOrDefaultAsync(); 
+            
+            if (station == null)
+            {
+                return (Exists: false, IsActive: false);
+            }
+
+            var isActive = 
+                station.TryGetValue("isActive", out var isActiveValue) && 
+                isActiveValue.BsonType == BsonType.Boolean &&
+                isActiveValue.AsBoolean;
+
+            return (Exists: true, IsActive: isActive);
+        }
+
+        private async Task<(
+            bool Exists, 
+            string? StationId, 
+            DateTime? StartTime, 
+            DateTime? EndTime, 
+            bool IsAvailable)> GetSlotStateAsync(string slotId)
+        {
+            var slots = _context.GetCollection<BsonDocument>(MongoCollectionNames.EnergyBookingSlots);
+
+            var slot = await slots
+                .Find(Builders<BsonDocument>.Filter.Eq("slotId", slotId))
+                .FirstOrDefaultAsync();
+
+            if (slot == null)
+            {
+                return (
+                    Exists: false,
+                    StationId: null,
+                    StartTime: null,
+                    EndTime: null,
+                    IsAvailable: false
+                );
+            }
+
+            var slotStationId =
+                slot.TryGetValue("stationId", out var stationIdValue) &&
+                stationIdValue.BsonType == BsonType.String
+                    ? stationIdValue.AsString
+                    : null;
+
+            DateTime? startTime = 
+                slot.TryGetValue("startTime", out var startTimeValue) && 
+                startTimeValue.BsonType == BsonType.DateTime
+                    ? startTimeValue.AsBsonDateTime.ToUniversalTime()
+                    : null;
+
+            DateTime? endTime =
+                slot.TryGetValue("endTime", out var endTimeValue) &&
+                endTimeValue.BsonType == BsonType.DateTime
+                    ? endTimeValue.AsBsonDateTime.ToUniversalTime()
+                    : null;
+
+            var isAvailable =
+                slot.TryGetValue("isAvailable", out var isAvailableValue) &&
+                isAvailableValue.BsonType == BsonType.Boolean &&
+                isAvailableValue.AsBoolean;
+
+            return (
+                Exists: true,
+                StationId: slotStationId,
+                StartTime: startTime,
+                EndTime: endTime,
+                IsAvailable: isAvailable
+            );
+        }
+
+        private async Task<bool> TryClaimAvailableSlotAsync(
+            string slotId,
+            string stationId)
+        {
+            // Atomically claims the matching slot only while it remains available
+            var slots = _context.GetCollection<BsonDocument>(
+                MongoCollectionNames.EnergyBookingSlots);
+
+            var filter = Builders<BsonDocument>.Filter.And(
+                Builders<BsonDocument>.Filter.Eq("slotId", slotId),
+                Builders<BsonDocument>.Filter.Eq("stationId", stationId),
+                Builders<BsonDocument>.Filter.Eq("isAvailable", true));
+
+            var update = Builders<BsonDocument>.Update
+                .Set("isAvailable", false);
+
+            var result = await slots.UpdateOneAsync(filter, update);
+
+            return result.ModifiedCount == 1;
+        }
+
+        private async Task<bool> ReleaseSlotAsync(
+            string slotId,
+            string stationId)
+        {
+            // Releases the matching slot only when it is currently unavailable
+            var slots = _context.GetCollection<BsonDocument>(
+                MongoCollectionNames.EnergyBookingSlots);
+
+            var filter = Builders<BsonDocument>.Filter.And(
+                Builders<BsonDocument>.Filter.Eq("slotId", slotId),
+                Builders<BsonDocument>.Filter.Eq("stationId", stationId),
+                Builders<BsonDocument>.Filter.Eq("isAvailable", false));
+
+            var update = Builders<BsonDocument>.Update
+                .Set("isAvailable", true);
+
+            var result = await slots.UpdateOneAsync(filter, update);
+
+            return result.ModifiedCount == 1;
+        }
+
+        private static void ValidateScheduledTimeAgainstSlot(
+            DateTime scheduledTime,
+            DateTime? slotStartTime,
+            DateTime? slotEndTime)
+        {
+            // TODO MEMBER 02 SLOT-TIME CONTRACT: define whether ScheduledTime equals, falls within, or derives from the slot window
+            _ = scheduledTime;
+            _ = slotStartTime;
+            _ = slotEndTime;
         }
 
         public async Task<EnergyReservation?> UpdateReservationStatusAsync(
