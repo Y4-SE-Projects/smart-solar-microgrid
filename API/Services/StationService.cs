@@ -115,7 +115,7 @@ namespace API.Services
                 .ToListAsync();
         }
         
-        // REturns nearby stations to your current location
+        // Returns nearby stations to your current location
         public async Task<List<SolarStation>> GetNearbyStationsAsync(double lat, double lng, double radiusKm)
         {
             // Same coordinate validation as CreateStationAsync, applied to
@@ -210,6 +210,37 @@ namespace API.Services
                 s => s.StationId == stationId,
                 update,
                 new FindOneAndUpdateOptions<SolarStation> { ReturnDocument = ReturnDocument.After });
+        }
+
+        // Hard delete a station from database.
+        public async Task<SolarStation?> DeleteStationAsync(string stationId)
+        {
+            // Looks up the station (404 if not found)
+            var station = await _stations
+                .Find(s => s.StationId == stationId)
+                .FirstOrDefaultAsync();
+ 
+            if (station == null)
+            {
+                return null;
+            }
+ 
+            // Blocks deletion if any reservation, in any status, was ever made against this station
+            var hasAnyReservations = await _reservations
+                .Find(r => r.StationId == stationId)
+                .AnyAsync();
+ 
+            if (hasAnyReservations)
+            {
+                throw new InvalidOperationException(
+                    $"Station '{stationId}' cannot be deleted because reservations reference it.");
+            }
+ 
+            // Permanently removes the document (Not a soft delete)
+            await _stations.DeleteOneAsync(s => s.StationId == stationId);
+ 
+            // Returns the now-deleted station's data to confirm exactly what was removed
+            return station;
         }
     }
 }

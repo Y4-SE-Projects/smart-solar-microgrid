@@ -22,7 +22,7 @@ namespace API.Controllers
             _service = service;
         }
 
-        // Creates a new microgrid station. Restricted to Backoffice users per the endpoint contract: the JWT must be valid and carry the Backoffice role.
+        // Creates a new microgrid station. (Backoffice only)
         [Authorize(Roles = Roles.Backoffice)]
         [HttpPost]
         public async Task<IActionResult> CreateStation([FromBody] CreateStationRequest request)
@@ -110,7 +110,7 @@ namespace API.Controllers
             }
         }
 
-        // Backoffice only endpoint.
+        // Deactivate a station. (Backoffice only)
         [Authorize(Roles = Roles.Backoffice)]
         [HttpPut("{stationId}/deactivate")]
         public async Task<IActionResult> DeactivateStation(string stationId)
@@ -148,6 +148,51 @@ namespace API.Controllers
             catch (InvalidOperationException ex)
             {
                 // Already deactivated, or blocked by active reservations, both are conflicts with the station's current state
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        // Permanently removes a station. (Backoffice only)
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpDelete("{stationId}")]
+        public async Task<IActionResult> DeleteStation(string stationId)
+        {
+            if (string.IsNullOrWhiteSpace(stationId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station ID is required."
+                });
+            }
+ 
+            try
+            {
+                var station = await _service.DeleteStationAsync(stationId);
+ 
+                if (station == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = $"No station found with ID '{stationId}'."
+                    });
+                }
+ 
+                return Ok(new
+                {
+                    success = true,
+                    message = "Station deleted successfully.",
+                    data = station
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Blocked because a reservation still references this station
                 return Conflict(new
                 {
                     success = false,
