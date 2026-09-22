@@ -3,6 +3,7 @@
  * Author: IT23218512
  */
 
+using API.DTOs;
 using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authorization;

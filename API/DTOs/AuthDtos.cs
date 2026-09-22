@@ -3,7 +3,7 @@
  * (Kept separate from User.cs because these describe what the client sends/receives over HTTP, not what's stored in MongoDB.)
  * Author: IT23218512
  */
-namespace API.Models
+namespace API.DTOs
 {
     // Body for POST /api/users/register
     public class RegisterRequest
