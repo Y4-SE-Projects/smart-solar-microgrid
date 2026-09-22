@@ -113,6 +113,62 @@ namespace API.Services
                 .SortBy(s => s.StationId)
                 .ToListAsync();
         }
+        
+        // REturns nearby stations to your current location
+        public async Task<List<SolarStation>> GetNearbyStationsAsync(double lat, double lng, double radiusKm)
+        {
+            // Same coordinate validation as CreateStationAsync, applied to
+            // the caller's search point rather than a station's location
+            if (lat < -90 || lat > 90 || lng < -180 || lng > 180)
+            {
+                throw new ArgumentException(
+                    "Latitude must be between -90 and 90, and longitude between -180 and 180.");
+            }
+ 
+            if (radiusKm <= 0)
+            {
+                throw new ArgumentException("radiusKm must be greater than 0.");
+            }
+ 
+            // Only active stations are worth suggesting — no point sending
+            // someone toward a station that's currently deactivated
+            var activeStations = await _stations
+                .Find(Builders<SolarStation>.Filter.Eq(s => s.IsActive, true))
+                .ToListAsync();
+ 
+            // Computes the straight-line distance to each station in memory
+            // and keeps only the ones inside the requested radius, nearest
+            // first. Fine at this project's scale; a large station count
+            // would eventually want a MongoDB geospatial index instead.
+            return activeStations
+                .Select(s => new
+                {
+                    Station = s,
+                    DistanceKm = HaversineDistanceKm(lat, lng, s.Latitude, s.Longitude)
+                })
+                .Where(x => x.DistanceKm <= radiusKm)
+                .OrderBy(x => x.DistanceKm)
+                .Select(x => x.Station)
+                .ToList();
+        }
+ 
+        private static double HaversineDistanceKm(double lat1, double lon1, double lat2, double lon2)
+        {
+            // Standard great-circle distance formula between two GPS points
+            const double earthRadiusKm = 6371.0;
+            var dLat = ToRadians(lat2 - lat1);
+            var dLon = ToRadians(lon2 - lon1);
+ 
+            var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                    Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
+                    Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+ 
+            var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+ 
+            return earthRadiusKm * c;
+        }
+ 
+        private static double ToRadians(double degrees) => degrees * (Math.PI / 180);
 
         // Deactivate stations that dont have any reservations.
         public async Task<SolarStation?> DeactivateStationAsync(string stationId)

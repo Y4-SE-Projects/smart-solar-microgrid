@@ -84,6 +84,32 @@ namespace API.Controllers
             });
         }
 
+        // List stations closer to your current location.
+        [Authorize]
+        [HttpGet("nearby")]
+        public async Task<IActionResult> GetNearbyStations([FromQuery] double lat, [FromQuery] double lng, [FromQuery] double radiusKm)
+        {
+            try
+            {
+                var stations = await _service.GetNearbyStationsAsync(lat, lng, radiusKm);
+ 
+                return Ok(new
+                {
+                    success = true,
+                    data = stations
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                // Invalid lat/lng/radiusKm
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
         // Backoffice only endpoint.
         [Authorize(Roles = Roles.Backoffice)]
         [HttpPut("{stationId}/deactivate")]
