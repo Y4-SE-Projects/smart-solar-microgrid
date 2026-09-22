@@ -19,6 +19,7 @@ builder.Services.AddSingleton<JwtTokenService>();
 
 // Application services
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<StationService>();
 
 // Controllers
 builder.Services.AddControllers();
