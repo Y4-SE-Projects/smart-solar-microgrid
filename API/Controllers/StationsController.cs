@@ -27,7 +27,7 @@ namespace API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateStation([FromBody] CreateStationRequest request)
         {
-            // Rejects if the boady is missing, before calling the service
+            // Rejects if the body is missing, before calling the service
             if (request == null)
             {
                 return BadRequest(new
@@ -67,6 +67,21 @@ namespace API.Controllers
                     message = ex.Message
                 });
             }
+        }
+
+        // Lists stations for any authenticated user. Pass activeOnly=true to exclude deactivated stations.
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> GetStations([FromQuery] bool activeOnly = false)
+        {
+            // Hands the actual query to the service
+            var stations = await _service.GetAllStationsAsync(activeOnly);
+
+            return Ok(new
+            {
+                success = true,
+                data = stations
+            });
         }
     }
 }

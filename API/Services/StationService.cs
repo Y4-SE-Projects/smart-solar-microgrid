@@ -95,5 +95,20 @@ namespace API.Services
             // Returns the saved station, including its generated Id
             return newStation;
         }
+
+        // Returns every station, or only the active ones when activeOnly is true.
+        public async Task<List<SolarStation>> GetAllStationsAsync(bool activeOnly = false)
+        {
+            // Builds a filter matching active stations only, or all stations
+            var filter = activeOnly
+                ? Builders<SolarStation>.Filter.Eq(s => s.IsActive, true)
+                : Builders<SolarStation>.Filter.Empty;
+
+            // Sorted by station ID for stable, predictable ordering
+            return await _stations
+                .Find(filter)
+                .SortBy(s => s.StationId)
+                .ToListAsync();
+        }
     }
 }
