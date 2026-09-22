@@ -255,6 +255,8 @@ namespace API.Services
                     nameof(request.ScheduledTime));
             }
 
+            ValidateMinimumNotice(scheduledTimeUtc, utcNow);
+
             var requestedStationId = request.StationId.Trim();
             var requestedSlotId = request.SlotId.Trim();
 
@@ -397,8 +399,123 @@ namespace API.Services
 
                 if (!oldSlotReleased)
                 {
+                    var rollbackFilter =
+                        Builders<EnergyReservation>.Filter.And(
+                            Builders<EnergyReservation>.Filter.Eq(
+                                r => r.ReservationId,
+                                reservation.ReservationId),
+                            Builders<EnergyReservation>.Filter.Eq(
+                                r => r.Status,
+                                reservation.Status),
+                            Builders<EnergyReservation>.Filter.Eq(
+                                r => r.StationId,
+                                requestedStationId),
+                            Builders<EnergyReservation>.Filter.Eq(
+                                r => r.SlotId,
+                                requestedSlotId),
+                            Builders<EnergyReservation>.Filter.Eq(
+                                r => r.ScheduledTime,
+                                scheduledTimeUtc),
+                            Builders<EnergyReservation>.Filter.Eq(
+                                r => r.UpdatedAt,
+                                updatedAt));
+
+                    var rollbackUpdate =
+                        Builders<EnergyReservation>.Update
+                            .Set(
+                                r => r.StationId,
+                                reservation.StationId)
+                            .Set(
+                                r => r.SlotId,
+                                reservation.SlotId)
+                            .Set(
+                                r => r.ScheduledTime,
+                                reservation.ScheduledTime)
+                            .Set(
+                                r => r.UpdatedAt,
+                                reservation.UpdatedAt);
+
+                    var rollbackResult =
+                        await _reservations.UpdateOneAsync(
+                            rollbackFilter,
+                            rollbackUpdate);
+
+                    if (rollbackResult.ModifiedCount != 1)
+                    {
+                        throw new InvalidOperationException(
+                            "The previous slot could not be released and the reservation could not be restored. The replacement slot remains unavailable to protect the stored reservation.");
+                    }
+
+                    var originalSlotState =
+                        await GetSlotStateAsync(reservation.SlotId);
+
+                    if (!originalSlotState.Exists ||
+                        !string.Equals(
+                            originalSlotState.StationId,
+                            reservation.StationId,
+                            StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            "The reservation was restored, but its original slot could not be validated. The replacement slot remains unavailable to prevent another reservation from claiming it.");
+                    }
+
+                    if (originalSlotState.IsAvailable)
+                    {
+                        var originalSlotReclaimed =
+                            await TryClaimAvailableSlotAsync(
+                                reservation.SlotId,
+                                reservation.StationId);
+
+                        if (!originalSlotReclaimed)
+                        {
+                            var originalSlotAfterClaim =
+                                await GetSlotStateAsync(
+                                    reservation.SlotId);
+
+                            var originalSlotIsUnavailable =
+                                originalSlotAfterClaim.Exists &&
+                                string.Equals(
+                                    originalSlotAfterClaim.StationId,
+                                    reservation.StationId,
+                                    StringComparison.Ordinal) &&
+                                !originalSlotAfterClaim.IsAvailable;
+
+                            if (!originalSlotIsUnavailable)
+                            {
+                                throw new InvalidOperationException(
+                                    "The reservation was restored, but its original slot could not be reclaimed. The replacement slot remains unavailable to protect reservation consistency.");
+                            }
+                        }
+                    }
+
+                    var replacementSlotReleased =
+                        await ReleaseSlotAsync(
+                            requestedSlotId,
+                            requestedStationId);
+
+                    if (!replacementSlotReleased)
+                    {
+                        var replacementSlotAfterRelease =
+                            await GetSlotStateAsync(
+                                requestedSlotId);
+
+                        var replacementSlotIsAvailable =
+                            replacementSlotAfterRelease.Exists &&
+                            string.Equals(
+                                replacementSlotAfterRelease.StationId,
+                                requestedStationId,
+                                StringComparison.Ordinal) &&
+                            replacementSlotAfterRelease.IsAvailable;
+
+                        if (!replacementSlotIsAvailable)
+                        {
+                            throw new InvalidOperationException(
+                                "The reservation was restored, but the replacement slot could not be released.");
+                        }
+                    }
+
                     throw new InvalidOperationException(
-                        "Reservation was updated, but its previous slot could not be released.");
+                        "The previous slot could not be released. The original reservation and slot allocation were restored.");
                 }
             }
 
@@ -782,15 +899,47 @@ namespace API.Services
             return result.ModifiedCount == 1;
         }
 
+
+
         private static void ValidateScheduledTimeAgainstSlot(
             DateTime scheduledTime,
             DateTime? slotStartTime,
             DateTime? slotEndTime)
         {
-            // TODO MEMBER 02 SLOT-TIME CONTRACT: define whether ScheduledTime equals, falls within, or derives from the slot window
-            _ = scheduledTime;
-            _ = slotStartTime;
+            // Enforces exact UTC equality between the reservation time and selected slot start time
             _ = slotEndTime;
+
+            if (!slotStartTime.HasValue)
+            {
+                throw new ArgumentException(
+                    "Selected slot does not have a valid start time.");
+            }
+
+            var scheduledTimeUtc = scheduledTime.Kind switch
+            {
+                DateTimeKind.Utc => scheduledTime,
+                DateTimeKind.Local => scheduledTime.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(
+                    scheduledTime,
+                    DateTimeKind.Utc)
+            };
+
+            var slotStartTimeUtc = slotStartTime.Value.Kind switch
+            {
+                DateTimeKind.Utc => slotStartTime.Value,
+                DateTimeKind.Local =>
+                    slotStartTime.Value.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(
+                    slotStartTime.Value,
+                    DateTimeKind.Utc)
+            };
+
+            if (scheduledTimeUtc != slotStartTimeUtc)
+            {
+                throw new ArgumentException(
+                    "Scheduled time must exactly match the selected slot start time.",
+                    nameof(scheduledTime));
+            }
         }
 
         public async Task<EnergyReservation?> UpdateReservationStatusAsync(
