@@ -608,6 +608,7 @@ namespace API.Services
 
         public async Task<(long PendingCount, long ApprovedFutureCount)> GetDashboardCountsAsync(string nic)
         {
+            // Counts the Prosumer's Pending reservations and future Approved reservations from MongoDB
             var UtcNow = DateTime.UtcNow;
 
             var pendingCountTask = _reservations.CountDocumentsAsync(
@@ -617,7 +618,7 @@ namespace API.Services
 
             var approvedFutureCountTask = _reservations.CountDocumentsAsync(
                 r => r.ProsumerNic == nic && 
-                r.Status == "Pending" && 
+                r.Status == "Approved" && 
                 r.ScheduledTime > UtcNow
             );
 
