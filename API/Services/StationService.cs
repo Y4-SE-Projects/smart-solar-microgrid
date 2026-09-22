@@ -21,6 +21,7 @@ namespace API.Services
         {
             // Asks the shared (singleton) MongoDB context for the SolarStationInfo collection, using the shared name constant rather than a literal string
             _stations = context.GetCollection<SolarStation>(MongoCollectionNames.SolarStationInfo);
+            _reservations = context.GetCollection<EnergyReservation>(MongoCollectionNames.EnergyReservation);
         }
 
         // Validates required field, rejects a duplicate station ID, inserts the new station.
