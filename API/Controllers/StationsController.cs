@@ -83,5 +83,51 @@ namespace API.Controllers
                 data = stations
             });
         }
+
+        // Backoffice only endpoint.
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("{stationId}/deactivate")]
+        public async Task<IActionResult> DeactivateStation(string stationId)
+        {
+            if (string.IsNullOrWhiteSpace(stationId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station ID is required."
+                });
+            }
+ 
+            try
+            {
+                var station = await _service.DeactivateStationAsync(stationId);
+ 
+                // Service returned null, meaning no station with this ID exists
+                if (station == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = $"No station found with ID '{stationId}'."
+                    });
+                }
+ 
+                return Ok(new
+                {
+                    success = true,
+                    message = "Station deactivated successfully.",
+                    data = station
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Already deactivated, or blocked by active reservations, both are conflicts with the station's current state
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
     }
 }

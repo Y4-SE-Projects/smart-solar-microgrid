@@ -14,6 +14,9 @@ namespace API.Services
         // Typed handle to the SolarStationInfo collection, fetched once in the constructor and reused by every method below
         private readonly IMongoCollection<SolarStation> _stations;
 
+        // Needed to check for active reservations before a station is deactivated.
+        private readonly IMongoCollection<EnergyReservation> _reservations;
+
         public StationService(MongoDbContext context)
         {
             // Asks the shared (singleton) MongoDB context for the SolarStationInfo collection, using the shared name constant rather than a literal string
@@ -109,6 +112,47 @@ namespace API.Services
                 .Find(filter)
                 .SortBy(s => s.StationId)
                 .ToListAsync();
+        }
+
+        // Deactivate stations that dont have any reservations.
+        public async Task<SolarStation?> DeactivateStationAsync(string stationId)
+        {
+            // Looks up the station first so the controller can return a clean (404 if not found)
+            var station = await _stations
+                .Find(s => s.StationId == stationId)
+                .FirstOrDefaultAsync();
+ 
+            if (station == null)
+            {
+                // Signals "not found" the same way UpdateReservationStatusAsync does elsewhere in this project — return null and let the
+                return null;
+            }
+ 
+            if (!station.IsActive)
+            {
+                throw new InvalidOperationException(
+                    $"Station '{stationId}' is already deactivated.");
+            }
+ 
+            // Block deactivation while any reservation for this station is still unresolved
+            var hasActiveReservations = await _reservations
+                .Find(r => r.StationId == stationId &&
+                           (r.Status == "Pending" || r.Status == "Approved"))
+                .AnyAsync();
+ 
+            if (hasActiveReservations)
+            {
+                throw new InvalidOperationException(
+                    $"Station '{stationId}' cannot be deactivated while it has active reservations.");
+            }
+ 
+            // Only the IsActive flag changes, every other field on the station record stays exactly as it was
+            var update = Builders<SolarStation>.Update.Set(s => s.IsActive, false);
+ 
+            return await _stations.FindOneAndUpdateAsync(
+                s => s.StationId == stationId,
+                update,
+                new FindOneAndUpdateOptions<SolarStation> { ReturnDocument = ReturnDocument.After });
         }
     }
 }
