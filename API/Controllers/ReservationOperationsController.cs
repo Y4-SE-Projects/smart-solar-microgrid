@@ -234,6 +234,14 @@ namespace API.Controllers
                     }
                 );
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
             catch (KeyNotFoundException ex)
             {
                 return NotFound(new
@@ -372,9 +380,11 @@ namespace API.Controllers
             return Ok(new { success = true, data = reservations });
         }
 
+        [Authorize(Roles = Roles.Prosumer)]
         [HttpGet("prosumer/{nic}/pending")]
         public async Task<IActionResult> GetPendingReservations(string nic)
         {
+            // Returns pending reservations only when the authenticated Prosumer owns the requested NIC
             if (string.IsNullOrWhiteSpace(nic))
             {
                 return BadRequest(new
@@ -384,8 +394,32 @@ namespace API.Controllers
                 });
             }
 
+            var requestedNic = nic.Trim();
+            var authenticatedNic = User.FindFirst("nic")?.Value.Trim();
+
+            if (string.IsNullOrWhiteSpace(authenticatedNic))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "The authenticated Prosumer NIC is missing."
+                });
+            }
+
+            if (!string.Equals(authenticatedNic, requestedNic, StringComparison.Ordinal))
+            {
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    new
+                    {
+                        success = false,
+                        message = "A Prosumer may view only their own pending reservations."
+                    }
+                );   
+            }
+
             var reservations =
-                await _service.GetPendingReservationAsync(nic);
+                await _service.GetPendingReservationAsync(authenticatedNic);
 
             return Ok(new
             {
