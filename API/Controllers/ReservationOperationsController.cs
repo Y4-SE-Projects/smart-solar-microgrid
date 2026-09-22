@@ -394,6 +394,56 @@ namespace API.Controllers
             });
         }
 
+        [Authorize(Roles = Roles.Prosumer)]
+        [HttpGet("prosumer/{nic}/dashboard-counts")]
+        public async Task<IActionResult> GetDashboardCounts(string nic)
+        {
+            // Returns dashboard counts only when the authenticated Prosumer owns the requested NIC
+            if (string.IsNullOrWhiteSpace(nic))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "NIC is required."
+                });
+            }
+
+            var requestedNic = nic.Trim();
+            var authenticatedNic = User.FindFirst("nic")?.Value?.Trim();
+
+            if (string.IsNullOrWhiteSpace(authenticatedNic))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "The authenticated Prosumer NIC is missing."
+                });
+            }
+
+            if (!string.Equals(
+                    authenticatedNic,
+                    requestedNic,
+                    StringComparison.Ordinal))
+            {
+                return StatusCode(
+                    StatusCodes.Status403Forbidden,
+                    new
+                    {
+                        success = false,
+                        message = "A Prosumer may view only their own dashboard counts."
+                    });
+            }
+
+            var counts =
+                await _service.GetDashboardCountsAsync(authenticatedNic);
+
+            return Ok(new
+            {
+                pendingCount = counts.PendingCount,
+                approvedFutureCount = counts.ApprovedFutureCount
+            });
+        }
+
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateReservationStatus(
             string id,
