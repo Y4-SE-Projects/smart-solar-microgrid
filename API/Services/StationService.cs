@@ -27,45 +27,22 @@ namespace API.Services
         // Validates required field, rejects a duplicate station ID, inserts the new station.
         public async Task<SolarStation> CreateStationAsync(CreateStationRequest request)
         {
-            // Trims the text fields once so " STN-001 " cannot slip past the duplicate check
+            // Station ID is only supplied on create, so it is checked here and not in the shared validator
             var stationId = request.StationId?.Trim() ?? string.Empty;
-            var name = request.Name?.Trim() ?? string.Empty;
-            var schedule = request.Schedule?.Trim() ?? string.Empty;
 
-            // Rejects missing required text fields
             if (string.IsNullOrWhiteSpace(stationId))
             {
                 throw new ArgumentException("Station ID is required.");
             }
 
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                throw new ArgumentException("Station name is required.");
-            }
-
-            if (string.IsNullOrWhiteSpace(schedule))
-            {
-                throw new ArgumentException("Schedule is required.");
-            }
-
-            // Rejects out-of-range GPS coordinates
-            if (request.Latitude < -90 || request.Latitude > 90 ||
-                request.Longitude < -180 || request.Longitude > 180)
-            {
-                throw new ArgumentException(
-                    "Latitude must be between -90 and 90, and longitude between -180 and 180.");
-            }
-
-            // Rejects capacity and battery slot counts that make no physical sense
-            if (request.CapacityKWh <= 0)
-            {
-                throw new ArgumentException("Capacity (kWh) must be greater than 0.");
-            }
-
-            if (request.BatterySlotCount < 1)
-            {
-                throw new ArgumentException("Battery slot count must be at least 1.");
-            }
+            // Runs the checks shared with update, and returns the trimmed text values
+            var (name, schedule) = ValidateStationFields(
+                name: request.Name,
+                schedule: request.Schedule,
+                latitude: request.Latitude,
+                longitude: request.Longitude,
+                capacityKWh: request.CapacityKWh,
+                batterySlotCount: request.BatterySlotCount);
 
             // Looks for an existing station with the same station ID
             var existingStation = await _stations
@@ -114,7 +91,7 @@ namespace API.Services
                 .SortBy(s => s.StationId)
                 .ToListAsync();
         }
-        
+
         // Returns nearby stations to your current location
         public async Task<List<SolarStation>> GetNearbyStationsAsync(double lat, double lng, double radiusKm)
         {
@@ -125,18 +102,18 @@ namespace API.Services
                 throw new ArgumentException(
                     "Latitude must be between -90 and 90, and longitude between -180 and 180.");
             }
- 
+
             if (radiusKm <= 0)
             {
                 throw new ArgumentException("radiusKm must be greater than 0.");
             }
- 
+
             // Only active stations are worth suggesting — no point sending
             // someone toward a station that's currently deactivated
             var activeStations = await _stations
                 .Find(Builders<SolarStation>.Filter.Eq(s => s.IsActive, true))
                 .ToListAsync();
- 
+
             // Computes the straight-line distance to each station in memory
             // and keeps only the ones inside the requested radius, nearest
             // first. Fine at this project's scale; a large station count
@@ -152,23 +129,23 @@ namespace API.Services
                 .Select(x => x.Station)
                 .ToList();
         }
- 
+
         private static double HaversineDistanceKm(double lat1, double lon1, double lat2, double lon2)
         {
             // Standard great-circle distance formula between two GPS points
             const double earthRadiusKm = 6371.0;
             var dLat = ToRadians(lat2 - lat1);
             var dLon = ToRadians(lon2 - lon1);
- 
+
             var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
                     Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
                     Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
- 
+
             var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
- 
+
             return earthRadiusKm * c;
         }
- 
+
         private static double ToRadians(double degrees) => degrees * (Math.PI / 180);
 
         // Deactivate stations that dont have any reservations.
@@ -178,34 +155,34 @@ namespace API.Services
             var station = await _stations
                 .Find(s => s.StationId == stationId)
                 .FirstOrDefaultAsync();
- 
+
             if (station == null)
             {
                 // Signals "not found" the same way UpdateReservationStatusAsync does elsewhere in this project — return null and let the
                 return null;
             }
- 
+
             if (!station.IsActive)
             {
                 throw new InvalidOperationException(
                     $"Station '{stationId}' is already deactivated.");
             }
- 
+
             // Block deactivation while any reservation for this station is still unresolved
             var hasActiveReservations = await _reservations
                 .Find(r => r.StationId == stationId &&
                            (r.Status == "Pending" || r.Status == "Approved"))
                 .AnyAsync();
- 
+
             if (hasActiveReservations)
             {
                 throw new InvalidOperationException(
                     $"Station '{stationId}' cannot be deactivated while it has active reservations.");
             }
- 
+
             // Only the IsActive flag changes, every other field on the station record stays exactly as it was
             var update = Builders<SolarStation>.Update.Set(s => s.IsActive, false);
- 
+
             return await _stations.FindOneAndUpdateAsync(
                 s => s.StationId == stationId,
                 update,
@@ -219,20 +196,20 @@ namespace API.Services
             var station = await _stations
                 .Find(s => s.StationId == stationId)
                 .FirstOrDefaultAsync();
- 
+
             if (station == null)
             {
                 return null;
             }
- 
+
             if (station.IsActive)
             {
                 throw new InvalidOperationException(
                     $"Station '{stationId}' is already active.");
             }
- 
+
             var update = Builders<SolarStation>.Update.Set(s => s.IsActive, true);
- 
+
             return await _stations.FindOneAndUpdateAsync(
                 s => s.StationId == stationId,
                 update,
@@ -242,23 +219,24 @@ namespace API.Services
         // Update station details.
         public async Task<SolarStation?> UpdateStationAsync(string stationId, UpdateStationRequest request)
         {
-            // Same coordinate validation as CreateStationAsync, applied to the new location the client is submitting
-            if (request.Latitude < -90 || request.Latitude > 90 ||
-                request.Longitude < -180 || request.Longitude > 180)
-            {
-                throw new ArgumentException(
-                    "Latitude must be between -90 and 90, and longitude between -180 and 180.");
-            }
- 
+            // Runs the same checks as create, so a station cannot be edited into an invalid state
+            var (name, schedule) = ValidateStationFields(
+                name: request.Name,
+                schedule: request.Schedule,
+                latitude: request.Latitude,
+                longitude: request.Longitude,
+                capacityKWh: request.CapacityKWh,
+                batterySlotCount: request.BatterySlotCount);
+
             // Lists every field that's allowed to change.
             var update = Builders<SolarStation>.Update
-                .Set(s => s.Name, request.Name.Trim())
+                .Set(s => s.Name, name)
                 .Set(s => s.Latitude, request.Latitude)
                 .Set(s => s.Longitude, request.Longitude)
                 .Set(s => s.CapacityKWh, request.CapacityKWh)
                 .Set(s => s.BatterySlotCount, request.BatterySlotCount)
-                .Set(s => s.Schedule, request.Schedule.Trim());
- 
+                .Set(s => s.Schedule, schedule);
+
             // Same "not found, null" pattern used by above 2 methods.
             return await _stations.FindOneAndUpdateAsync(
                 s => s.StationId == stationId,
@@ -273,28 +251,74 @@ namespace API.Services
             var station = await _stations
                 .Find(s => s.StationId == stationId)
                 .FirstOrDefaultAsync();
- 
+
             if (station == null)
             {
                 return null;
             }
- 
+
             // Blocks deletion if any reservation, in any status, was ever made against this station
             var hasAnyReservations = await _reservations
                 .Find(r => r.StationId == stationId)
                 .AnyAsync();
- 
+
             if (hasAnyReservations)
             {
                 throw new InvalidOperationException(
                     $"Station '{stationId}' cannot be deleted because reservations reference it.");
             }
- 
+
             // Permanently removes the document (Not a soft delete)
             await _stations.DeleteOneAsync(s => s.StationId == stationId);
- 
+
             // Returns the now-deleted station's data to confirm exactly what was removed
             return station;
+        }
+
+        // Checks every station field that create and update both care about, and returns the trimmed text values.
+        private static (string Name, string Schedule) ValidateStationFields(
+            string? name,
+            string? schedule,
+            double latitude,
+            double longitude,
+            double capacityKWh,
+            int batterySlotCount)
+        {
+            // Trims once so the value checked is the value stored
+            var trimmedName = name?.Trim() ?? string.Empty;
+            var trimmedSchedule = schedule?.Trim() ?? string.Empty;
+
+            // Rejects missing required text fields
+            if (string.IsNullOrWhiteSpace(trimmedName))
+            {
+                throw new ArgumentException("Station name is required.");
+            }
+
+            if (string.IsNullOrWhiteSpace(trimmedSchedule))
+            {
+                throw new ArgumentException("Schedule is required.");
+            }
+
+            // Rejects out-of-range GPS coordinates
+            if (latitude < -90 || latitude > 90 ||
+                longitude < -180 || longitude > 180)
+            {
+                throw new ArgumentException(
+                    "Latitude must be between -90 and 90, and longitude between -180 and 180.");
+            }
+
+            // Rejects capacity and battery slot counts that make no physical sense
+            if (capacityKWh <= 0)
+            {
+                throw new ArgumentException("Capacity (kWh) must be greater than 0.");
+            }
+
+            if (batterySlotCount < 1)
+            {
+                throw new ArgumentException("Battery slot count must be at least 1.");
+            }
+
+            return (trimmedName, trimmedSchedule);
         }
     }
 }

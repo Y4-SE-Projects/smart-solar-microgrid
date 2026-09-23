@@ -7,10 +7,10 @@ namespace API.DTOs
     public class CreateStationRequest
     {
         // Human-readable station code, e.g. "STN-001". Must be unique.
-        public string StationId { get; set; } = string.Empty;
+        public string? StationId { get; set; }
 
         // Display name shown to users, e.g. "Colombo North Hub".
-        public string Name { get; set; } = string.Empty;
+        public string? Name { get; set; }
 
         // GPS latitude
         public double Latitude { get; set; }
@@ -25,6 +25,6 @@ namespace API.DTOs
         public int BatterySlotCount { get; set; }
 
         // Operating hours, e.g. "Mon-Sun 06:00-22:00".
-        public string Schedule { get; set; } = string.Empty;
+        public string? Schedule { get; set; }
     }
 }

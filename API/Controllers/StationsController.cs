@@ -92,7 +92,7 @@ namespace API.Controllers
             try
             {
                 var stations = await _service.GetNearbyStationsAsync(lat, lng, radiusKm);
- 
+
                 return Ok(new
                 {
                     success = true,
@@ -123,11 +123,11 @@ namespace API.Controllers
                     message = "Station ID is required."
                 });
             }
- 
+
             try
             {
                 var station = await _service.DeactivateStationAsync(stationId);
- 
+
                 // Service returned null, meaning no station with this ID exists
                 if (station == null)
                 {
@@ -137,7 +137,7 @@ namespace API.Controllers
                         message = $"No station found with ID '{stationId}'."
                     });
                 }
- 
+
                 return Ok(new
                 {
                     success = true,
@@ -169,11 +169,11 @@ namespace API.Controllers
                     message = "Station ID is required."
                 });
             }
- 
+
             try
             {
                 var station = await _service.ReactivateStationAsync(stationId);
- 
+
                 if (station == null)
                 {
                     return NotFound(new
@@ -182,7 +182,7 @@ namespace API.Controllers
                         message = $"No station found with ID '{stationId}'."
                     });
                 }
- 
+
                 return Ok(new
                 {
                     success = true,
@@ -214,20 +214,20 @@ namespace API.Controllers
                     message = "Station ID is required."
                 });
             }
- 
-            if (request == null || string.IsNullOrWhiteSpace(request.Name))
+
+            if (request == null)
             {
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Station name is required."
+                    message = "A station request body is required."
                 });
             }
- 
+
             try
             {
                 var station = await _service.UpdateStationAsync(stationId, request);
- 
+
                 if (station == null)
                 {
                     return NotFound(new
@@ -236,7 +236,7 @@ namespace API.Controllers
                         message = $"No station found with ID '{stationId}'."
                     });
                 }
- 
+
                 return Ok(new
                 {
                     success = true,
@@ -268,11 +268,11 @@ namespace API.Controllers
                     message = "Station ID is required."
                 });
             }
- 
+
             try
             {
                 var station = await _service.DeleteStationAsync(stationId);
- 
+
                 if (station == null)
                 {
                     return NotFound(new
@@ -281,7 +281,7 @@ namespace API.Controllers
                         message = $"No station found with ID '{stationId}'."
                     });
                 }
- 
+
                 return Ok(new
                 {
                     success = true,
