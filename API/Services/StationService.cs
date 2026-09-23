@@ -212,6 +212,33 @@ namespace API.Services
                 new FindOneAndUpdateOptions<SolarStation> { ReturnDocument = ReturnDocument.After });
         }
 
+        // Reactivate stations that are deactivated.
+        public async Task<SolarStation?> ReactivateStationAsync(string stationId)
+        {
+            // Same "not found, null" pattern as DeactivateStationAsync
+            var station = await _stations
+                .Find(s => s.StationId == stationId)
+                .FirstOrDefaultAsync();
+ 
+            if (station == null)
+            {
+                return null;
+            }
+ 
+            if (station.IsActive)
+            {
+                throw new InvalidOperationException(
+                    $"Station '{stationId}' is already active.");
+            }
+ 
+            var update = Builders<SolarStation>.Update.Set(s => s.IsActive, true);
+ 
+            return await _stations.FindOneAndUpdateAsync(
+                s => s.StationId == stationId,
+                update,
+                new FindOneAndUpdateOptions<SolarStation> { ReturnDocument = ReturnDocument.After });
+        }
+
         // Hard delete a station from database.
         public async Task<SolarStation?> DeleteStationAsync(string stationId)
         {

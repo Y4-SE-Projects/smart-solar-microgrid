@@ -156,6 +156,53 @@ namespace API.Controllers
             }
         }
 
+        // Reactivate a station. (Backoffice only)
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("{stationId}/reactivate")]
+        public async Task<IActionResult> ReactivateStation(string stationId)
+        {
+            if (string.IsNullOrWhiteSpace(stationId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station ID is required."
+                });
+            }
+ 
+            try
+            {
+                var station = await _service.ReactivateStationAsync(stationId);
+ 
+                if (station == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = $"No station found with ID '{stationId}'."
+                    });
+                }
+ 
+                return Ok(new
+                {
+                    success = true,
+                    message = "Station reactivated successfully.",
+                    data = station
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Already active
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        
+
         // Permanently removes a station. (Backoffice only)
         [Authorize(Roles = Roles.Backoffice)]
         [HttpDelete("{stationId}")]
