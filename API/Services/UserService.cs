@@ -69,16 +69,24 @@ namespace API.Services
         }
 
         // Flips IsActive to false. Called when a Prosumer requests deactivation.
-        public async Task DeactivateAsync(string nic)
+        public async Task DeactivateAsync(string nic, string? reason)
         {
-            var update = Builders<User>.Update.Set(u => u.IsActive, false);
+            var update = Builders<User>.Update
+                .Set(u => u.IsActive, false)
+                .Set(u => u.DeactivationReason, reason)
+                .Set(u => u.DeactivatedAt, DateTime.UtcNow);
+
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 
         // Flips IsActive back to true. Only ever reached via a Backoffice-only endpoint.
         public async Task ReactivateAsync(string nic)
         {
-            var update = Builders<User>.Update.Set(u => u.IsActive, true);
+            var update = Builders<User>.Update
+                .Set(u => u.IsActive, true)
+                .Set(u => u.DeactivationReason, (string?)null)
+                .Set(u => u.DeactivatedAt, (DateTime?)null);
+
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 

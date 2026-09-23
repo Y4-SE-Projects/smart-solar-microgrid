@@ -45,6 +45,16 @@ namespace API.Models
         [BsonElement("isActive")]
         public bool IsActive { get; set; } = true;
 
+        // Optional reason the Prosumer gave when requesting deactivation.
+        // Null when never deactivated, and cleared back to null on reactivation.
+        [BsonElement("deactivationReason")]
+        public string? DeactivationReason { get; set; }
+
+        // Compute "days elapsed" for the Backoffice review screen when the account was deactivated. 
+        // Null when active.
+        [BsonElement("deactivatedAt")]
+        public DateTime? DeactivatedAt { get; set; }
+
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

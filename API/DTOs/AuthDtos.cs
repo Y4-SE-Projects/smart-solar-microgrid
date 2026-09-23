@@ -3,6 +3,7 @@
  * (Kept separate from User.cs because these describe what the client sends/receives over HTTP, not what's stored in MongoDB.)
  * Author: IT23218512
  */
+ 
 namespace API.DTOs
 {
     // Body for POST /api/users/register
@@ -54,6 +55,12 @@ namespace API.DTOs
         public string Phone { get; set; } = string.Empty;
     }
 
+    // Body for PUT /api/users/{nic}/deactivate. ( Reason is optional )
+    public class DeactivateAccountRequest
+    {
+        public string? Reason { get; set; }
+    }
+
     // Safe shape returned by profile-related endpoints. 
     // Deliberately excludes PasswordHash — that should never leave the server.
     public class UserProfileResponse
@@ -64,5 +71,13 @@ namespace API.DTOs
         public string Phone { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        // Below are only populated when the account is/was deactivated.
+        public string? DeactivationReason { get; set; }
+        public DateTime? DeactivatedAt { get; set; }
+
+        // Computed server-side from DeactivatedAt 
+        // The client doesn't need to do its own date math (or worry about timezones).
+        public int? DaysElapsed { get; set; }
     }
 }
