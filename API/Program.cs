@@ -1,3 +1,5 @@
+/* File: Program.cs */
+
 using API.Settings;
 using API.Data;
 using API.Services;
@@ -30,11 +32,11 @@ builder.Services.AddSwaggerGen(options =>
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = SecuritySchemeType.ApiKey,
-        Scheme = "Bearer",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "Paste: Bearer {your JWT token}"
+        Description = "Paste just your raw JWT token here — Swagger adds the \"Bearer \" prefix automatically."
     });
 
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -110,7 +112,7 @@ app.Use(async (context, next) =>
     await next();
 });
 
-
+// Order matters: Authentication before Authorization, both before endpoints are mapped.
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -55,5 +55,45 @@ namespace API.Services
         {
             await _users.InsertOneAsync(user);
         }
+
+        // Updates the editable profile fields for a Prosumer's own account.
+        // Nic and Role are never touched here — those can't change via this call.
+        public async Task UpdateProfileAsync(string nic, string fullName, string email, string phone)
+        {
+            var update = Builders<User>.Update
+                .Set(u => u.FullName, fullName)
+                .Set(u => u.Email, email)
+                .Set(u => u.Phone, phone);
+
+            await _users.UpdateOneAsync(u => u.Nic == nic, update);
+        }
+
+        // Flips IsActive to false. Called when a Prosumer requests deactivation.
+        public async Task DeactivateAsync(string nic, string? reason)
+        {
+            var update = Builders<User>.Update
+                .Set(u => u.IsActive, false)
+                .Set(u => u.DeactivationReason, reason)
+                .Set(u => u.DeactivatedAt, DateTime.UtcNow);
+
+            await _users.UpdateOneAsync(u => u.Nic == nic, update);
+        }
+
+        // Flips IsActive back to true. Only ever reached via a Backoffice-only endpoint.
+        public async Task ReactivateAsync(string nic)
+        {
+            var update = Builders<User>.Update
+                .Set(u => u.IsActive, true)
+                .Set(u => u.DeactivationReason, (string?)null)
+                .Set(u => u.DeactivatedAt, (DateTime?)null);
+
+            await _users.UpdateOneAsync(u => u.Nic == nic, update);
+        }
+
+        // Returns every deactivated Prosumer account, for the Backoffice review screen.
+        public async Task<List<User>> GetPendingDeactivationAsync()
+        {
+            return await _users.Find(u => u.Role == Roles.Prosumer && !u.IsActive).ToListAsync();
+        }
     }
 }
