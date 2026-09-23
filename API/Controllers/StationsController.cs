@@ -201,7 +201,59 @@ namespace API.Controllers
             }
         }
 
-        
+        // Update a station's data. (Backoffice only)
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("{stationId}")]
+        public async Task<IActionResult> UpdateStation(string stationId, [FromBody] UpdateStationRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(stationId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station ID is required."
+                });
+            }
+ 
+            if (request == null || string.IsNullOrWhiteSpace(request.Name))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station name is required."
+                });
+            }
+ 
+            try
+            {
+                var station = await _service.UpdateStationAsync(stationId, request);
+ 
+                if (station == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = $"No station found with ID '{stationId}'."
+                    });
+                }
+ 
+                return Ok(new
+                {
+                    success = true,
+                    message = "Station updated successfully.",
+                    data = station
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                // Invalid input, e.g. GPS coordinates out of range
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
 
         // Permanently removes a station. (Backoffice only)
         [Authorize(Roles = Roles.Backoffice)]

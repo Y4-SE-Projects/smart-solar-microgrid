@@ -239,6 +239,33 @@ namespace API.Services
                 new FindOneAndUpdateOptions<SolarStation> { ReturnDocument = ReturnDocument.After });
         }
 
+        // Update station details.
+        public async Task<SolarStation?> UpdateStationAsync(string stationId, UpdateStationRequest request)
+        {
+            // Same coordinate validation as CreateStationAsync, applied to the new location the client is submitting
+            if (request.Latitude < -90 || request.Latitude > 90 ||
+                request.Longitude < -180 || request.Longitude > 180)
+            {
+                throw new ArgumentException(
+                    "Latitude must be between -90 and 90, and longitude between -180 and 180.");
+            }
+ 
+            // Lists every field that's allowed to change.
+            var update = Builders<SolarStation>.Update
+                .Set(s => s.Name, request.Name.Trim())
+                .Set(s => s.Latitude, request.Latitude)
+                .Set(s => s.Longitude, request.Longitude)
+                .Set(s => s.CapacityKWh, request.CapacityKWh)
+                .Set(s => s.BatterySlotCount, request.BatterySlotCount)
+                .Set(s => s.Schedule, request.Schedule.Trim());
+ 
+            // Same "not found, null" pattern used by above 2 methods.
+            return await _stations.FindOneAndUpdateAsync(
+                s => s.StationId == stationId,
+                update,
+                new FindOneAndUpdateOptions<SolarStation> { ReturnDocument = ReturnDocument.After });
+        }
+
         // Hard delete a station from database.
         public async Task<SolarStation?> DeleteStationAsync(string stationId)
         {
