@@ -107,5 +107,12 @@ namespace API.Services
         {
             return await _users.Find(u => u.Role == Roles.Backoffice || u.Role == Roles.GridOperator).ToListAsync();
         }
+
+        // True, if at least one Backoffice account already exists. 
+        // Used only at startup to decide whether the first Backoffice account needs to be seeded.
+        public async Task<bool> AnyBackofficeExistsAsync()
+        {
+            return await _users.Find(u => u.Role == Roles.Backoffice).AnyAsync();
+        }
     }
 }
