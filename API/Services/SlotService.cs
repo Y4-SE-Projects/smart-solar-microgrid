@@ -3,6 +3,7 @@
 // Author: IT23215856
 
 using API.Data;
+using API.DTOs;
 using API.Models;
 using MongoDB.Driver;
 
@@ -47,6 +48,54 @@ namespace API.Services
             }
 
             return (start, end);
+        }
+
+        // Creates one bookable slot for an existing station.
+        public async Task<EnergyBookingSlot> CreateSlotAsync(string stationId, CreateSlotRequest request)
+        {
+            // Confirms the referenced station actually exists — stationId here
+            // is a foreign key, and a typo'd one would otherwise silently
+            // create a slot with no matching station behind it
+            var station = await _stations
+                .Find(s => s.StationId == stationId)
+                .FirstOrDefaultAsync();
+
+            if (station == null)
+            {
+                throw new KeyNotFoundException($"No station found with ID '{stationId}'.");
+            }
+
+            // Reuses the existing timezone + ordering checks rather than
+            // re-validating the same thing a second way
+            var (startTime, endTime) = ValidateSlotWindow(request.StartTime, request.EndTime);
+
+            // Rejects a second slot that starts at the exact same time as an
+            // existing one for this station — that would just be a confusing
+            // duplicate of the same bookable window
+            var duplicateExists = await _slots
+                .Find(s => s.StationId == stationId && s.StartTime == startTime)
+                .AnyAsync();
+
+            if (duplicateExists)
+            {
+                throw new InvalidOperationException(
+                    $"Station '{stationId}' already has a slot starting at {startTime:O}.");
+            }
+
+            var newSlot = new EnergyBookingSlot
+            {
+                // Server-generated and naturally unique per station + start
+                // time — the client never supplies this
+                SlotId = $"{stationId}-{startTime:yyyyMMddHHmm}",
+                StationId = stationId,
+                StartTime = startTime,
+                EndTime = endTime,
+                IsAvailable = true
+            };
+
+            await _slots.InsertOneAsync(newSlot);
+
+            return newSlot;
         }
     }
 }

@@ -15,6 +15,7 @@ namespace API.Controllers
     public class StationsController : ControllerBase
     {
         private readonly StationService _service;
+        private readonly SlotService _slotService;
 
         public StationsController(StationService service)
         {
@@ -292,6 +293,71 @@ namespace API.Controllers
             catch (InvalidOperationException ex)
             {
                 // Blocked because a reservation still references this station
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        // Create a slots for station. (Backoffice only)
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPost("{stationId}/slots")]
+        public async Task<IActionResult> CreateSlot(string stationId, [FromBody] CreateSlotRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(stationId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station ID is required."
+                });
+            }
+ 
+            if (request == null)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "A slot request body is required."
+                });
+            }
+ 
+            try
+            {
+                // Delegates to SlotService, which still owns the
+                // EnergyBookingSlots collection and all slot business rules
+                var slot = await _slotService.CreateSlotAsync(stationId, request);
+ 
+                return Ok(new
+                {
+                    success = true,
+                    message = "Slot created successfully.",
+                    data = slot
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // The referenced station doesn't exist
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                // Missing timezone, inverted time window
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Duplicate slot start time for this station
                 return Conflict(new
                 {
                     success = false,
