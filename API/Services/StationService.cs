@@ -17,11 +17,16 @@ namespace API.Services
         // Needed to check for active reservations before a station is deactivated.
         private readonly IMongoCollection<EnergyReservation> _reservations;
 
+        // Needed to check for existing slots before a station is deleted, so no
+        // slot document is ever left pointing at a station that no longer exists.
+        private readonly IMongoCollection<EnergyBookingSlot> _slots;
+
         public StationService(MongoDbContext context)
         {
             // Asks the shared (singleton) MongoDB context for the SolarStationInfo collection, using the shared name constant rather than a literal string
             _stations = context.GetCollection<SolarStation>(MongoCollectionNames.SolarStationInfo);
             _reservations = context.GetCollection<EnergyReservation>(MongoCollectionNames.EnergyReservation);
+            _slots = context.GetCollection<EnergyBookingSlot>(MongoCollectionNames.EnergyBookingSlots);
         }
 
         // Validates required field, rejects a duplicate station ID, inserts the new station.
@@ -268,10 +273,21 @@ namespace API.Services
                     $"Station '{stationId}' cannot be deleted because reservations reference it.");
             }
 
+            // Blocks deletion while slots still exist for this station (removes the creation of orphan slots)
+            var hasAnySlots = await _slots
+                .Find(s => s.StationId == stationId)
+                .AnyAsync();
+
+            if (hasAnySlots)
+            {
+                throw new InvalidOperationException(
+                    $"Station '{stationId}' cannot be deleted because it still has slots. Delete them first.");
+            }
+
             // Permanently removes the document (Not a soft delete)
             await _stations.DeleteOneAsync(s => s.StationId == stationId);
 
-            // Returns the now-deleted station's data to confirm exactly what was removed
+            // Returns the deleted station's data
             return station;
         }
 

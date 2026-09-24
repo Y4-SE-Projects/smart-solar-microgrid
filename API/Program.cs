@@ -19,7 +19,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
 builder.Services.AddSingleton<MongoDbContext>();
 
-builder.Services.AddScoped<ReservationOperationsService>();
 // JWT configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.AddSingleton<JwtTokenService>();
@@ -31,6 +30,8 @@ builder.Services.Configure<SeedAdminSettings>(builder.Configuration.GetSection("
 // Application services
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<StationService>();
+builder.Services.AddScoped<SlotService>();
+builder.Services.AddScoped<ReservationOperationsService>();
 
 // Controllers
 builder.Services.AddControllers();

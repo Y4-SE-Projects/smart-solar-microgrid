@@ -15,11 +15,13 @@ namespace API.Controllers
     public class StationsController : ControllerBase
     {
         private readonly StationService _service;
+        private readonly SlotService _slotService;
 
-        public StationsController(StationService service)
+        public StationsController(StationService service, SlotService slotService)
         {
-            // Stores the injected service, this controller only handles HTTP concerns
+            // Stores the injected services, this controller only handles HTTP concerns
             _service = service;
+            _slotService = slotService;
         }
 
         // Creates a new microgrid station. (Backoffice only)
@@ -298,6 +300,104 @@ namespace API.Controllers
                     message = ex.Message
                 });
             }
+        }
+
+        // Create a slots for station. (Backoffice only)
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPost("{stationId}/slots")]
+        public async Task<IActionResult> CreateSlot(string stationId, [FromBody] CreateSlotRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(stationId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station ID is required."
+                });
+            }
+ 
+            if (request == null)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "A slot request body is required."
+                });
+            }
+ 
+            try
+            {
+                // Delegates to SlotService, which still owns the
+                // EnergyBookingSlots collection and all slot business rules
+                var slot = await _slotService.CreateSlotAsync(stationId, request);
+ 
+                return Ok(new
+                {
+                    success = true,
+                    message = "Slot created successfully.",
+                    data = slot
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                // The referenced station doesn't exist
+                return NotFound(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                // Missing timezone, inverted time window
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Duplicate slot start time for this station
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
+
+        // Get slots from a single station.
+        [Authorize]
+        [HttpGet("{stationId}/slots")]
+        public async Task<IActionResult> GetSlotsForStation(string stationId)
+        {
+            if (string.IsNullOrWhiteSpace(stationId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station ID is required."
+                });
+            }
+ 
+            var slots = await _slotService.GetSlotsForStationAsync(stationId);
+ 
+            // Service returns null, when the station itself doesn't exist. 200 if station exist but no slots (empty list)
+            if (slots == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = $"No station found with ID '{stationId}'."
+                });
+            }
+ 
+            return Ok(new
+            {
+                success = true,
+                data = slots
+            });
         }
     }
 }
