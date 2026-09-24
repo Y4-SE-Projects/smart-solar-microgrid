@@ -15,6 +15,7 @@ const BREADCRUMB_LABELS = {
   '/stations': 'Solar Stations & Nodes',
   '/prosumers': 'Prosumer Users',
   '/staff': 'Staff Accounts',
+  '/schedules': 'Energy Slot Schedules',
 };
 
 export default function AppLayout() {

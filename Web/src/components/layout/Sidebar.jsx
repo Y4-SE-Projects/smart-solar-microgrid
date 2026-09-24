@@ -13,7 +13,7 @@ const NAV_ITEMS = [
   { label: 'Solar Stations & Nodes', to: '/stations', icon: 'solar_power', roles: [Roles.Backoffice] },
   { label: 'Prosumer Users', to: '/prosumers', icon: 'group', roles: [Roles.Backoffice] },
   { label: 'Staff Accounts', to: '/staff', icon: 'badge', roles: [Roles.Backoffice] },
-  { label: 'Energy Slot Schedules', icon: 'calendar_today', disabled: true },
+  { label: 'Energy Slot Schedules', to: '/schedules', icon: 'calendar_today' },
   { label: 'Reservation Oversight', icon: 'event_available', disabled: true },
 ];
 
