@@ -17,10 +17,11 @@ namespace API.Controllers
         private readonly StationService _service;
         private readonly SlotService _slotService;
 
-        public StationsController(StationService service)
+        public StationsController(StationService service, SlotService slotService)
         {
-            // Stores the injected service, this controller only handles HTTP concerns
+            // Stores the injected services, this controller only handles HTTP concerns
             _service = service;
+            _slotService = slotService;
         }
 
         // Creates a new microgrid station. (Backoffice only)

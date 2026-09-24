@@ -15,10 +15,14 @@ namespace API.Services
         private readonly IMongoCollection<EnergyBookingSlot> _slots;
         private readonly IMongoCollection<SolarStation> _stations;
 
+        // Needed to block a slot edit or re-availability while a reservation still references it
+        private readonly IMongoCollection<EnergyReservation> _reservations;
+
         public SlotService(MongoDbContext context)
         {
             _slots = context.GetCollection<EnergyBookingSlot>(MongoCollectionNames.EnergyBookingSlots);
             _stations = context.GetCollection<SolarStation>(MongoCollectionNames.SolarStationInfo);
+            _reservations = context.GetCollection<EnergyReservation>(MongoCollectionNames.EnergyReservation);
         }
 
         // Rejects a timestamp with no timezone.
@@ -96,16 +100,103 @@ namespace API.Services
             var station = await _stations
                 .Find(s => s.StationId == stationId)
                 .FirstOrDefaultAsync();
- 
+
             if (station == null)
             {
                 return null;
             }
- 
+
             return await _slots
                 .Find(s => s.StationId == stationId)
                 .SortBy(s => s.StartTime)
                 .ToListAsync();
+        }
+
+        // Updates a slot's time window. Blocked while a Pending or Approved reservation
+        // still references this slot, since a silent time change would disagree with
+        // that reservation's already-recorded ScheduledTime.
+        public async Task<EnergyBookingSlot?> UpdateSlotAsync(string slotId, UpdateSlotRequest request)
+        {
+            var slot = await _slots
+                .Find(s => s.SlotId == slotId)
+                .FirstOrDefaultAsync();
+
+            if (slot == null)
+            {
+                return null;
+            }
+
+            // Reuses the same timezone and ordering checks used on create
+            var (startTime, endTime) = ValidateSlotWindow(request.StartTime, request.EndTime);
+
+            var hasActiveReservation = await _reservations
+                .Find(r => r.SlotId == slotId &&
+                           (r.Status == "Pending" || r.Status == "Approved"))
+                .AnyAsync();
+
+            if (hasActiveReservation)
+            {
+                throw new InvalidOperationException(
+                    $"Slot '{slotId}' cannot be changed while a reservation references it.");
+            }
+
+            // Rejects a different slot at the same station that already starts at this new time
+            var duplicateExists = await _slots
+                .Find(s => s.StationId == slot.StationId &&
+                           s.SlotId != slotId &&
+                           s.StartTime == startTime)
+                .AnyAsync();
+
+            if (duplicateExists)
+            {
+                throw new InvalidOperationException(
+                    $"Station '{slot.StationId}' already has a slot starting at {startTime:O}.");
+            }
+
+            var update = Builders<EnergyBookingSlot>.Update
+                .Set(s => s.StartTime, startTime)
+                .Set(s => s.EndTime, endTime);
+
+            return await _slots.FindOneAndUpdateAsync(
+                s => s.SlotId == slotId,
+                update,
+                new FindOneAndUpdateOptions<EnergyBookingSlot> { ReturnDocument = ReturnDocument.After });
+        }
+
+        // Flips a slot's availability. Marking it available again is blocked while a
+        // Pending or Approved reservation still holds it, so a Grid Operator override
+        // cannot open a slot for double-booking behind an active reservation's back.
+        public async Task<EnergyBookingSlot?> SetSlotAvailabilityAsync(string slotId, bool isAvailable)
+        {
+            var slot = await _slots
+                .Find(s => s.SlotId == slotId)
+                .FirstOrDefaultAsync();
+
+            if (slot == null)
+            {
+                return null;
+            }
+
+            if (isAvailable)
+            {
+                var hasActiveReservation = await _reservations
+                    .Find(r => r.SlotId == slotId &&
+                               (r.Status == "Pending" || r.Status == "Approved"))
+                    .AnyAsync();
+
+                if (hasActiveReservation)
+                {
+                    throw new InvalidOperationException(
+                        $"Slot '{slotId}' cannot be marked available while a reservation references it.");
+                }
+            }
+
+            var update = Builders<EnergyBookingSlot>.Update.Set(s => s.IsAvailable, isAvailable);
+
+            return await _slots.FindOneAndUpdateAsync(
+                s => s.SlotId == slotId,
+                update,
+                new FindOneAndUpdateOptions<EnergyBookingSlot> { ReturnDocument = ReturnDocument.After });
         }
     }
 }
