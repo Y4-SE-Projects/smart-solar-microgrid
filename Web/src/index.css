@@ -1,1 +1,163 @@
 @import "tailwindcss";
+
+@theme {
+  /* Font */
+  --font-sans: "Inter", sans-serif;
+
+  /* Colors — Material-3-style surface/on-surface tokens, as used
+     directly as Tailwind class names throughout both mockups. */
+  --color-surface: #faf8ff;
+  --color-surface-dim: #d2d9f4;
+  --color-surface-bright: #faf8ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f3ff;
+  --color-surface-container: #eaedff;
+  --color-surface-container-high: #e2e7ff;
+  --color-surface-container-highest: #dae2fd;
+  --color-on-surface: #131b2e;
+  --color-on-surface-variant: #404945;
+  --color-inverse-surface: #283044;
+  --color-inverse-on-surface: #eef0ff;
+  --color-outline: #707975;
+  --color-outline-variant: #bfc9c3;
+  --color-surface-tint: #2f6858;
+  --color-primary: #003025;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #044839;
+  --color-on-primary-container: #7cb6a2;
+  --color-inverse-primary: #98d2be;
+  --color-secondary: #006c4a;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #7bf6bf;
+  --color-on-secondary-container: #00714e;
+  --color-tertiary: #002f32;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #1b4549;
+  --color-on-tertiary-container: #89b2b6;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-primary-fixed: #b3efda;
+  --color-primary-fixed-dim: #98d2be;
+  --color-on-primary-fixed: #002018;
+  --color-on-primary-fixed-variant: #125041;
+  --color-secondary-fixed: #7ef9c2;
+  --color-secondary-fixed-dim: #60dca7;
+  --color-on-secondary-fixed: #002114;
+  --color-on-secondary-fixed-variant: #005237;
+  --color-tertiary-fixed: #c0eaef;
+  --color-tertiary-fixed-dim: #a4ced2;
+  --color-on-tertiary-fixed: #002022;
+  --color-on-tertiary-fixed-variant: #244d51;
+  --color-background: #faf8ff;
+  --color-on-background: #131b2e;
+  --color-surface-variant: #dae2fd;
+
+  /* Custom semantic tokens layered on top of the Material-3 set */
+  --color-mint-surface: #C8EFC1;
+  --color-solar-lime: #CBF39D;
+  --color-alert-danger: #720613;
+  --color-operational-blue: #2180E6;
+  --color-canvas-bg: #F8FAF9;
+  --color-border-slate: #E2E8F0;
+
+  /* Spacing — named scale from DESIGN.md, used as px-gutter, py-space-md,
+     mt-margin-lg, etc. alongside Tailwind's normal numeric scale. */
+  --spacing-gutter: 1rem;
+  --spacing-gutter-lg: 1.5rem;
+  --spacing-margin: 1rem;
+  --spacing-margin-md: 1.5rem;
+  --spacing-margin-lg: 2rem;
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 0.75rem;
+  --spacing-space-lg: 1rem;
+  --spacing-space-xl: 1.5rem;
+
+  /* Typography — named text styles from DESIGN.md. Each pairs a font
+     size with its own line-height (and letter-spacing where specified)
+     via Tailwind v4's paired-property syntax, so e.g. `text-headline-sm`
+     alone sets both. Font WEIGHT is applied separately via ordinary
+     font-semibold/font-bold utilities in component markup, since v4
+     doesn't pair weight into the text-size utility itself. */
+  --text-headline-xl: 32px;
+  --text-headline-xl--line-height: 40px;
+  --text-headline-xl--letter-spacing: -0.02em;
+
+  --text-headline-lg: 24px;
+  --text-headline-lg--line-height: 32px;
+  --text-headline-lg--letter-spacing: -0.015em;
+
+  --text-headline-md: 20px;
+  --text-headline-md--line-height: 28px;
+  --text-headline-md--letter-spacing: -0.01em;
+
+  --text-headline-sm: 16px;
+  --text-headline-sm--line-height: 24px;
+
+  --text-title-md: 14px;
+  --text-title-md--line-height: 20px;
+
+  --text-body-lg: 16px;
+  --text-body-lg--line-height: 24px;
+
+  --text-body-md: 14px;
+  --text-body-md--line-height: 20px;
+
+  --text-body-sm: 12px;
+  --text-body-sm--line-height: 16px;
+
+  --text-label-lg: 14px;
+  --text-label-lg--line-height: 20px;
+
+  --text-label-md: 12px;
+  --text-label-md--line-height: 16px;
+
+  --text-label-sm: 11px;
+  --text-label-sm--line-height: 14px;
+  --text-label-sm--letter-spacing: 0.04em;
+
+  --text-metric-num: 28px;
+  --text-metric-num--line-height: 32px;
+  --text-metric-num--letter-spacing: -0.02em;
+}
+
+@layer base {
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    background-color: var(--color-canvas-bg);
+    color: var(--color-on-surface);
+  }
+}
+
+/* Google's standard boilerplate for the "Material Symbols Outlined"
+   ligature icon font (loaded via <link> in index.html). Required for
+   <span class="material-symbols-outlined">icon_name</span> to render as
+   an icon glyph instead of literal text — this is a plain CSS class, not
+   a Tailwind utility, so it has to be defined by hand. */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tabular figures for live telemetry/metric values (kW readings, prices,
+   pendingCount, approvedFutureCount) per DESIGN.md's Typography section —
+   keeps digits from jittering in width as values update in real time. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
