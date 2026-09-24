@@ -33,15 +33,19 @@ export default function LoginPage() {
 
       if (data.role === Roles.Backoffice) {
         login(data);
-        navigate('/prosumers', { replace: true });
+        navigate('/stations', { replace: true });
+        return;
+      }
+
+      if (data.role === Roles.GridOperator) {
+        login(data);
+        navigate('/schedules', { replace: true });
         return;
       }
 
       // Valid credentials, but the wrong surface for this role.
       if (data.role === Roles.Prosumer) {
         setErrorMessage('Prosumer accounts sign in through the HelioGrid mobile app, not the web console.');
-      } else if (data.role === Roles.GridOperator) {
-        setErrorMessage('Grid Operator web access is coming in a later phase. Please use the mobile app for now.');
       } else {
         setErrorMessage('This account role is not supported on the web console.');
       }
@@ -63,7 +67,7 @@ export default function LoginPage() {
           </span>
           <span className="text-headline-sm font-semibold text-primary tracking-tight">HelioGrid</span>
           <span className="text-label-md px-space-xs py-0.5 bg-surface-container-high text-on-surface rounded">
-            Backoffice Core
+            Operations Console
           </span>
         </div>
       </header>
@@ -77,7 +81,7 @@ export default function LoginPage() {
 
           {/* Title */}
           <div className="mb-space-lg flex flex-col items-center text-center">
-            <h1 className="text-headline-md font-semibold text-primary tracking-tight">Backoffice Portal</h1>
+            <h1 className="text-headline-md font-semibold text-primary tracking-tight">Web Console Login</h1>
             <p className="text-body-md text-on-surface-variant mt-1">Enter your credentials to access the console</p>
           </div>
 
@@ -182,7 +186,7 @@ export default function LoginPage() {
       {/* Footer */}
       <footer className="w-full py-space-xl px-gutter flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto gap-space-md text-center sm:text-left">
         <div className="w-full flex items-center justify-center text-on-surface-variant text-body-sm">
-          <span className="text-outline-variant">© HelioGrid Backoffice System</span>
+          <span className="text-outline-variant">© HelioGrid Web Console</span>
         </div>
       </footer>
     </div>
