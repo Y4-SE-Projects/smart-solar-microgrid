@@ -198,5 +198,36 @@ namespace API.Services
                 update,
                 new FindOneAndUpdateOptions<EnergyBookingSlot> { ReturnDocument = ReturnDocument.After });
         }
+
+        // Permanently removes a slot. Blocked if any reservation, in any status, was ever made against it
+        public async Task<EnergyBookingSlot?> DeleteSlotAsync(string slotId)
+        {
+            // Looks up the slot (404 if not found)
+            var slot = await _slots
+                .Find(s => s.SlotId == slotId)
+                .FirstOrDefaultAsync();
+
+            if (slot == null)
+            {
+                return null;
+            }
+
+            // Blocks deletion if any reservation, in any status, references this slot
+            var hasAnyReservations = await _reservations
+                .Find(r => r.SlotId == slotId)
+                .AnyAsync();
+
+            if (hasAnyReservations)
+            {
+                throw new InvalidOperationException(
+                    $"Slot '{slotId}' cannot be deleted because reservations reference it.");
+            }
+
+            // Permanently removes the document (not a soft delete)
+            await _slots.DeleteOneAsync(s => s.SlotId == slotId);
+
+            // Returns the deleted slot's data
+            return slot;
+        }
     }
 }

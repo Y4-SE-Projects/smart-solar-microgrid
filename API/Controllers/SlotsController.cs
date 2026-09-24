@@ -138,5 +138,50 @@ namespace API.Controllers
                 });
             }
         }
+
+        // Permanently delets a slot. (Backoffice only)
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpDelete("{slotId}")]
+        public async Task<IActionResult> DeleteSlot(string slotId)
+        {
+            if (string.IsNullOrWhiteSpace(slotId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Slot ID is required."
+                });
+            }
+
+            try
+            {
+                var slot = await _service.DeleteSlotAsync(slotId);
+
+                if (slot == null)
+                {
+                    return NotFound(new
+                    {
+                        success = false,
+                        message = $"No slot found with ID '{slotId}'."
+                    });
+                }
+
+                return Ok(new
+                {
+                    success = true,
+                    message = "Slot deleted successfully.",
+                    data = slot
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Blocked because a reservation still references this slot
+                return Conflict(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+        }
     }
 }
