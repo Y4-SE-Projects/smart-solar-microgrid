@@ -2,7 +2,7 @@
  * Purpose: Reusable MongoDB lookup/creation methods against the Users collection.
  * Author: IT23218512
  */
- 
+
 using API.Data;
 using API.Models;
 using MongoDB.Driver;
@@ -94,6 +94,18 @@ namespace API.Services
         public async Task<List<User>> GetPendingDeactivationAsync()
         {
             return await _users.Find(u => u.Role == Roles.Prosumer && !u.IsActive).ToListAsync();
+        }
+
+        // Returns every Prosumer account regardless of status (active and deactivated), for the Backoffice master prosumer directory.
+        public async Task<List<User>> GetAllProsumersAsync()
+        {
+            return await _users.Find(u => u.Role == Roles.Prosumer).ToListAsync();
+        }
+
+        // Returns every Backoffice/GridOperator account, for the Backoffice staff-management screen.
+        public async Task<List<User>> GetStaffAsync()
+        {
+            return await _users.Find(u => u.Role == Roles.Backoffice || u.Role == Roles.GridOperator).ToListAsync();
         }
     }
 }
