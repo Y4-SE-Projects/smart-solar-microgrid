@@ -1,7 +1,12 @@
-/* File: Program.cs */
+/* File: Program.cs
+ * Purpose: Configures MongoDB, JWT bearer authentication, CORS, Swagger, request logging, and maps all
+ *          controllers/minimal-API endpoints for the Smart Solar Microgrid API.
+ * Author: All 4 Members
+ */
 
 using API.Settings;
 using API.Data;
+using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -18,6 +23,10 @@ builder.Services.AddScoped<ReservationOperationsService>();
 // JWT configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.AddSingleton<JwtTokenService>();
+
+// Seed-admin configuration. 
+// The credentials used to create the first Backoffice account on startup if one doesn't already exist.
+builder.Services.Configure<SeedAdminSettings>(builder.Configuration.GetSection("SeedAdminSettings"));
 
 // Application services
 builder.Services.AddScoped<UserService>();
@@ -96,6 +105,52 @@ try
 catch (Exception ex)
 {
     Console.WriteLine($"MongoDB connection FAILED: {ex.Message}");
+}
+
+// Seed the first Backoffice account if none exists yet.
+// Register now refuses to create Backoffice/GridOperator accounts unless the caller is already an authenticated Backoffice user. 
+// So without this seed there would be no way to create the very first one. 
+// ( Runs once per startup and is a no-op on every run after the first Backoffice account exists. Therefore, it's safe to leave in place permanently rather than removing it after first use. )
+using (var scope = app.Services.CreateScope())
+{
+    try
+    {
+        var userService = scope.ServiceProvider.GetRequiredService<UserService>();
+        var seedSettings = scope.ServiceProvider
+            .GetRequiredService<Microsoft.Extensions.Options.IOptions<SeedAdminSettings>>().Value;
+
+        var anyBackofficeExists = await userService.AnyBackofficeExistsAsync();
+        if (!anyBackofficeExists)
+        {
+            if (string.IsNullOrWhiteSpace(seedSettings.Username) || string.IsNullOrWhiteSpace(seedSettings.Password))
+            {
+                Console.WriteLine("No Backoffice account exists and SeedAdminSettings is not configured — skipping seed. Add a SeedAdminSettings section to appsettings.json.");
+            }
+            else
+            {
+                var seedUser = new User
+                {
+                    Username = seedSettings.Username,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedSettings.Password),
+                    Role = Roles.Backoffice,
+                    FullName = seedSettings.FullName,
+                    Email = seedSettings.Email,
+                    Phone = seedSettings.Phone,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await userService.CreateUserAsync(seedUser);
+                Console.WriteLine($"Seeded initial Backoffice account: \"{seedSettings.Username}\". Log in and change this password, or create your real admin accounts and stop using this one.");
+            }
+        }
+    }
+    catch (Exception ex)
+    {
+        // Never let a seeding failure prevent the API from starting. 
+        // ( The rest of the system (login, all other endpoints) works regardless )
+        Console.WriteLine($"Backoffice seed check FAILED: {ex.Message}");
+    }
 }
 
 if (app.Environment.IsDevelopment())

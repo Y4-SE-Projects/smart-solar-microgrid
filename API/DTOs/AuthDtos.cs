@@ -1,9 +1,10 @@
 /* File: AuthDtos.cs
  * Purpose: Request / response shapes for the register and login endpoints.
- * (Kept separate from User.cs because these describe what the client sends/receives over HTTP, not what's stored in MongoDB.)
+ * (Kept separate from User.cs because these describe what the client sends/receives over HTTP, 
+ * not what's stored in MongoDB.)
  * Author: IT23218512
  */
- 
+
 namespace API.DTOs
 {
     // Body for POST /api/users/register
@@ -61,7 +62,7 @@ namespace API.DTOs
         public string? Reason { get; set; }
     }
 
-    // Safe shape returned by profile-related endpoints. 
+    // Safe shape returned by profile-related endpoints.
     // Deliberately excludes PasswordHash — that should never leave the server.
     public class UserProfileResponse
     {
@@ -76,8 +77,25 @@ namespace API.DTOs
         public string? DeactivationReason { get; set; }
         public DateTime? DeactivatedAt { get; set; }
 
-        // Computed server-side from DeactivatedAt 
+        // Computed server-side from DeactivatedAt
         // The client doesn't need to do its own date math (or worry about timezones).
         public int? DaysElapsed { get; set; }
+    }
+
+    // Safe shape returned by GET /api/users/staff — Backoffice/GridOperator accounts. 
+    // Username-keyed (not NIC) and has no deactivation-reason fields, since those only apply to Prosumer accounts. 
+    // Deliberately excludes PasswordHash, same as UserProfileResponse.
+    public class StaffProfileResponse
+    {
+        public string Username { get; set; } = string.Empty;
+
+        // Roles.Backoffice or Roles.GridOperator.
+        public string Role { get; set; } = string.Empty;
+
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 }
