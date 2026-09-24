@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './router/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
 import LoginPage from './pages/LoginPage';
+import StationsManagementPage from './pages/StationsManagementPage';
 import ProsumerManagementPage from './pages/ProsumerManagementPage';
 import StaffManagementPage from './pages/StaffManagementPage';
 import { Roles } from './constants/roles';
@@ -20,7 +21,8 @@ function App() {
           {/* Backoffice-only area. GridOperator is Web + Mobile per the role table. */}
           <Route element={<ProtectedRoute allowedRoles={[Roles.Backoffice]} />}>
             <Route element={<AppLayout />}>
-              <Route path="/" element={<Navigate to="/prosumers" replace />} />
+              <Route path="/" element={<Navigate to="/stations" replace />} />
+              <Route path="/stations" element={<StationsManagementPage />} />
               <Route path="/prosumers" element={<ProsumerManagementPage />} />
               <Route path="/staff" element={<StaffManagementPage />} />
             </Route>
