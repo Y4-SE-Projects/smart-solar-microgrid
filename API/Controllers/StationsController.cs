@@ -365,5 +365,38 @@ namespace API.Controllers
                 });
             }
         }
+
+        // Get slots from a single station.
+        [Authorize]
+        [HttpGet("{stationId}/slots")]
+        public async Task<IActionResult> GetSlotsForStation(string stationId)
+        {
+            if (string.IsNullOrWhiteSpace(stationId))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Station ID is required."
+                });
+            }
+ 
+            var slots = await _slotService.GetSlotsForStationAsync(stationId);
+ 
+            // Service returns null, when the station itself doesn't exist. 200 if station exist but no slots (empty list)
+            if (slots == null)
+            {
+                return NotFound(new
+                {
+                    success = false,
+                    message = $"No station found with ID '{stationId}'."
+                });
+            }
+ 
+            return Ok(new
+            {
+                success = true,
+                data = slots
+            });
+        }
     }
 }

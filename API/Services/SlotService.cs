@@ -21,8 +21,7 @@ namespace API.Services
             _stations = context.GetCollection<SolarStation>(MongoCollectionNames.SolarStationInfo);
         }
 
-        // Rejects a timestamp with no timezone, because .NET reads it as server local time and
-        // silently shifts it. Returns the value converted to UTC.
+        // Rejects a timestamp with no timezone.
         public static DateTime RequireExplicitTimeZone(DateTime value, string fieldName)
         {
             if (value.Kind == DateTimeKind.Unspecified)
@@ -53,9 +52,7 @@ namespace API.Services
         // Creates one bookable slot for an existing station.
         public async Task<EnergyBookingSlot> CreateSlotAsync(string stationId, CreateSlotRequest request)
         {
-            // Confirms the referenced station actually exists — stationId here
-            // is a foreign key, and a typo'd one would otherwise silently
-            // create a slot with no matching station behind it
+            // Confirms the referenced station actually exists.
             var station = await _stations
                 .Find(s => s.StationId == stationId)
                 .FirstOrDefaultAsync();
@@ -65,13 +62,10 @@ namespace API.Services
                 throw new KeyNotFoundException($"No station found with ID '{stationId}'.");
             }
 
-            // Reuses the existing timezone + ordering checks rather than
-            // re-validating the same thing a second way
+            // Reuses the existing timezone with ordering checks rather than re-validating the same thing a second way
             var (startTime, endTime) = ValidateSlotWindow(request.StartTime, request.EndTime);
 
-            // Rejects a second slot that starts at the exact same time as an
-            // existing one for this station — that would just be a confusing
-            // duplicate of the same bookable window
+            // Rejects a second slot that starts at the exact same time as an existing one is available
             var duplicateExists = await _slots
                 .Find(s => s.StationId == stationId && s.StartTime == startTime)
                 .AnyAsync();
@@ -84,8 +78,6 @@ namespace API.Services
 
             var newSlot = new EnergyBookingSlot
             {
-                // Server-generated and naturally unique per station + start
-                // time — the client never supplies this
                 SlotId = $"{stationId}-{startTime:yyyyMMddHHmm}",
                 StationId = stationId,
                 StartTime = startTime,
@@ -96,6 +88,24 @@ namespace API.Services
             await _slots.InsertOneAsync(newSlot);
 
             return newSlot;
+        }
+
+        // Lists every slot for a station, chronological order.
+        public async Task<List<EnergyBookingSlot>?> GetSlotsForStationAsync(string stationId)
+        {
+            var station = await _stations
+                .Find(s => s.StationId == stationId)
+                .FirstOrDefaultAsync();
+ 
+            if (station == null)
+            {
+                return null;
+            }
+ 
+            return await _slots
+                .Find(s => s.StationId == stationId)
+                .SortBy(s => s.StartTime)
+                .ToListAsync();
         }
     }
 }
