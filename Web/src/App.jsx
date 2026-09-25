@@ -11,6 +11,7 @@ import ProsumerManagementPage from './pages/ProsumerManagementPage';
 import StaffManagementPage from './pages/StaffManagementPage';
 import SlotSchedulesPage from './pages/SlotSchedulesPage';
 import { Roles } from './constants/roles';
+import ReservationOversightPage from './pages/ReservationOversightPage';
 
 // "/" has no single fixed destination anymore — Backoffice and GridOperator each land
 // on a different home page, so this picks the right one from the logged-in session.
@@ -41,6 +42,11 @@ function App() {
                 <Route path="/stations" element={<StationsManagementPage />} />
                 <Route path="/prosumers" element={<ProsumerManagementPage />} />
                 <Route path="/staff" element={<StaffManagementPage />} />
+              </Route>
+              
+              {/* GridOperator-only pages */}
+              <Route element={<ProtectedRoute allowedRoles={[Roles.GridOperator]} />}>
+                <Route path="/reservations" element={<ReservationOversightPage />} />
               </Route>
             </Route>
           </Route>
