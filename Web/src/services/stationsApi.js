@@ -4,8 +4,11 @@
 import apiClient from './api';
 
 // Lists every station (active and inactive) so Backoffice can still find and reactivate a deactivated one.
-export function fetchStations() {
-  return apiClient.get('/stations');
+export function fetchStations(activeOnly = false) {
+  return apiClient.get(
+    '/stations',
+    activeOnly ? { params: { activeOnly: true } } : undefined
+  );
 }
 
 export function createStation(payload) {
