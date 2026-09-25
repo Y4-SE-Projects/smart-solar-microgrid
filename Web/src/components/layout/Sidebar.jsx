@@ -14,7 +14,7 @@ const NAV_ITEMS = [
   { label: 'Prosumer Users', to: '/prosumers', icon: 'group', roles: [Roles.Backoffice] },
   { label: 'Staff Accounts', to: '/staff', icon: 'badge', roles: [Roles.Backoffice] },
   { label: 'Energy Slot Schedules', to: '/schedules', icon: 'calendar_today' },
-  { label: 'Reservation Oversight', icon: 'event_available', disabled: true },
+  { label: 'Reservation Oversight', to: '/reservations', icon: 'event_available', roles: [Roles.GridOperator] },
 ];
 
 // Computes the "BA" / "JD"-style initials shown in the footer avatar from the session's fullName.

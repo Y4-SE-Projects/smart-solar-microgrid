@@ -16,6 +16,7 @@ const BREADCRUMB_LABELS = {
   '/prosumers': 'Prosumer Users',
   '/staff': 'Staff Accounts',
   '/schedules': 'Energy Slot Schedules',
+  '/reservations': 'Reservation Oversight',
 };
 
 export default function AppLayout() {
