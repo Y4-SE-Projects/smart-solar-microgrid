@@ -3,8 +3,9 @@
 
 import apiClient from './api';
 
-export function fetchSlotsForStation(stationId) {
-  return apiClient.get(`/stations/${stationId}/slots`);
+// Pass a month ('yyyy-MM') for that month's slots; omit it for all of them.
+export function fetchSlotsForStation(stationId, month) {
+  return apiClient.get(`/stations/${stationId}/slots`, { params: month ? { month } : undefined });
 }
 
 // Backoffice only. Creates one slot per selected weekday within a date range, skipping any
