@@ -6,11 +6,12 @@ import Modal from '../ui/Modal';
 import LocationPickerMap from './LocationPickerMap';
 import ScheduleField from './ScheduleField';
 import { inputClass } from './formStyles';
+import { DEFAULT_SCHEDULE } from '../../utils/stationSchedule';
 
 // Builds the initial form state from an existing station (edit mode) or blank text fields (create mode).
 function toFormState(station) {
   if (!station) {
-    return { stationId: '', name: '', latitude: '', longitude: '', capacityKWh: '', batterySlotCount: '', schedule: '' };
+    return { stationId: '', name: '', latitude: '', longitude: '', capacityKWh: '', batterySlotCount: '', schedule: DEFAULT_SCHEDULE };
   }
   return {
     stationId: station.stationId,
