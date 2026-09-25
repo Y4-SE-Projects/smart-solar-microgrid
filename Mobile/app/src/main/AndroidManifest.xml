@@ -11,6 +11,7 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application
+        android:name=".SmartSolarApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -33,6 +34,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".activities.LoginActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".activities.ProsumerHomeActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.OperatorHomeActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
