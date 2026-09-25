@@ -33,7 +33,7 @@ export default function ScheduleField({ value, onChange }) {
         </p>
       ) : (
         <p className="text-body-sm text-on-surface-variant">
-          Slots can only be created inside these hours. The days a station runs are the days it has slots.
+          Slots can only be created inside these hours.
         </p>
       )}
     </div>
