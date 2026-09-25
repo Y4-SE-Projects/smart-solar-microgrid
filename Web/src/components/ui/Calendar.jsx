@@ -1,25 +1,21 @@
-// File: DateRangeCalendar.jsx
-// Purpose: Single-month date range picker drawn entirely with the app's own tokens.
-//          react-day-picker still owns the range logic, keyboard navigation and ARIA, but its
-//          default stylesheet is not loaded and the day cells are rendered here, so none of
-//          the library's own colours can leak through.
-//          Click a start day, then an end day. While waiting for the end day, hovering previews
-//          the range; clicking again after a range is complete starts a new one.
+// File: Calendar.jsx
+// Purpose: The app's month calendar, for picking one date (mode="single") or a range (mode="range").
+//          react-day-picker owns the selection logic, keyboard navigation and ARIA, but its default
+//          stylesheet is not loaded and the day cells are rendered here, so only the app's own
+//          tokens are used.
+//          Range mode: click a start day, then an end day. While waiting for the end day, hovering
+//          previews the range; clicking again after a range is complete starts a new one.
 
 import { useState } from 'react';
 import { DayPicker, Day, DayButton } from 'react-day-picker';
-
-function isSameDay(a, b) {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
+import { isSameDay } from '../../utils/time';
 
 function ordered(a, b) {
   return a <= b ? [a, b] : [b, a];
 }
 
-// Half-width band on the endpoint cells so the range reads as one continuous strip that
-// starts and ends at the centre of the endpoint circles. Rounded where a week row begins or
-// ends, so a range that wraps onto the next row doesn't end in a hard square edge.
+// Half-width band on the endpoint cells so a range reads as one continuous strip that starts and
+// ends at the centre of the endpoint circles. Rounded where a week row begins or ends.
 const ROW_EDGES = 'first:rounded-l-full last:rounded-r-full';
 const BAND = {
   middle: `bg-mint-surface ${ROW_EDGES}`,
@@ -48,8 +44,8 @@ function CalendarDay(props) {
   return <Day {...props} className={`h-9 p-0 ${band}`} />;
 }
 
-// Wraps the library's DayButton so its focus handling (keyboard navigation) is kept, with
-// every visual state decided here in one ordered chain instead of competing CSS classes.
+// Wraps the library's DayButton so its focus handling (keyboard navigation) is kept, with every
+// visual state decided here in one ordered chain instead of competing CSS classes.
 function CalendarDayButton(props) {
   const { modifiers } = props;
 
@@ -62,6 +58,8 @@ function CalendarDayButton(props) {
     state = 'text-primary font-semibold ring-1 ring-inset ring-secondary';
   } else if (modifiers.band_middle || modifiers.preview_middle) {
     state = 'text-primary hover:bg-on-surface/6';
+  } else if (modifiers.marked) {
+    state = 'bg-mint-surface text-primary font-semibold hover:bg-secondary-container';
   } else if (modifiers.today) {
     state = 'text-secondary font-semibold hover:bg-on-surface/6';
   } else {
@@ -89,8 +87,9 @@ function CalendarChevron({ orientation }) {
   );
 }
 
+// overflow-hidden: until the icon font loads, the ligature text is wide and would cover the other arrow
 const NAV_BUTTON =
-  'inline-flex size-8 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-on-surface/6 hover:text-on-surface outline-none focus-visible:ring-2 focus-visible:ring-secondary aria-disabled:pointer-events-none aria-disabled:opacity-30 disabled:pointer-events-none disabled:opacity-30';
+  'inline-flex size-8 items-center justify-center overflow-hidden rounded-full text-on-surface-variant transition-colors hover:bg-on-surface/6 hover:text-on-surface outline-none focus-visible:ring-2 focus-visible:ring-secondary aria-disabled:pointer-events-none aria-disabled:opacity-30 disabled:pointer-events-none disabled:opacity-30';
 
 const CLASS_NAMES = {
   root: 'w-full',
@@ -107,17 +106,28 @@ const CLASS_NAMES = {
 
 const COMPONENTS = { Day: CalendarDay, DayButton: CalendarDayButton, Chevron: CalendarChevron };
 
-export default function DateRangeCalendar({ value, onChange, minDate, maxRangeDays, disabled }) {
+export default function Calendar({
+  mode = 'single',
+  value,
+  onChange,
+  minDate,
+  maxRangeDays,
+  markedDays,
+  disabled = false,
+  month,
+  onMonthChange,
+}) {
   const [hoverDate, setHoverDate] = useState(null);
+  const isRange = mode === 'range';
 
-  const from = value?.from;
-  const to = value?.to;
-  const committed = from && to && !isSameDay(from, to) ? [from, to] : null;
-  const preview = from && !to && hoverDate && !isSameDay(hoverDate, from) ? ordered(from, hoverDate) : null;
+  const from = isRange ? value?.from : value;
+  const to = isRange ? value?.to : value;
+  const committed = isRange && from && to && !isSameDay(from, to) ? [from, to] : null;
+  const preview = isRange && from && !to && hoverDate && !isSameDay(hoverDate, from) ? ordered(from, hoverDate) : null;
 
   // Custom modifiers drive every visual state in CalendarDay / CalendarDayButton above
   const modifiers = {
-    endpoint: from ? (to ? [from, to] : [from]) : false,
+    endpoint: from ? (to && !isSameDay(from, to) ? [from, to] : [from]) : false,
     preview_endpoint: preview ? hoverDate : false,
     band_start: committed ? committed[0] : false,
     band_end: committed ? committed[1] : false,
@@ -125,25 +135,28 @@ export default function DateRangeCalendar({ value, onChange, minDate, maxRangeDa
     preview_start: preview ? preview[0] : false,
     preview_end: preview ? preview[1] : false,
     preview_middle: preview ? { after: preview[0], before: preview[1] } : false,
+    marked: markedDays?.length ? markedDays : false, // e.g. days that already have slots
   };
+
+  const selectionProps = isRange
+    ? { mode: 'range', required: true, resetOnSelect: true, max: maxRangeDays, selected: value, onSelect: onChange }
+    : { mode: 'single', required: true, selected: value, onSelect: onChange };
+
+  // Controlled month when the parent needs to move the view (e.g. a "Today" button)
+  const monthProps = month ? { month, onMonthChange } : { defaultMonth: from ?? minDate };
 
   return (
     <DayPicker
-      mode="range"
-      required
-      resetOnSelect
-      max={maxRangeDays}
-      selected={value}
-      onSelect={onChange}
-      disabled={disabled ? true : { before: minDate }}
+      {...selectionProps}
+      {...monthProps}
+      disabled={disabled ? true : minDate ? { before: minDate } : undefined}
       startMonth={minDate}
-      defaultMonth={from ?? minDate}
       weekStartsOn={1}
       fixedWeeks
       showOutsideDays={false}
       modifiers={modifiers}
-      onDayMouseEnter={(date, dayModifiers) => setHoverDate(dayModifiers.disabled ? null : date)}
-      onDayMouseLeave={() => setHoverDate(null)}
+      onDayMouseEnter={isRange ? (date, dayModifiers) => setHoverDate(dayModifiers.disabled ? null : date) : undefined}
+      onDayMouseLeave={isRange ? () => setHoverDate(null) : undefined}
       classNames={CLASS_NAMES}
       components={COMPONENTS}
     />

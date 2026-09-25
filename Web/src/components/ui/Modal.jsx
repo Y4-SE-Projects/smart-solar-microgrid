@@ -15,11 +15,12 @@ export default function Modal({ title, description, onClose, children, maxWidthC
     onCloseRef.current = onClose;
   });
 
-  // Moves focus into the dialog when it opens, and closes it on Escape.
+  // Moves focus into the dialog when it opens, and closes it on Escape unless a control inside
+  // (such as an open dropdown) already handled that key.
   useEffect(() => {
     panelRef.current?.focus();
     function handleKeyDown(event) {
-      if (event.key === 'Escape') onCloseRef.current();
+      if (event.key === 'Escape' && !event.defaultPrevented) onCloseRef.current();
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
