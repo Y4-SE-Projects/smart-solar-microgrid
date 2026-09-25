@@ -1,12 +1,13 @@
 // File: Modal.jsx
 // Purpose: Generic centered dialog shell, reused by every modal in the app.
 
-export default function Modal({ title, onClose, children, maxWidthClassName = 'max-w-lg' }) {
+export default function Modal({ title, onClose, children, maxWidthClassName = 'max-w-lg', scrollable = true }) {
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center px-gutter">
       <div className="absolute inset-0 bg-inverse-surface/40" onClick={onClose} />
       <div
-        className={`relative w-full ${maxWidthClassName} bg-surface-container-lowest rounded-2xl shadow-xl p-space-xl max-h-[90vh] overflow-y-auto`}
+        className={`relative w-full ${maxWidthClassName} bg-surface-container-lowest rounded-2xl shadow-xl p-space-xl ${scrollable ? 'max-h-[90vh] overflow-y-auto' : 'overflow-visible'
+          }`}
       >
         <div className="flex items-center justify-between mb-space-md">
           <h2 className="text-headline-sm font-bold text-primary">{title}</h2>
