@@ -2,4 +2,24 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- HelioGrid design tokens, taken from mobile_app_ui/DESIGN.md -->
+    <color name="primary">#003025</color>
+    <color name="primary_container">#044839</color>
+    <color name="on_primary">#FFFFFF</color>
+    <color name="secondary">#006C4A</color>
+    <color name="secondary_fixed">#7EF9C2</color>
+    <color name="surface">#FAF8FF</color>
+    <color name="surface_container_low">#F2F3FF</color>
+    <color name="surface_container_lowest">#FFFFFF</color>
+    <color name="on_surface">#131B2E</color>
+    <color name="on_surface_variant">#404945</color>
+    <color name="outline">#707975</color>
+    <color name="input_border">#CBD5E1</color>
+    <color name="border_slate">#E2E8F0</color>
+    <color name="mint_surface">#C8EFC1</color>
+    <color name="mint_border">#A7F3D0</color>
+    <color name="alert_danger">#720613</color>
+    <color name="error_container">#FFDAD6</color>
+    <color name="on_error_container">#93000A</color>
 </resources>
