@@ -2,6 +2,7 @@
 // Purpose: HTTP endpoints for microgrid station management.
 // Author: IT23215856
 
+using System.Globalization;
 using API.DTOs;
 using API.Models;
 using API.Services;
@@ -302,10 +303,10 @@ namespace API.Controllers
             }
         }
 
-        // Get slots from a single station.
+        // Get slots from a single station, or only one month's slots when month=yyyy-MM is given.
         [Authorize]
         [HttpGet("{stationId}/slots")]
-        public async Task<IActionResult> GetSlotsForStation(string stationId)
+        public async Task<IActionResult> GetSlotsForStation(string stationId, [FromQuery] string? month)
         {
             if (string.IsNullOrWhiteSpace(stationId))
             {
@@ -315,9 +316,28 @@ namespace API.Controllers
                     message = "Station ID is required."
                 });
             }
- 
-            var slots = await _slotService.GetSlotsForStationAsync(stationId);
- 
+
+            List<EnergyBookingSlot>? slots;
+
+            if (string.IsNullOrWhiteSpace(month))
+            {
+                slots = await _slotService.GetSlotsForStationAsync(stationId);
+            }
+            else
+            {
+                // Accepts a year and month only, e.g. 2026-09
+                if (!DateTime.TryParseExact(month, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var monthStart))
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "month must be in yyyy-MM format, e.g. 2026-09."
+                    });
+                }
+
+                slots = await _slotService.GetSlotsForStationInMonthAsync(stationId, monthStart.Year, monthStart.Month);
+            }
+
             // Service returns null, when the station itself doesn't exist. 200 if station exist but no slots (empty list)
             if (slots == null)
             {
@@ -335,7 +355,7 @@ namespace API.Controllers
             });
         }
 
-        // Generates one slot per selected weekday within a date range, skipping any day that already has a slot at that time.
+        // Creates one slot per selected weekday within a date range, skipping any day that already has a slot at that time.
         [Authorize(Roles = Roles.Backoffice)]
         [HttpPost("{stationId}/slots")]
         public async Task<IActionResult> GenerateRecurringSlots(string stationId, [FromBody] CreateSlotRequest request)
@@ -380,8 +400,17 @@ namespace API.Controllers
             }
             catch (ArgumentException ex)
             {
-                // Invalid day name, time format, or date range
+                // Invalid day name, time format, date range, or a time outside the station's hours
                 return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                // The station is deactivated or its schedule can't be read
+                return Conflict(new
                 {
                     success = false,
                     message = ex.Message

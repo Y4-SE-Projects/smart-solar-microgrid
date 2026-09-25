@@ -53,6 +53,35 @@ namespace API.Services
             return (start, end);
         }
 
+        // Converts the caller's UTC offset in minutes to a TimeSpan, rejecting offsets no real timezone uses
+        public static TimeSpan RequireUtcOffset(int utcOffsetMinutes)
+        {
+            if (utcOffsetMinutes < -720 || utcOffsetMinutes > 840)
+            {
+                throw new ArgumentException("utcOffsetMinutes must be between -720 and 840.");
+            }
+
+            return TimeSpan.FromMinutes(utcOffsetMinutes);
+        }
+
+        // Rejects slot changes on a deactivated station or one whose schedule can't be read, and returns the schedule
+        private static StationSchedule RequireSlotRules(SolarStation station)
+        {
+            if (!station.IsActive)
+            {
+                throw new InvalidOperationException(
+                    $"Station '{station.StationId}' is deactivated. Reactivate it before changing its slots.");
+            }
+
+            if (!StationSchedule.TryParse(station.Schedule, out var schedule))
+            {
+                throw new InvalidOperationException(
+                    $"Station '{station.StationId}' has no readable operating hours. Set them on the station first.");
+            }
+
+            return schedule!;
+        }
+
         // Lists every slot for a station, chronological order.
         public async Task<List<EnergyBookingSlot>?> GetSlotsForStationAsync(string stationId)
         {
@@ -67,6 +96,29 @@ namespace API.Services
 
             return await _slots
                 .Find(s => s.StationId == stationId)
+                .SortBy(s => s.StartTime)
+                .ToListAsync();
+        }
+
+        // Lists a station's slots that start in one calendar month, in chronological order
+        public async Task<List<EnergyBookingSlot>?> GetSlotsForStationInMonthAsync(string stationId, int year, int month)
+        {
+            var station = await _stations
+                .Find(s => s.StationId == stationId)
+                .FirstOrDefaultAsync();
+
+            if (station == null)
+            {
+                return null;
+            }
+
+            // Pads the month by a day on each side so a caller in any timezone gets every slot in its local month
+            var monthStart = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var from = monthStart.AddDays(-1);
+            var to = monthStart.AddMonths(1).AddDays(1);
+
+            return await _slots
+                .Find(s => s.StationId == stationId && s.StartTime >= from && s.StartTime < to)
                 .SortBy(s => s.StartTime)
                 .ToListAsync();
         }
@@ -87,6 +139,33 @@ namespace API.Services
 
             // Reuses the same timezone and ordering checks used on create
             var (startTime, endTime) = ValidateSlotWindow(request.StartTime, request.EndTime);
+
+            // Loads the slot's station so the edit can be checked against its state and schedule
+            var station = await _stations
+                .Find(s => s.StationId == slot.StationId)
+                .FirstOrDefaultAsync();
+
+            if (station == null)
+            {
+                throw new InvalidOperationException($"The station for slot '{slotId}' no longer exists.");
+            }
+
+            var schedule = RequireSlotRules(station);
+
+            // Compares against the schedule in the caller's local time
+            var utcOffset = RequireUtcOffset(request.UtcOffsetMinutes);
+            var localStart = startTime + utcOffset;
+            var localEnd = endTime + utcOffset;
+
+            if (localEnd.Date != localStart.Date)
+            {
+                throw new ArgumentException("A slot must start and end on the same day.");
+            }
+
+            if (!schedule.Covers(localStart.TimeOfDay, localEnd.TimeOfDay))
+            {
+                throw new ArgumentException($"Slots must fall within the station's hours, {schedule.HoursLabel()}.");
+            }
 
             var hasActiveReservation = await _reservations
                 .Find(r => r.SlotId == slotId &&
@@ -109,7 +188,7 @@ namespace API.Services
             if (duplicateExists)
             {
                 throw new InvalidOperationException(
-                    $"Station '{slot.StationId}' already has a slot starting at {startTime:O}.");
+                    $"Station '{slot.StationId}' already has a slot starting at this time.");
             }
 
             var update = Builders<EnergyBookingSlot>.Update
@@ -172,13 +251,15 @@ namespace API.Services
                 throw new KeyNotFoundException($"No station found with ID '{stationId}'.");
             }
 
+            // Refuses deactivated stations and stations whose schedule can't be read
+            var schedule = RequireSlotRules(station);
+
             if (request.DaysOfWeek == null || request.DaysOfWeek.Count == 0)
             {
                 throw new ArgumentException("At least one day of week is required.");
             }
 
-            // Parses each day name against System.DayOfWeek so "Monday"/"monday" both work,
-            // and a typo like "Mondey" is rejected up front instead of silently matching nothing.
+            // Parses each day name against System.DayOfWeek, rejecting typos such as "Mondey"
             var selectedDays = new HashSet<DayOfWeek>();
             foreach (var dayName in request.DaysOfWeek)
             {
@@ -204,16 +285,14 @@ namespace API.Services
                 throw new ArgumentException("startTime must be earlier than endTime.");
             }
 
-            // UTC offsets in real use run from -12:00 to +14:00
-            if (request.UtcOffsetMinutes < -720 || request.UtcOffsetMinutes > 840)
+            // Rejects a time window outside the station's opening hours
+            if (!schedule.Covers(startTimeOfDay, endTimeOfDay))
             {
-                throw new ArgumentException("utcOffsetMinutes must be between -720 and 840.");
+                throw new ArgumentException($"Slots must fall within the station's hours, {schedule.HoursLabel()}.");
             }
 
-            // Days and times are the caller's local wall-clock values, so the range is shifted into
-            // local time before taking the calendar date. Taking the UTC date instead would move the
-            // whole range a day early for any caller east of UTC (e.g. Sri Lanka, +05:30).
-            var utcOffset = TimeSpan.FromMinutes(request.UtcOffsetMinutes);
+            // Shifts the range into the caller's local time before taking calendar dates
+            var utcOffset = RequireUtcOffset(request.UtcOffsetMinutes);
             var rangeStart = (RequireExplicitTimeZone(request.RangeStart, "rangeStart") + utcOffset).Date;
             var rangeEnd = (RequireExplicitTimeZone(request.RangeEnd, "rangeEnd") + utcOffset).Date;
 
@@ -222,8 +301,7 @@ namespace API.Services
                 throw new ArgumentException("rangeStart must not be after rangeEnd.");
             }
 
-            // Caps how far a single call can reach, so this can't flood the collection with
-            // years of slots from one request.
+            // Caps one request at a year of slots
             if ((rangeEnd - rangeStart).TotalDays > 366)
             {
                 throw new ArgumentException("The date range cannot span more than a year.");
@@ -252,7 +330,7 @@ namespace API.Services
                     skipped.Add(new SkippedSlotOccurrence
                     {
                         StartTime = startTime,
-                        Reason = $"Station '{stationId}' already has a slot starting at {startTime:O}."
+                        Reason = $"Already has a slot at {request.StartTime}."
                     });
                     continue;
                 }
