@@ -2,7 +2,7 @@
 // Purpose: Draft station and date filters for the operator reservation list.
 
 import { useEffect, useState } from 'react';
-import CustomSelect from '../ui/CustomSelect';
+import Dropdown from '../ui/Dropdown';
 import { inputClass } from '../stations/formStyles';
 import { fetchStations } from '../../services/stationsApi';
 
@@ -18,6 +18,12 @@ export default function ReservationFilterPanel({
     const [isLoadingStations, setIsLoadingStations] = useState(true);
     const [stationsError, setStationsError] = useState('');
     const [reloadKey, setReloadKey] = useState(0);
+    const stationOptions = stations.map((station) => ({
+        value: station.stationId,
+        label: `${station.name} (${station.stationId})${
+            station.isActive === false ? ' • Inactive' : ''
+        }`,
+    }));
 
     useEffect(() => {
         let cancelled = false;
@@ -84,18 +90,16 @@ export default function ReservationFilterPanel({
                     >
                         Station
                     </label>
-                    <CustomSelect
+                    <Dropdown
                         id="reservation-filter-station"
+                        label="Station"
                         value={draft.stationId}
-                        options={stations}
+                        options={stationOptions}
                         onChange={(value) => setDraft((current) => ({ ...current, stationId: value }))}
-                        getOptionValue={(station) => station.stationId}
-                        getOptionLabel={(station) =>
-                            `${station.name} (${station.stationId})${station.isActive === false ? ' • Inactive' : ''
-                            }`
-                        }
                         placeholder="All stations"
                         disabled={isLoadingStations || Boolean(stationsError)}
+                        searchable
+                        searchPlaceholder="Search stations"
                     />
                     {isLoadingStations && (
                         <p className="text-body-sm text-on-surface-variant">Loading stations...</p>

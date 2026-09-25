@@ -7,7 +7,7 @@ import { inputClass } from '../stations/formStyles';
 import { fetchStations } from '../../services/stationsApi';
 import { fetchSlotsForStation } from '../../services/slotsApi';
 import { createReservation } from '../../services/reservationApi';
-import CustomSelect from '../ui/CustomSelect';
+import Dropdown from '../ui/Dropdown';
 
 function twoDigits(value) {
     return String(value).padStart(2, '0');
@@ -108,6 +108,14 @@ export default function ManualReservationModal({ onClose, onCreated }) {
     }, [selectedStationId, slotReloadKey]);
 
     const availableSlots = slots.filter((slot) => slot.isAvailable);
+    const stationOptions = stations.map((station) => ({
+        value: station.stationId,
+        label: `${station.name} (${station.stationId})`,
+    }));
+    const slotOptions = availableSlots.map((slot) => ({
+        value: slot.slotId,
+        label: formatSlotWindow(slot),
+    }));
     const selectedSlot =
         availableSlots.find((slot) => slot.slotId === selectedSlotId) ?? null;
 
@@ -220,13 +228,12 @@ export default function ManualReservationModal({ onClose, onCreated }) {
                     >
                         Active Station
                     </label>
-                    <CustomSelect
+                    <Dropdown
                         id="manual-reservation-station"
+                        label="Active Station"
                         value={selectedStationId}
-                        options={stations}
+                        options={stationOptions}
                         onChange={handleStationChange}
-                        getOptionValue={(station) => station.stationId}
-                        getOptionLabel={(station) => `${station.name} (${station.stationId})`}
                         placeholder="Select a station"
                         disabled={
                             isSubmitting ||
@@ -234,6 +241,8 @@ export default function ManualReservationModal({ onClose, onCreated }) {
                             Boolean(stationsError) ||
                             stations.length === 0
                         }
+                        searchable
+                        searchPlaceholder="Search stations"
                         required
                     />
 
@@ -264,16 +273,15 @@ export default function ManualReservationModal({ onClose, onCreated }) {
                     >
                         Available Slot
                     </label>
-                    <CustomSelect
+                    <Dropdown
                         id="manual-reservation-slot"
+                        label="Available Slot"
                         value={selectedSlotId}
-                        options={availableSlots}
+                        options={slotOptions}
                         onChange={(slotId) => {
                             setSelectedSlotId(slotId);
                             setGeneralError('');
                         }}
-                        getOptionValue={(slot) => slot.slotId}
-                        getOptionLabel={formatSlotWindow}
                         placeholder="Select an available slot"
                         disabled={
                             isSubmitting ||
@@ -282,6 +290,8 @@ export default function ManualReservationModal({ onClose, onCreated }) {
                             Boolean(slotsError) ||
                             availableSlots.length === 0
                         }
+                        searchable
+                        searchPlaceholder="Search booking windows"
                         required
                     />
 

@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import Modal from '../ui/Modal';
-import CustomSelect from '../ui/CustomSelect';
+import Dropdown from '../ui/Dropdown';
 import ReservationStatusBadge from './ReservationStatusBadge';
 import { fetchStations } from '../../services/stationsApi';
 import { fetchSlotsForStation } from '../../services/slotsApi';
@@ -174,6 +174,14 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                 (selectedStationId === reservation.stationId &&
                     slot.slotId === reservation.slotId))
     );
+    const stationOptions = stations.map((station) => ({
+        value: station.stationId,
+        label: `${station.name} (${station.stationId})`,
+    }));
+    const slotOptions = selectableSlots.map((slot) => ({
+        value: slot.slotId,
+        label: slotLabel(slot),
+    }));
 
     const selectedSlot =
         selectableSlots.find((slot) => slot.slotId === selectedSlotId) || null;
@@ -342,15 +350,12 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                             >
                                 Active Station
                             </label>
-                            <CustomSelect
+                            <Dropdown
                                 id="edit-reservation-station"
+                                label="Active Station"
                                 value={selectedStationId}
-                                options={stations}
+                                options={stationOptions}
                                 onChange={handleStationChange}
-                                getOptionValue={(station) => station.stationId}
-                                getOptionLabel={(station) =>
-                                    `${station.name} (${station.stationId})`
-                                }
                                 placeholder="Select an active station"
                                 disabled={
                                     isSubmitting ||
@@ -358,6 +363,8 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                     Boolean(stationsError) ||
                                     stations.length === 0
                                 }
+                                searchable
+                                searchPlaceholder="Search stations"
                                 required
                             />
                             {isLoadingStations && (
@@ -403,16 +410,15 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                             >
                                 Booking Slot
                             </label>
-                            <CustomSelect
+                            <Dropdown
                                 id="edit-reservation-slot"
+                                label="Booking Slot"
                                 value={selectedSlotId}
-                                options={selectableSlots}
+                                options={slotOptions}
                                 onChange={(slotId) => {
                                     setSelectedSlotId(slotId);
                                     setGeneralError('');
                                 }}
-                                getOptionValue={(slot) => slot.slotId}
-                                getOptionLabel={slotLabel}
                                 placeholder="Select a booking slot"
                                 disabled={
                                     isSubmitting ||
@@ -421,6 +427,8 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                     Boolean(slotsError) ||
                                     selectableSlots.length === 0
                                 }
+                                searchable
+                                searchPlaceholder="Search booking windows"
                                 required
                             />
                             {!selectedStationId &&
