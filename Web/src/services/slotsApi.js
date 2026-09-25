@@ -7,8 +7,9 @@ export function fetchSlotsForStation(stationId) {
   return apiClient.get(`/stations/${stationId}/slots`);
 }
 
-// Backoffice only.
-export function createSlot(stationId, payload) {
+// Backoffice only. Creates one slot per selected weekday within a date range, skipping any
+// day that already has a slot at that time instead of failing the whole request.
+export function generateRecurringSlots(stationId, payload) {
   return apiClient.post(`/stations/${stationId}/slots`, payload);
 }
 

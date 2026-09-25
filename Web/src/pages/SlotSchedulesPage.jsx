@@ -8,8 +8,9 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Roles } from '../constants/roles';
 import { fetchStations } from '../services/stationsApi';
-import { fetchSlotsForStation, createSlot, updateSlot, setSlotAvailability, deleteSlot } from '../services/slotsApi';
+import { fetchSlotsForStation, generateRecurringSlots, updateSlot, setSlotAvailability, deleteSlot } from '../services/slotsApi';
 import SlotFormModal from '../components/slots/SlotFormModal';
+import GenerateSlotsModal from '../components/slots/GenerateSlotsModal';
 import Modal from '../components/ui/Modal';
 
 export default function SlotSchedulesPage() {
@@ -103,10 +104,12 @@ export default function SlotSchedulesPage() {
     }
   }
 
-  async function handleCreate(payload) {
-    await createSlot(selectedStationId, payload);
-    setFormModal(null);
+  // Returns the { created, skipped } summary so GenerateSlotsModal can show it — the modal
+  // stays open on its own result screen rather than closing immediately like a normal form.
+  async function handleGenerate(payload) {
+    const response = await generateRecurringSlots(selectedStationId, payload);
     await reloadSlots();
+    return response.data.data;
   }
 
   async function handleEdit(payload) {
@@ -164,7 +167,7 @@ export default function SlotSchedulesPage() {
               className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs shadow-sm hover:bg-primary transition-all shrink-0"
             >
               <span className="material-symbols-outlined text-[18px]">add_circle</span>
-              <span>Add Slot</span>
+              <span>Add Slots</span>
             </button>
           )}
         </div>
@@ -310,7 +313,13 @@ export default function SlotSchedulesPage() {
         </table>
       </div>
 
-      {formModal?.mode === 'create' && <SlotFormModal onClose={() => setFormModal(null)} onSubmit={handleCreate} />}
+      {formModal?.mode === 'create' && (
+        <GenerateSlotsModal
+          station={stations.find((s) => s.stationId === selectedStationId)}
+          onClose={() => setFormModal(null)}
+          onSubmit={handleGenerate}
+        />
+      )}
       {formModal?.mode === 'edit' && (
         <SlotFormModal slot={formModal.slot} onClose={() => setFormModal(null)} onSubmit={handleEdit} />
       )}
@@ -318,7 +327,7 @@ export default function SlotSchedulesPage() {
       {deleteTarget && (
         <Modal title={`Delete ${deleteTarget.slotId}?`} onClose={() => setDeleteTarget(null)} maxWidthClassName="max-w-md">
           <p className="text-body-md text-on-surface-variant mb-space-lg">
-            This permanently removes the slot. Blocked by the API if any reservation was ever made against it.
+            This permanently removes the slot. Blocked if any reservation was ever made against it.
           </p>
           <div className="flex items-center justify-end gap-2">
             <button

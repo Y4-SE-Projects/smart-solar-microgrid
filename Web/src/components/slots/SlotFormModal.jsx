@@ -1,8 +1,9 @@
 // File: SlotFormModal.jsx
-// Purpose: Create/Edit form for one bookable slot's start/end time window (Backoffice only).
+// Purpose: Edit form for one existing slot's start/end time window (Backoffice only). New
+//          slots are created in bulk via GenerateSlotsModal instead, so this is edit-only.
 //          The API rejects a timestamp with no timezone; datetime-local inputs are local
 //          wall-clock time with none, so this converts through Date/toISOString on submit,
-//          and back again (in local time) when prefilling an existing slot for edit.
+//          and back again (in local time) when prefilling the slot being edited.
 
 import { useState } from 'react';
 import Modal from '../ui/Modal';
@@ -15,9 +16,8 @@ function toDatetimeLocalValue(isoString) {
 }
 
 export default function SlotFormModal({ slot, onClose, onSubmit }) {
-  const isEdit = Boolean(slot);
-  const [startTime, setStartTime] = useState(() => (slot ? toDatetimeLocalValue(slot.startTime) : ''));
-  const [endTime, setEndTime] = useState(() => (slot ? toDatetimeLocalValue(slot.endTime) : ''));
+  const [startTime, setStartTime] = useState(() => toDatetimeLocalValue(slot.startTime));
+  const [endTime, setEndTime] = useState(() => toDatetimeLocalValue(slot.endTime));
   const [generalError, setGeneralError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -38,7 +38,7 @@ export default function SlotFormModal({ slot, onClose, onSubmit }) {
   }
 
   return (
-    <Modal title={isEdit ? `Edit ${slot.slotId}` : 'Add Slot'} onClose={onClose} maxWidthClassName="max-w-md">
+    <Modal title={`Edit ${slot.slotId}`} onClose={onClose} maxWidthClassName="max-w-md">
       <form className="space-y-space-md" onSubmit={handleSubmit} noValidate>
         <div className="space-y-1">
           <label className="text-label-md font-medium text-on-surface">Starts</label>
@@ -81,7 +81,7 @@ export default function SlotFormModal({ slot, onClose, onSubmit }) {
             disabled={isSubmitting}
             className="px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-sm shadow-sm hover:bg-primary disabled:opacity-60 transition-all"
           >
-            {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Add Slot'}
+            {isSubmitting ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </form>
