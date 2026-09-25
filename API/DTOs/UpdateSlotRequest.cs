@@ -10,5 +10,8 @@ namespace API.DTOs
         public DateTime StartTime { get; set; }
 
         public DateTime EndTime { get; set; }
+
+        // The caller's offset from UTC in minutes, e.g. 330 for Sri Lanka, used to check the station's schedule
+        public int UtcOffsetMinutes { get; set; }
     }
 }

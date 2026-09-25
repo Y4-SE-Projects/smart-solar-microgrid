@@ -315,6 +315,12 @@ namespace API.Services
                 throw new ArgumentException("Schedule is required.");
             }
 
+            // Rejects a schedule with no readable operating hours, since slots must fall inside them
+            if (!StationSchedule.TryParse(trimmedSchedule, out _))
+            {
+                throw new ArgumentException("Schedule must give operating hours, e.g. \"06:00-22:00\", with opening before closing.");
+            }
+
             // Rejects out-of-range GPS coordinates
             if (latitude < -90 || latitude > 90 ||
                 longitude < -180 || longitude > 180)
