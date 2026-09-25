@@ -82,6 +82,12 @@ namespace API.Services
             return schedule!;
         }
 
+        // Formats a slot's window in the caller's local time, e.g. 09:00-11:00
+        private static string LocalWindowLabel(EnergyBookingSlot slot, TimeSpan utcOffset)
+        {
+            return $"{slot.StartTime + utcOffset:HH:mm}-{slot.EndTime + utcOffset:HH:mm}";
+        }
+
         // Lists every slot for a station, chronological order.
         public async Task<List<EnergyBookingSlot>?> GetSlotsForStationAsync(string stationId)
         {
@@ -178,17 +184,18 @@ namespace API.Services
                     $"Slot '{slotId}' cannot be changed while a reservation references it.");
             }
 
-            // Rejects a different slot at the same station that already starts at this new time
-            var duplicateExists = await _slots
+            // Rejects a new window that overlaps another slot at this station, a slot may start exactly when another ends
+            var overlapping = await _slots
                 .Find(s => s.StationId == slot.StationId &&
-                           s.SlotId != slotId &&
-                           s.StartTime == startTime)
-                .AnyAsync();
+                           s.Id != slot.Id &&
+                           s.StartTime < endTime &&
+                           s.EndTime > startTime)
+                .FirstOrDefaultAsync();
 
-            if (duplicateExists)
+            if (overlapping != null)
             {
                 throw new InvalidOperationException(
-                    $"Station '{slot.StationId}' already has a slot starting at this time.");
+                    $"This time overlaps the {LocalWindowLabel(overlapping, utcOffset)} slot ({overlapping.SlotId}). Slots can start when another ends, but not overlap.");
             }
 
             var update = Builders<EnergyBookingSlot>.Update
@@ -237,7 +244,7 @@ namespace API.Services
                 new FindOneAndUpdateOptions<EnergyBookingSlot> { ReturnDocument = ReturnDocument.After });
         }
 
-        // Generates one slot per selected weekday within, all sharing the same time-of-day. A day that already has a slot starting at that exact time is skipped.
+        // Generates one slot per selected weekday within a date range, all sharing the same time-of-day. A day where the window overlaps an existing slot is skipped.
         public async Task<(List<EnergyBookingSlot> Created, List<SkippedSlotOccurrence> Skipped)> GenerateRecurringSlotsAsync(
             string stationId,
             CreateSlotRequest request)
@@ -307,6 +314,13 @@ namespace API.Services
                 throw new ArgumentException("The date range cannot span more than a year.");
             }
 
+            // Loads the station's slots across the whole range once, so each day's overlap check needs no extra query
+            var firstStart = DateTime.SpecifyKind(rangeStart.Add(startTimeOfDay) - utcOffset, DateTimeKind.Utc);
+            var lastEnd = DateTime.SpecifyKind(rangeEnd.Add(endTimeOfDay) - utcOffset, DateTimeKind.Utc);
+            var existingSlots = await _slots
+                .Find(s => s.StationId == stationId && s.StartTime < lastEnd && s.EndTime > firstStart)
+                .ToListAsync();
+
             var created = new List<EnergyBookingSlot>();
             var skipped = new List<SkippedSlotOccurrence>();
 
@@ -321,16 +335,15 @@ namespace API.Services
                 var startTime = DateTime.SpecifyKind(date.Add(startTimeOfDay) - utcOffset, DateTimeKind.Utc);
                 var endTime = DateTime.SpecifyKind(date.Add(endTimeOfDay) - utcOffset, DateTimeKind.Utc);
 
-                var duplicateExists = await _slots
-                    .Find(s => s.StationId == stationId && s.StartTime == startTime)
-                    .AnyAsync();
+                // Skips the day if the window overlaps an existing slot, a slot may start exactly when another ends
+                var overlapping = existingSlots.FirstOrDefault(s => s.StartTime < endTime && s.EndTime > startTime);
 
-                if (duplicateExists)
+                if (overlapping != null)
                 {
                     skipped.Add(new SkippedSlotOccurrence
                     {
                         StartTime = startTime,
-                        Reason = $"Already has a slot at {request.StartTime}."
+                        Reason = $"Overlaps the {LocalWindowLabel(overlapping, utcOffset)} slot."
                     });
                     continue;
                 }

@@ -1,5 +1,5 @@
 // File: SkippedSlotOccurrence.cs
-// Purpose: One day the create-slots request skipped because a slot already existed there.
+// Purpose: One day the create-slots request skipped because the window overlapped an existing slot there.
 // Author: IT23215856
 
 namespace API.DTOs

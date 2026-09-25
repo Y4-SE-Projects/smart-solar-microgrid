@@ -355,7 +355,7 @@ namespace API.Controllers
             });
         }
 
-        // Creates one slot per selected weekday within a date range, skipping any day that already has a slot at that time.
+        // Creates one slot per selected weekday within a date range, skipping any day where the window overlaps an existing slot.
         [Authorize(Roles = Roles.Backoffice)]
         [HttpPost("{stationId}/slots")]
         public async Task<IActionResult> GenerateRecurringSlots(string stationId, [FromBody] CreateSlotRequest request)
