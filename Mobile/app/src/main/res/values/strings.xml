@@ -1,3 +1,37 @@
 <resources>
-    <string name="app_name">smart_solar_mobile</string>
+    <string name="app_name">HelioGrid</string>
+
+    <!-- Login -->
+    <string name="login_welcome">Welcome Back</string>
+    <string name="login_subtitle">Sign in to manage your clean energy</string>
+    <string name="login_role_prosumer">Solar Prosumer</string>
+    <string name="login_role_operator">Grid Operator</string>
+    <string name="login_label_nic">National Identity Card (NIC)</string>
+    <string name="login_label_username">Username</string>
+    <string name="login_hint_nic">e.g. 199423801928</string>
+    <string name="login_hint_username">e.g. dispatch_eng</string>
+    <string name="login_label_password">Password</string>
+    <string name="login_hint_password">Enter your password</string>
+    <string name="login_remember_me">Remember on this device</string>
+    <string name="login_sign_in">Sign In</string>
+    <string name="login_signing_in">Signing in…</string>
+    <string name="login_operator_notice">Grid operators use assigned credentials from central administration.</string>
+    <string name="login_error_nic_required">Enter your NIC.</string>
+    <string name="login_error_username_required">Enter your username.</string>
+    <string name="login_error_password_required">Enter your password.</string>
+    <string name="login_error_role_not_supported">This account can\'t be used in the mobile app.</string>
+    <string name="login_session_expired">Your session has expired. Please sign in again.</string>
+
+    <!-- Shared API errors -->
+    <string name="error_network">Can\'t reach the server. Check your connection and try again.</string>
+    <string name="error_unauthorized">You\'re not signed in, or your session has expired.</string>
+    <string name="error_forbidden">You don\'t have permission to do that.</string>
+    <string name="error_not_found">That item could not be found.</string>
+    <string name="error_generic">Something went wrong (HTTP %1$d). Please try again.</string>
+
+    <!-- Home -->
+    <string name="home_sign_out">Sign out</string>
+    <string name="home_greeting">Hello, %1$s</string>
+    <string name="home_nic">NIC: %1$s</string>
+    <string name="home_username">Username: %1$s</string>
 </resources>
