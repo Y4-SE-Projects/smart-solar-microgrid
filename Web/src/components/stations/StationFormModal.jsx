@@ -6,11 +6,12 @@ import Modal from '../ui/Modal';
 import LocationPickerMap from './LocationPickerMap';
 import ScheduleField from './ScheduleField';
 import { inputClass } from './formStyles';
+import { DEFAULT_SCHEDULE } from '../../utils/stationSchedule';
 
 // Builds the initial form state from an existing station (edit mode) or blank text fields (create mode).
 function toFormState(station) {
   if (!station) {
-    return { stationId: '', name: '', latitude: '', longitude: '', capacityKWh: '', batterySlotCount: '', schedule: '' };
+    return { stationId: '', name: '', latitude: '', longitude: '', capacityKWh: '', batterySlotCount: '', schedule: DEFAULT_SCHEDULE };
   }
   return {
     stationId: station.stationId,
@@ -59,94 +60,105 @@ export default function StationFormModal({ station, onClose, onSubmit }) {
   }
 
   return (
-    <Modal title={isEdit ? `Edit ${station.stationId}` : 'Register Station'} onClose={onClose}>
+    <Modal title={isEdit ? `Edit ${station.stationId}` : 'Register Station'} onClose={onClose} maxWidthClassName="max-w-4xl">
       <form className="space-y-space-md" onSubmit={handleSubmit} noValidate>
-        {!isEdit && (
-          <Field label="Station ID">
-            <input
-              className={inputClass}
-              value={form.stationId}
-              onChange={(e) => updateField('stationId', e.target.value)}
-              placeholder="STN-006"
-              required
-            />
-          </Field>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-space-xl items-stretch">
+          {/* Left column — every typed input, so nothing here needs the map to be visible */}
+          <div className="space-y-space-md">
+            {!isEdit && (
+              <Field label="Station ID">
+                <input
+                  className={inputClass}
+                  value={form.stationId}
+                  onChange={(e) => updateField('stationId', e.target.value)}
+                  placeholder="STN-006"
+                  required
+                />
+              </Field>
+            )}
 
-        <Field label="Station Name">
-          <input
-            className={inputClass}
-            value={form.name}
-            onChange={(e) => updateField('name', e.target.value)}
-            placeholder="Colombo Central Hub"
-            required
-          />
-        </Field>
+            <Field label="Station Name">
+              <input
+                className={inputClass}
+                value={form.name}
+                onChange={(e) => updateField('name', e.target.value)}
+                placeholder="Colombo Central Hub"
+                required
+              />
+            </Field>
 
-        <Field label="Location">
-          <LocationPickerMap
-            latitude={form.latitude === '' ? null : Number(form.latitude)}
-            longitude={form.longitude === '' ? null : Number(form.longitude)}
-            onChange={(lat, lng) => {
-              updateField('latitude', String(lat));
-              updateField('longitude', String(lng));
-            }}
-          />
-        </Field>
+            <div className="grid grid-cols-2 gap-space-md">
+              <Field label="Latitude">
+                <input
+                  className={inputClass}
+                  type="number"
+                  step="any"
+                  value={form.latitude}
+                  onChange={(e) => updateField('latitude', e.target.value)}
+                  placeholder="6.9271"
+                  required
+                />
+              </Field>
+              <Field label="Longitude">
+                <input
+                  className={inputClass}
+                  type="number"
+                  step="any"
+                  value={form.longitude}
+                  onChange={(e) => updateField('longitude', e.target.value)}
+                  placeholder="79.8612"
+                  required
+                />
+              </Field>
+            </div>
 
-        <div className="grid grid-cols-2 gap-space-md">
-          <Field label="Latitude">
-            <input
-              className={inputClass}
-              type="number"
-              step="any"
-              value={form.latitude}
-              onChange={(e) => updateField('latitude', e.target.value)}
-              placeholder="6.9271"
-              required
-            />
-          </Field>
-          <Field label="Longitude">
-            <input
-              className={inputClass}
-              type="number"
-              step="any"
-              value={form.longitude}
-              onChange={(e) => updateField('longitude', e.target.value)}
-              placeholder="79.8612"
-              required
+            <p className="text-body-sm text-on-surface-variant">
+              Select from the map, or type directly to set coordinate.
+            </p>
+
+            <div className="grid grid-cols-2 gap-space-md">
+              <Field label="Capacity (kWh)">
+                <input
+                  className={inputClass}
+                  type="number"
+                  step="any"
+                  min="0.1"
+                  value={form.capacityKWh}
+                  onChange={(e) => updateField('capacityKWh', e.target.value)}
+                  placeholder="120.5"
+                  required
+                />
+              </Field>
+              <Field label="Battery Slots">
+                <input
+                  className={inputClass}
+                  type="number"
+                  step="1"
+                  min="1"
+                  value={form.batterySlotCount}
+                  onChange={(e) => updateField('batterySlotCount', e.target.value)}
+                  placeholder="8"
+                  required
+                />
+              </Field>
+            </div>
+
+            <ScheduleField value={form.schedule} onChange={(next) => updateField('schedule', next)} />
+          </div>
+
+          {/* Right column — the map, stretched by the grid to match the left column's height */}
+          <Field label="Location" className="h-full flex flex-col">
+            <LocationPickerMap
+              className="flex-1"
+              latitude={form.latitude === '' ? null : Number(form.latitude)}
+              longitude={form.longitude === '' ? null : Number(form.longitude)}
+              onChange={(lat, lng) => {
+                updateField('latitude', String(lat));
+                updateField('longitude', String(lng));
+              }}
             />
           </Field>
         </div>
-
-        <div className="grid grid-cols-2 gap-space-md">
-          <Field label="Capacity (kWh)">
-            <input
-              className={inputClass}
-              type="number"
-              step="any"
-              min="0.1"
-              value={form.capacityKWh}
-              onChange={(e) => updateField('capacityKWh', e.target.value)}
-              placeholder="120.5"
-              required
-            />
-          </Field>
-          <Field label="Battery Slots">
-            <input
-              className={inputClass}
-              type="number"
-              step="1"
-              min="1"
-              value={form.batterySlotCount}
-              onChange={(e) => updateField('batterySlotCount', e.target.value)}
-              placeholder="8"
-              required
-            />
-          </Field>
-        </div>
-
-        <ScheduleField value={form.schedule} onChange={(next) => updateField('schedule', next)} />
 
         {generalError && (
           <div role="alert" className="flex items-start gap-2 px-space-md py-space-sm bg-error-container text-on-error-container rounded-xl text-body-sm">
@@ -176,10 +188,12 @@ export default function StationFormModal({ station, onClose, onSubmit }) {
   );
 }
 
-// Small label + input wrapper, local to this form.
-function Field({ label, children }) {
+// Small label + input wrapper, local to this form. `className` extends (not replaces)
+// the default layout, so the Location field can add `h-full flex flex-col` to stretch
+// its map inside the two-column grid while every other field keeps the plain default.
+function Field({ label, children, className = '' }) {
   return (
-    <div className="space-y-1">
+    <div className={`space-y-1 ${className}`}>
       <label className="text-label-md font-medium text-on-surface">{label}</label>
       {children}
     </div>

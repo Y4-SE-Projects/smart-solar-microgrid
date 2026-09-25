@@ -1,0 +1,15 @@
+// File: SkippedSlotOccurrence.cs
+// Purpose: One day the create-slots request skipped because the window overlapped an existing slot there.
+// Author: IT23215856
+
+namespace API.DTOs
+{
+    public class SkippedSlotOccurrence
+    {
+        // UTC start of the slot that would have been created, so the client can show it in local time
+        public DateTime StartTime { get; set; }
+
+        // Human-readable explanation of the skip
+        public string Reason { get; set; } = string.Empty;
+    }
+}

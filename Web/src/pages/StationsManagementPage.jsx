@@ -12,6 +12,7 @@ import {
 } from '../services/stationsApi';
 import StationFormModal from '../components/stations/StationFormModal';
 import Modal from '../components/ui/Modal';
+import Dropdown from '../components/ui/Dropdown';
 
 const SORT_OPTIONS = [
   { value: 'stationId', label: 'Station ID (Ascending)' },
@@ -215,10 +216,10 @@ export default function StationsManagementPage() {
       {actionError && (
         <div
           role="alert"
-          className="flex items-start justify-between gap-3 px-5 py-3 mb-6 bg-error-container text-on-error-container rounded-2xl text-body-sm"
+          className="flex items-start justify-between px-5 py-1 mb-6 bg-error-container text-on-error-container rounded-xl text-body-sm"
         >
-          <span className="flex items-start gap-2">
-            <span className="material-symbols-outlined text-[18px] mt-0.5">error</span>
+          <span className="flex items-start gap-2 flex-1 pt-2">
+            <span className="material-symbols-outlined text-[16px] shrink-0">error</span>
             <span>
               <strong>{actionError.stationId}:</strong> {actionError.message}
             </span>
@@ -227,9 +228,9 @@ export default function StationsManagementPage() {
             type="button"
             onClick={() => setActionError(null)}
             aria-label="Dismiss"
-            className="w-7 h-7 shrink-0 flex items-center justify-center rounded-full hover:bg-error/10 transition-colors"
+            className="w-7 h-7 shrink-0 flex items-center justify-center rounded-md hover:bg-black/10 active:bg-black/20 transition-colors duration-150 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <span className="material-symbols-outlined text-[16px]">close</span>
           </button>
         </div>
       )}
@@ -255,17 +256,14 @@ export default function StationsManagementPage() {
               <FilterPill label={`Active (${kpis.active})`} active={statusFilter === 'active'} onClick={() => setStatusFilter('active')} />
               <FilterPill label={`Inactive (${kpis.inactive})`} active={statusFilter === 'inactive'} onClick={() => setStatusFilter('inactive')} />
             </div>
-            <select
-              className="h-10 px-4 pr-8 bg-canvas-bg border border-border-slate rounded-full text-xs text-on-surface font-medium focus:outline-none focus:border-secondary cursor-pointer transition-all"
+            <Dropdown
+              label="Sort stations"
+              variant="pill"
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              options={SORT_OPTIONS}
+              onChange={setSortBy}
+              className="w-56"
+            />
           </div>
         </div>
 

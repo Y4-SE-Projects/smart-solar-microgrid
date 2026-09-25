@@ -1,9 +1,67 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.Smart_solar_mobile" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+    <!-- Base application theme. The design is light-only, so values-night uses the same Light parent. -->
+    <style name="Base.Theme.Smart_solar_mobile" parent="Theme.Material3.Light.NoActionBar" />
+
+    <style name="Theme.Smart_solar_mobile" parent="Base.Theme.Smart_solar_mobile">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/on_primary</item>
+        <item name="colorPrimaryContainer">@color/primary_container</item>
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorError">@color/alert_danger</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/on_surface_variant</item>
+        <item name="colorOutline">@color/outline</item>
+        <item name="android:colorBackground">@color/surface</item>
+        <item name="android:windowBackground">@color/surface</item>
     </style>
 
-    <style name="Theme.Smart_solar_mobile" parent="Base.Theme.Smart_solar_mobile" />
+    <!-- Solar Prosumer / Grid Operator segmented toggle on the login screen -->
+    <style name="Widget.SmartSolar.RoleToggle" parent="Widget.Material3.Button.TextButton.Icon">
+        <item name="backgroundTint">@color/role_toggle_background</item>
+        <item name="android:textColor">@color/role_toggle_content</item>
+        <item name="iconTint">@color/role_toggle_content</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconPadding">8dp</item>
+        <item name="iconSize">18dp</item>
+        <item name="cornerRadius">8dp</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Outlined text field with the label shown above it rather than floating -->
+    <style name="Widget.SmartSolar.TextField" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="hintEnabled">false</item>
+        <item name="boxBackgroundColor">@color/surface_container_lowest</item>
+        <item name="boxStrokeColor">@color/text_field_stroke</item>
+        <item name="boxStrokeErrorColor">@color/alert_danger</item>
+        <item name="boxCornerRadiusTopStart">8dp</item>
+        <item name="boxCornerRadiusTopEnd">8dp</item>
+        <item name="boxCornerRadiusBottomStart">8dp</item>
+        <item name="boxCornerRadiusBottomEnd">8dp</item>
+        <item name="startIconTint">@color/on_surface_variant</item>
+        <item name="endIconTint">@color/on_surface_variant</item>
+        <item name="errorTextColor">@color/alert_danger</item>
+        <item name="errorIconDrawable">@null</item>
+    </style>
+
+    <!-- Field label above a text field -->
+    <style name="TextAppearance.SmartSolar.FieldLabel" parent="">
+        <item name="android:textSize">12sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <!-- Full-width primary action button -->
+    <style name="Widget.SmartSolar.PrimaryButton" parent="Widget.Material3.Button">
+        <item name="backgroundTint">@color/primary_button_background</item>
+        <item name="android:textColor">@color/on_primary</item>
+        <item name="iconTint">@color/on_primary</item>
+        <item name="cornerRadius">8dp</item>
+        <item name="android:minHeight">52dp</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
 </resources>

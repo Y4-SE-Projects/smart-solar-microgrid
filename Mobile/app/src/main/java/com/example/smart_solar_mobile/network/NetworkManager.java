@@ -19,6 +19,7 @@ public class NetworkManager {
                             .build();
                     return chain.proceed(request);
                 })
+                .addInterceptor(new AuthInterceptor())
                 .build();
 
         retrofit = new Retrofit.Builder()

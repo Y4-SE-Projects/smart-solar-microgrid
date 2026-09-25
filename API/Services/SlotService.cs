@@ -53,45 +53,39 @@ namespace API.Services
             return (start, end);
         }
 
-        // Creates one bookable slot for an existing station.
-        public async Task<EnergyBookingSlot> CreateSlotAsync(string stationId, CreateSlotRequest request)
+        // Converts the caller's UTC offset in minutes to a TimeSpan, rejecting offsets no real timezone uses
+        public static TimeSpan RequireUtcOffset(int utcOffsetMinutes)
         {
-            // Confirms the referenced station actually exists.
-            var station = await _stations
-                .Find(s => s.StationId == stationId)
-                .FirstOrDefaultAsync();
-
-            if (station == null)
+            if (utcOffsetMinutes < -720 || utcOffsetMinutes > 840)
             {
-                throw new KeyNotFoundException($"No station found with ID '{stationId}'.");
+                throw new ArgumentException("utcOffsetMinutes must be between -720 and 840.");
             }
 
-            // Reuses the existing timezone with ordering checks rather than re-validating the same thing a second way
-            var (startTime, endTime) = ValidateSlotWindow(request.StartTime, request.EndTime);
+            return TimeSpan.FromMinutes(utcOffsetMinutes);
+        }
 
-            // Rejects a second slot that starts at the exact same time as an existing one is available
-            var duplicateExists = await _slots
-                .Find(s => s.StationId == stationId && s.StartTime == startTime)
-                .AnyAsync();
-
-            if (duplicateExists)
+        // Rejects slot changes on a deactivated station or one whose schedule can't be read, and returns the schedule
+        private static StationSchedule RequireSlotRules(SolarStation station)
+        {
+            if (!station.IsActive)
             {
                 throw new InvalidOperationException(
-                    $"Station '{stationId}' already has a slot starting at {startTime:O}.");
+                    $"Station '{station.StationId}' is deactivated. Reactivate it before changing its slots.");
             }
 
-            var newSlot = new EnergyBookingSlot
+            if (!StationSchedule.TryParse(station.Schedule, out var schedule))
             {
-                SlotId = $"{stationId}-{startTime:yyyyMMddHHmm}",
-                StationId = stationId,
-                StartTime = startTime,
-                EndTime = endTime,
-                IsAvailable = true
-            };
+                throw new InvalidOperationException(
+                    $"Station '{station.StationId}' has no readable operating hours. Set them on the station first.");
+            }
 
-            await _slots.InsertOneAsync(newSlot);
+            return schedule!;
+        }
 
-            return newSlot;
+        // Formats a slot's window in the caller's local time, e.g. 09:00-11:00
+        private static string LocalWindowLabel(EnergyBookingSlot slot, TimeSpan utcOffset)
+        {
+            return $"{slot.StartTime + utcOffset:HH:mm}-{slot.EndTime + utcOffset:HH:mm}";
         }
 
         // Lists every slot for a station, chronological order.
@@ -108,6 +102,29 @@ namespace API.Services
 
             return await _slots
                 .Find(s => s.StationId == stationId)
+                .SortBy(s => s.StartTime)
+                .ToListAsync();
+        }
+
+        // Lists a station's slots that start in one calendar month, in chronological order
+        public async Task<List<EnergyBookingSlot>?> GetSlotsForStationInMonthAsync(string stationId, int year, int month)
+        {
+            var station = await _stations
+                .Find(s => s.StationId == stationId)
+                .FirstOrDefaultAsync();
+
+            if (station == null)
+            {
+                return null;
+            }
+
+            // Pads the month by a day on each side so a caller in any timezone gets every slot in its local month
+            var monthStart = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var from = monthStart.AddDays(-1);
+            var to = monthStart.AddMonths(1).AddDays(1);
+
+            return await _slots
+                .Find(s => s.StationId == stationId && s.StartTime >= from && s.StartTime < to)
                 .SortBy(s => s.StartTime)
                 .ToListAsync();
         }
@@ -129,6 +146,33 @@ namespace API.Services
             // Reuses the same timezone and ordering checks used on create
             var (startTime, endTime) = ValidateSlotWindow(request.StartTime, request.EndTime);
 
+            // Loads the slot's station so the edit can be checked against its state and schedule
+            var station = await _stations
+                .Find(s => s.StationId == slot.StationId)
+                .FirstOrDefaultAsync();
+
+            if (station == null)
+            {
+                throw new InvalidOperationException($"The station for slot '{slotId}' no longer exists.");
+            }
+
+            var schedule = RequireSlotRules(station);
+
+            // Compares against the schedule in the caller's local time
+            var utcOffset = RequireUtcOffset(request.UtcOffsetMinutes);
+            var localStart = startTime + utcOffset;
+            var localEnd = endTime + utcOffset;
+
+            if (localEnd.Date != localStart.Date)
+            {
+                throw new ArgumentException("A slot must start and end on the same day.");
+            }
+
+            if (!schedule.Covers(localStart.TimeOfDay, localEnd.TimeOfDay))
+            {
+                throw new ArgumentException($"Slots must fall within the station's hours, {schedule.HoursLabel()}.");
+            }
+
             var hasActiveReservation = await _reservations
                 .Find(r => r.SlotId == slotId &&
                            (r.Status == "Pending" || r.Status == "Approved"))
@@ -140,17 +184,18 @@ namespace API.Services
                     $"Slot '{slotId}' cannot be changed while a reservation references it.");
             }
 
-            // Rejects a different slot at the same station that already starts at this new time
-            var duplicateExists = await _slots
+            // Rejects a new window that overlaps another slot at this station, a slot may start exactly when another ends
+            var overlapping = await _slots
                 .Find(s => s.StationId == slot.StationId &&
-                           s.SlotId != slotId &&
-                           s.StartTime == startTime)
-                .AnyAsync();
+                           s.Id != slot.Id &&
+                           s.StartTime < endTime &&
+                           s.EndTime > startTime)
+                .FirstOrDefaultAsync();
 
-            if (duplicateExists)
+            if (overlapping != null)
             {
                 throw new InvalidOperationException(
-                    $"Station '{slot.StationId}' already has a slot starting at {startTime:O}.");
+                    $"This time overlaps the {LocalWindowLabel(overlapping, utcOffset)} slot ({overlapping.SlotId}). Slots can start when another ends, but not overlap.");
             }
 
             var update = Builders<EnergyBookingSlot>.Update
@@ -197,6 +242,126 @@ namespace API.Services
                 s => s.SlotId == slotId,
                 update,
                 new FindOneAndUpdateOptions<EnergyBookingSlot> { ReturnDocument = ReturnDocument.After });
+        }
+
+        // Generates one slot per selected weekday within a date range, all sharing the same time-of-day. A day where the window overlaps an existing slot is skipped.
+        public async Task<(List<EnergyBookingSlot> Created, List<SkippedSlotOccurrence> Skipped)> GenerateRecurringSlotsAsync(
+            string stationId,
+            CreateSlotRequest request)
+        {
+            var station = await _stations
+                .Find(s => s.StationId == stationId)
+                .FirstOrDefaultAsync();
+
+            if (station == null)
+            {
+                throw new KeyNotFoundException($"No station found with ID '{stationId}'.");
+            }
+
+            // Refuses deactivated stations and stations whose schedule can't be read
+            var schedule = RequireSlotRules(station);
+
+            if (request.DaysOfWeek == null || request.DaysOfWeek.Count == 0)
+            {
+                throw new ArgumentException("At least one day of week is required.");
+            }
+
+            // Parses each day name against System.DayOfWeek, rejecting typos such as "Mondey"
+            var selectedDays = new HashSet<DayOfWeek>();
+            foreach (var dayName in request.DaysOfWeek)
+            {
+                if (!Enum.TryParse<DayOfWeek>(dayName, ignoreCase: true, out var day))
+                {
+                    throw new ArgumentException($"'{dayName}' is not a valid day of week.");
+                }
+                selectedDays.Add(day);
+            }
+
+            if (!TimeSpan.TryParseExact(request.StartTime, @"hh\:mm", null, out var startTimeOfDay))
+            {
+                throw new ArgumentException("startTime must be in HH:mm format, e.g. 08:00.");
+            }
+
+            if (!TimeSpan.TryParseExact(request.EndTime, @"hh\:mm", null, out var endTimeOfDay))
+            {
+                throw new ArgumentException("endTime must be in HH:mm format, e.g. 18:00.");
+            }
+
+            if (startTimeOfDay >= endTimeOfDay)
+            {
+                throw new ArgumentException("startTime must be earlier than endTime.");
+            }
+
+            // Rejects a time window outside the station's opening hours
+            if (!schedule.Covers(startTimeOfDay, endTimeOfDay))
+            {
+                throw new ArgumentException($"Slots must fall within the station's hours, {schedule.HoursLabel()}.");
+            }
+
+            // Shifts the range into the caller's local time before taking calendar dates
+            var utcOffset = RequireUtcOffset(request.UtcOffsetMinutes);
+            var rangeStart = (RequireExplicitTimeZone(request.RangeStart, "rangeStart") + utcOffset).Date;
+            var rangeEnd = (RequireExplicitTimeZone(request.RangeEnd, "rangeEnd") + utcOffset).Date;
+
+            if (rangeStart > rangeEnd)
+            {
+                throw new ArgumentException("rangeStart must not be after rangeEnd.");
+            }
+
+            // Caps one request at a year of slots
+            if ((rangeEnd - rangeStart).TotalDays > 366)
+            {
+                throw new ArgumentException("The date range cannot span more than a year.");
+            }
+
+            // Loads the station's slots across the whole range once, so each day's overlap check needs no extra query
+            var firstStart = DateTime.SpecifyKind(rangeStart.Add(startTimeOfDay) - utcOffset, DateTimeKind.Utc);
+            var lastEnd = DateTime.SpecifyKind(rangeEnd.Add(endTimeOfDay) - utcOffset, DateTimeKind.Utc);
+            var existingSlots = await _slots
+                .Find(s => s.StationId == stationId && s.StartTime < lastEnd && s.EndTime > firstStart)
+                .ToListAsync();
+
+            var created = new List<EnergyBookingSlot>();
+            var skipped = new List<SkippedSlotOccurrence>();
+
+            for (var date = rangeStart; date <= rangeEnd; date = date.AddDays(1))
+            {
+                if (!selectedDays.Contains(date.DayOfWeek))
+                {
+                    continue;
+                }
+
+                // Builds the slot in local time on this day, then converts to UTC for storage
+                var startTime = DateTime.SpecifyKind(date.Add(startTimeOfDay) - utcOffset, DateTimeKind.Utc);
+                var endTime = DateTime.SpecifyKind(date.Add(endTimeOfDay) - utcOffset, DateTimeKind.Utc);
+
+                // Skips the day if the window overlaps an existing slot, a slot may start exactly when another ends
+                var overlapping = existingSlots.FirstOrDefault(s => s.StartTime < endTime && s.EndTime > startTime);
+
+                if (overlapping != null)
+                {
+                    skipped.Add(new SkippedSlotOccurrence
+                    {
+                        StartTime = startTime,
+                        Reason = $"Overlaps the {LocalWindowLabel(overlapping, utcOffset)} slot."
+                    });
+                    continue;
+                }
+
+                var slot = new EnergyBookingSlot
+                {
+                    SlotId = $"{stationId}-{startTime:yyyyMMddHHmm}",
+                    StationId = stationId,
+                    StartTime = startTime,
+                    EndTime = endTime,
+                    IsAvailable = true
+                };
+
+                await _slots.InsertOneAsync(slot);
+                created.Add(slot);
+            }
+
+            return (created, skipped);
         }
 
         // Permanently removes a slot. Blocked if any reservation, in any status, was ever made against it
