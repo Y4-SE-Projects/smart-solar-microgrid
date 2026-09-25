@@ -134,42 +134,40 @@ export default function SlotSchedulesPage() {
               : 'Define the bookable time windows offered at each station.'}
           </p>
         </div>
-        {isBackoffice && selectedStationId && (
-          <button
-            type="button"
-            onClick={() => setFormModal({ mode: 'create' })}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs shadow-sm hover:bg-primary transition-all self-start md:self-auto shrink-0"
-          >
-            <span className="material-symbols-outlined text-[18px]">add_circle</span>
-            <span>Add Slot</span>
-          </button>
-        )}
-      </div>
-
-      <div className="bg-surface-container-lowest border border-border-slate rounded-2xl shadow-sm p-5 mb-6">
-        <label className="text-label-md font-medium text-on-surface">Station</label>
-        {stationsError ? (
-          <p className="text-body-sm text-alert-danger mt-1">{stationsError}</p>
-        ) : (
-          <select
-            className="mt-2 h-10 px-4 pr-8 bg-canvas-bg border border-border-slate rounded-full text-xs text-on-surface font-medium focus:outline-none focus:border-secondary cursor-pointer transition-all w-full max-w-sm"
-            value={selectedStationId}
-            onChange={(e) => {
-              setIsLoadingSlots(true);
-              setSlotsError('');
-              setSelectedStationId(e.target.value);
-            }}
-            disabled={!hasStations}
-          >
-            {!hasStations && <option value="">No stations registered yet</option>}
-            {stations.map((s) => (
-              <option key={s.stationId} value={s.stationId}>
-                {s.stationId} — {s.name}
-                {!s.isActive ? ' (Deactivated)' : ''}
-              </option>
-            ))}
-          </select>
-        )}
+        <div className="flex items-center gap-3 self-start md:self-auto shrink-0">
+          {stationsError ? (
+            <p className="text-body-sm text-alert-danger">{stationsError}</p>
+          ) : (
+            <select
+              className="h-10 px-4 pr-8 bg-canvas-bg border border-border-slate rounded-full text-xs text-on-surface font-medium focus:outline-none focus:border-secondary cursor-pointer transition-all w-84"
+              value={selectedStationId}
+              onChange={(e) => {
+                setIsLoadingSlots(true);
+                setSlotsError('');
+                setSelectedStationId(e.target.value);
+              }}
+              disabled={!hasStations}
+            >
+              {!hasStations && <option value="">No stations registered yet</option>}
+              {stations.map((s) => (
+                <option key={s.stationId} value={s.stationId}>
+                  {s.stationId} — {s.name}
+                  {!s.isActive ? ' (Deactivated)' : ''}
+                </option>
+              ))}
+            </select>
+          )}
+          {isBackoffice && selectedStationId && (
+            <button
+              type="button"
+              onClick={() => setFormModal({ mode: 'create' })}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary-container text-on-primary font-semibold text-xs shadow-sm hover:bg-primary transition-all shrink-0"
+            >
+              <span className="material-symbols-outlined text-[18px]">add_circle</span>
+              <span>Add Slot</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {actionError && (
@@ -259,8 +257,8 @@ export default function SlotSchedulesPage() {
                         Available
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-high text-on-surface font-semibold text-[11px]">
-                        <span className="w-1.5 h-1.5 rounded-full bg-outline" />
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-error-container text-alert-danger font-semibold text-[11px]">
+                        <span className="w-1.5 h-1.5 rounded-full bg-alert-danger" />
                         Unavailable
                       </span>
                     )}

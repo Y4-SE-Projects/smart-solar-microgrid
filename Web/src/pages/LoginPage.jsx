@@ -62,13 +62,8 @@ export default function LoginPage() {
       {/* Header */}
       <header className="w-full pt-margin-lg pb-space-lg px-gutter flex flex-col items-center justify-center">
         <div className="flex items-center gap-space-sm mb-space-sm">
-          <span className="flex items-center justify-center h-8 w-8 rounded-lg bg-primary text-on-primary">
-            <span className="material-symbols-outlined text-[20px]">bolt</span>
-          </span>
+          <img src="/logo.svg" alt="HelioGrid logo" className="h-9 w-9 object-contain"/>
           <span className="text-headline-sm font-semibold text-primary tracking-tight">HelioGrid</span>
-          <span className="text-label-md px-space-xs py-0.5 bg-surface-container-high text-on-surface rounded">
-            Operations Console
-          </span>
         </div>
       </header>
 
@@ -81,7 +76,7 @@ export default function LoginPage() {
 
           {/* Title */}
           <div className="mb-space-lg flex flex-col items-center text-center">
-            <h1 className="text-headline-md font-semibold text-primary tracking-tight">Web Console Login</h1>
+            <h1 className="text-headline-md font-semibold text-primary tracking-tight">Operations Console Login</h1>
             <p className="text-body-md text-on-surface-variant mt-1">Enter your credentials to access the console</p>
           </div>
 
