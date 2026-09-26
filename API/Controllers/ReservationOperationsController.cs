@@ -376,6 +376,41 @@ namespace API.Controllers
             }
         }
 
+        [Authorize(Roles = Roles.GridOperator + "," + Roles.Backoffice)]
+        [HttpGet]
+        public async Task<IActionResult> GetReservations([FromQuery] ReservationListQuery query)
+        {
+            // Returns one filtered, paginated page of reservations across all prosumers
+            try
+            {
+                var result = await _service.GetReservationsAsync(query);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = result
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = ex.Message
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message = "Retrieving reservations failed."
+                    });
+            }
+        }
+
         [Authorize(Roles = Roles.Prosumer)]
         [HttpGet("prosumer/{nic}")]
         public async Task<IActionResult> GetProsumerHistory(string nic)
