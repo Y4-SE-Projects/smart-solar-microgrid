@@ -1,6 +1,6 @@
 /* File: AuthDtos.cs
  * Purpose: Request / response shapes for the register and login endpoints.
- * (Kept separate from User.cs because these describe what the client sends/receives over HTTP, 
+ * (Kept separate from User.cs because these describe what the client sends/receives over HTTP,
  * not what's stored in MongoDB.)
  * Author: IT23218512
  */
@@ -62,8 +62,23 @@ namespace API.DTOs
         public string? Reason { get; set; }
     }
 
+    // Body for POST /api/users/reactivation-request and its /cancel counterpart.
+    // These endpoints are public because a deactivated account is never issued a token. 
+    // NIC and password is what authenticates the call, and stops anyone's raising requests against a NIC that isn't theirs.
+    public class ReactivationRequest
+    {
+        public string Nic { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+
+    // Body for PUT /api/users/{nic}/reject-reactivation. ( Reason is optional )
+    public class RejectReactivationRequest
+    {
+        public string? Reason { get; set; }
+    }
+
     // Safe shape returned by profile-related endpoints.
-    // Deliberately excludes PasswordHash — that should never leave the server.
+    // Deliberately excludes PasswordHash. That should never leave the server.
     public class UserProfileResponse
     {
         public string Nic { get; set; } = string.Empty;
@@ -73,6 +88,10 @@ namespace API.DTOs
         public bool IsActive { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        // One of the AccountStatus values - Active, Deactivated or PendingReactivation.
+        // Computed server-side so the Web and Mobile clients don't each re-derive the same three states from the flags below.
+        public string Status { get; set; } = string.Empty;
+
         // Below are only populated when the account is/was deactivated.
         public string? DeactivationReason { get; set; }
         public DateTime? DeactivatedAt { get; set; }
@@ -80,10 +99,15 @@ namespace API.DTOs
         // Computed server-side from DeactivatedAt
         // The client doesn't need to do its own date math (or worry about timezones).
         public int? DaysElapsed { get; set; }
+
+        // Only populated while a reactivation request is outstanding. 
+        // DaysSinceRequest is how long the Backoffice queue has been sitting on it.
+        public DateTime? ReactivationRequestedAt { get; set; }
+        public int? DaysSinceRequest { get; set; }
     }
 
-    // Safe shape returned by GET /api/users/staff — Backoffice/GridOperator accounts. 
-    // Username-keyed (not NIC) and has no deactivation-reason fields, since those only apply to Prosumer accounts. 
+    // Safe shape returned by GET /api/users/staff — Backoffice/GridOperator accounts.
+    // Username-keyed (not NIC) and has no deactivation-reason fields, since those only apply to Prosumer accounts.
     // Deliberately excludes PasswordHash, same as UserProfileResponse.
     public class StaffProfileResponse
     {

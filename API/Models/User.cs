@@ -1,6 +1,6 @@
 /* File: User.cs
  * Purpose: Represents one document in the "Users" MongoDB collection.
- * Author: IT23218512 
+ * Author: IT23218512
  */
 
 using MongoDB.Bson;
@@ -50,10 +50,23 @@ namespace API.Models
         [BsonElement("deactivationReason")]
         public string? DeactivationReason { get; set; }
 
-        // Compute "days elapsed" for the Backoffice review screen when the account was deactivated. 
+        // Compute "days elapsed" for the Backoffice review screen when the account was deactivated.
         // Null when active.
         [BsonElement("deactivatedAt")]
         public DateTime? DeactivatedAt { get; set; }
+
+        // Set when a deactivated Prosumer asks to have the account restored.
+        // Separates a plain deactivated account from one sitting in the Backoffice queue.
+        [BsonElement("reactivationRequestedAt")]
+        public DateTime? ReactivationRequestedAt { get; set; }
+
+        // Set when a Backoffice user declines a reactivation request. 
+        [BsonElement("reactivationRejectedAt")]
+        public DateTime? ReactivationRejectedAt { get; set; }
+
+        // Optional reason the Backoffice user gave when declining.
+        [BsonElement("reactivationRejectionReason")]
+        public string? ReactivationRejectionReason { get; set; }
 
         [BsonElement("createdAt")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

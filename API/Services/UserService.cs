@@ -39,6 +39,8 @@ namespace API.Services
         }
 
         // True if a user with this NIC already exists (duplicate-registration check).
+        // A deactivated Prosumer must not be able to register a fresh one against the same NIC. 
+        // ( Their only route back is a reactivation request. )
         public async Task<bool> NicExistsAsync(string nic)
         {
             return await _users.Find(u => u.Nic == nic).AnyAsync();
@@ -68,32 +70,79 @@ namespace API.Services
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 
-        // Flips IsActive to false. Called when a Prosumer requests deactivation.
+        // Flips IsActive to false. Called when a Prosumer deactivates their own account.
+        // Any reactivation request or rejection left from a previous cycle is cleared. 
+        // Else, a re-deactivated account would re-appear in the Backoffice queue.
         public async Task DeactivateAsync(string nic, string? reason)
         {
             var update = Builders<User>.Update
                 .Set(u => u.IsActive, false)
                 .Set(u => u.DeactivationReason, reason)
-                .Set(u => u.DeactivatedAt, DateTime.UtcNow);
+                .Set(u => u.DeactivatedAt, DateTime.UtcNow)
+                .Set(u => u.ReactivationRequestedAt, (DateTime?)null)
+                .Set(u => u.ReactivationRejectedAt, (DateTime?)null)
+                .Set(u => u.ReactivationRejectionReason, (string?)null);
 
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 
         // Flips IsActive back to true. Only ever reached via a Backoffice-only endpoint.
+        // Clears the deactivation and reactivation-request fields, so the account looks like it never deactivated.
         public async Task ReactivateAsync(string nic)
         {
             var update = Builders<User>.Update
                 .Set(u => u.IsActive, true)
                 .Set(u => u.DeactivationReason, (string?)null)
-                .Set(u => u.DeactivatedAt, (DateTime?)null);
+                .Set(u => u.DeactivatedAt, (DateTime?)null)
+                .Set(u => u.ReactivationRequestedAt, (DateTime?)null)
+                .Set(u => u.ReactivationRejectedAt, (DateTime?)null)
+                .Set(u => u.ReactivationRejectionReason, (string?)null);
 
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 
-        // Returns every deactivated Prosumer account, for the Backoffice review screen.
-        public async Task<List<User>> GetPendingDeactivationAsync()
+        // Records a deactivated Prosumer's request to be restored.
+        // This puts the account into the Backoffice queue. 
+        // Any earlier rejection is cleared so a fresh request isn't shown alongside a stale decline.
+        public async Task RequestReactivationAsync(string nic)
         {
-            return await _users.Find(u => u.Role == Roles.Prosumer && !u.IsActive).ToListAsync();
+            var update = Builders<User>.Update
+                .Set(u => u.ReactivationRequestedAt, DateTime.UtcNow)
+                .Set(u => u.ReactivationRejectedAt, (DateTime?)null)
+                .Set(u => u.ReactivationRejectionReason, (string?)null);
+
+            await _users.UpdateOneAsync(u => u.Nic == nic, update);
+        }
+
+        // Withdraws an outstanding request. The account stays deactivated. Takes it back out of the Backoffice queue.
+        public async Task CancelReactivationRequestAsync(string nic)
+        {
+            var update = Builders<User>.Update
+                .Set(u => u.ReactivationRequestedAt, (DateTime?)null);
+
+            await _users.UpdateOneAsync(u => u.Nic == nic, update);
+        }
+
+        // Declines an outstanding request. The account leaves the queue. 
+        // The reason is kept so the Prosumer can be told why at their next login attempt.
+        public async Task RejectReactivationAsync(string nic, string? reason)
+        {
+            var update = Builders<User>.Update
+                .Set(u => u.ReactivationRequestedAt, (DateTime?)null)
+                .Set(u => u.ReactivationRejectedAt, DateTime.UtcNow)
+                .Set(u => u.ReactivationRejectionReason, reason);
+
+            await _users.UpdateOneAsync(u => u.Nic == nic, update);
+        }
+
+        // Every deactivated Prosumer with an outstanding reactivation request, for the Backoffice queue. 
+        // Sorted oldest request first.
+        public async Task<List<User>> GetReactivationRequestsAsync()
+        {
+            return await _users
+                .Find(u => u.Role == Roles.Prosumer && !u.IsActive && u.ReactivationRequestedAt != null)
+                .SortBy(u => u.ReactivationRequestedAt)
+                .ToListAsync();
         }
 
         // Returns every Prosumer account regardless of status (active and deactivated), for the Backoffice master prosumer directory.
@@ -108,7 +157,7 @@ namespace API.Services
             return await _users.Find(u => u.Role == Roles.Backoffice || u.Role == Roles.GridOperator).ToListAsync();
         }
 
-        // True, if at least one Backoffice account already exists. 
+        // True, if at least one Backoffice account already exists.
         // Used only at startup to decide whether the first Backoffice account needs to be seeded.
         public async Task<bool> AnyBackofficeExistsAsync()
         {
