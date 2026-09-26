@@ -4,6 +4,7 @@
 import { useEffect, useState } from 'react';
 import ReservationStatusBadge from './ReservationStatusBadge';
 import ReservationTimeIndicator from './ReservationTimeIndicator';
+import RowActionsMenu from './RowActionsMenu';
 
 function validDate(value) {
     if (!value) return null;
@@ -65,6 +66,8 @@ export default function ReservationTable({
     onClearFilters,
     onEdit,
     onCancel,
+    onApprove,
+    onDecline,
 }) {
     const [now, setNow] = useState(null);
     const hasRows = Array.isArray(reservations) && reservations.length > 0;
@@ -158,12 +161,32 @@ export default function ReservationTable({
                         reservations.map((reservation) => {
                             const created = validDate(reservation.createdAt);
                             const scheduled = validDate(reservation.scheduledTime);
-                            const canShowEdit = Boolean(onEdit) && reservation.status === 'Pending';
                             const status = reservation.status?.toLowerCase();
-                            const canShowCancel =
-                                Boolean(onCancel) &&
-                                (status === 'pending' || status === 'approved');
-                            const hasActions = canShowEdit || canShowCancel;
+                            // Pending: Approve is the main action; Edit and Decline sit in the row menu.
+                            // Approved: Cancel. Declined, Cancelled and Completed rows have no actions.
+                            const canShowReview =
+                                Boolean(onApprove) && Boolean(onDecline) && status === 'pending';
+                            const canShowCancel = Boolean(onCancel) && status === 'approved';
+                            const menuItems = [];
+                            if (onEdit && status === 'pending') {
+                                menuItems.push({
+                                    key: 'edit',
+                                    label: 'Edit',
+                                    icon: 'edit',
+                                    onSelect: () => onEdit(reservation),
+                                });
+                            }
+                            if (canShowReview) {
+                                menuItems.push({
+                                    key: 'decline',
+                                    label: 'Decline',
+                                    icon: 'cancel',
+                                    tone: 'danger',
+                                    onSelect: () => onDecline(reservation),
+                                });
+                            }
+                            const hasActions =
+                                canShowReview || canShowCancel || menuItems.length > 0;
 
                             return (
                                 <tr
@@ -237,17 +260,23 @@ export default function ReservationTable({
                                     <td className="whitespace-nowrap px-6 py-4 text-right">
                                         {hasActions ? (
                                             <div className="inline-flex items-center gap-2">
-                                                {canShowEdit && (
+                                                {canShowReview && (
                                                     <button
                                                         type="button"
-                                                        onClick={() => onEdit(reservation)}
-                                                        className="inline-flex items-center gap-1 rounded-full border border-border-slate bg-canvas-bg px-3 py-1.5 text-xs font-semibold text-primary shadow-sm hover:bg-surface-container-high"
+                                                        onClick={() => onApprove(reservation)}
+                                                        className="inline-flex items-center gap-1 rounded-full bg-primary-container px-3 py-1.5 text-xs font-semibold text-on-primary shadow-sm hover:bg-primary"
                                                     >
                                                         <span aria-hidden="true" className="material-symbols-outlined text-[15px]">
-                                                            edit
+                                                            check_circle
                                                         </span>
-                                                        Edit
+                                                        Approve
                                                     </button>
+                                                )}
+                                                {menuItems.length > 0 && (
+                                                    <RowActionsMenu
+                                                        items={menuItems}
+                                                        label={`More actions for ${reservation.reservationId}`}
+                                                    />
                                                 )}
                                                 {canShowCancel && (
                                                     <button

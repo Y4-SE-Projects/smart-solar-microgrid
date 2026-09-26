@@ -18,8 +18,8 @@ namespace API.Services
 
     public class QrService
     {
-        // Reservation IDs are generated as "RES=" + 32 hex characters.
-        public static readonly Regex ReservationIdPattern = new(@"^RES=[0-9a-f]{32}$", RegexOptions.Compiled);
+        // Reservation IDs are generated as "RES-" + 8 digits, e.g. RES-48213907.
+        public static readonly Regex ReservationIdPattern = new(@"^RES-\d{8}$", RegexOptions.Compiled);
 
         private static readonly Regex Base64UrlPattern = new(@"^[A-Za-z0-9_-]+$", RegexOptions.Compiled);
 

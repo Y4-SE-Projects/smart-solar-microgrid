@@ -15,6 +15,13 @@ namespace API.Services
     {
         private const int MaximumCreationWindowDays = 7;
         private const int MinimumNoticeHours = 12;
+        private const int MaximumListPage = 1_000_000;
+        private const int MaximumListPageSize = 50;
+        private const int MaximumSearchLength = 64;
+        private const int MaximumIdAttempts = 10;
+
+        private static readonly string[] ListStatuses =
+            { "Pending", "Approved", "Declined", "Completed", "Cancelled" };
 
         private readonly MongoDbContext _context;
         private readonly IMongoCollection<EnergyReservation> _reservations;
@@ -30,6 +37,119 @@ namespace API.Services
             _reservations = context.GetCollection<EnergyReservation>(MongoCollectionNames.EnergyReservation);
         }
 
+        public async Task<PagedReservationResult> GetReservationsAsync(ReservationListQuery query)
+        {
+            // Returns one page of reservations (newest first) across all prosumers, with optional filters
+            if (query.Page < 1 || query.Page > MaximumListPage)
+            {
+                throw new ArgumentException($"Page must be between 1 and {MaximumListPage}.");
+            }
+
+            if (query.PageSize < 1 || query.PageSize > MaximumListPageSize)
+            {
+                throw new ArgumentException($"Page size must be between 1 and {MaximumListPageSize}.");
+            }
+
+            var filters = new List<FilterDefinition<EnergyReservation>>();
+            var filterBuilder = Builders<EnergyReservation>.Filter;
+
+            var status = query.Status?.Trim();
+
+            if (!string.IsNullOrEmpty(status) &&
+                !string.Equals(status, "All", StringComparison.OrdinalIgnoreCase))
+            {
+                var normalizedStatus = ListStatuses.FirstOrDefault(s =>
+                    string.Equals(s, status, StringComparison.OrdinalIgnoreCase));
+
+                if (normalizedStatus == null)
+                {
+                    throw new ArgumentException(
+                        "Status must be All, Pending, Approved, Declined, Completed, or Cancelled.");
+                }
+
+                filters.Add(filterBuilder.Eq(r => r.Status, normalizedStatus));
+            }
+
+            var stationId = query.StationId?.Trim();
+
+            if (!string.IsNullOrEmpty(stationId))
+            {
+                filters.Add(filterBuilder.Eq(r => r.StationId, stationId));
+            }
+
+            if (query.DateFrom.HasValue)
+            {
+                filters.Add(filterBuilder.Gte(r => r.ScheduledTime, ToUtc(query.DateFrom.Value)));
+            }
+
+            if (query.DateTo.HasValue)
+            {
+                var dateTo = ToUtc(query.DateTo.Value);
+
+                // A date without a time covers that whole day
+                filters.Add(dateTo.TimeOfDay == TimeSpan.Zero
+                    ? filterBuilder.Lt(r => r.ScheduledTime, dateTo.AddDays(1))
+                    : filterBuilder.Lte(r => r.ScheduledTime, dateTo));
+            }
+
+            if (query.DateFrom.HasValue && query.DateTo.HasValue &&
+                ToUtc(query.DateFrom.Value) > ToUtc(query.DateTo.Value))
+            {
+                throw new ArgumentException("Date from must not be after date to.");
+            }
+
+            var search = query.Search?.Trim();
+
+            if (!string.IsNullOrEmpty(search))
+            {
+                if (search.Length > MaximumSearchLength)
+                {
+                    throw new ArgumentException($"Search text must be at most {MaximumSearchLength} characters.");
+                }
+
+                // Escaped, so the text is always matched literally and cannot inject a regex
+                var pattern = new BsonRegularExpression(System.Text.RegularExpressions.Regex.Escape(search), "i");
+
+                filters.Add(filterBuilder.Or(
+                    filterBuilder.Regex(r => r.ReservationId, pattern),
+                    filterBuilder.Regex(r => r.ProsumerNic, pattern),
+                    filterBuilder.Regex(r => r.StationId, pattern)));
+            }
+
+            var filter = filters.Count == 0
+                ? filterBuilder.Empty
+                : filterBuilder.And(filters);
+
+            var totalCount = await _reservations.CountDocumentsAsync(filter);
+
+            var items = await _reservations
+                .Find(filter)
+                .Sort(Builders<EnergyReservation>.Sort
+                    .Descending(r => r.CreatedAt)
+                    .Descending(r => r.ReservationId))
+                .Skip((query.Page - 1) * query.PageSize)
+                .Limit(query.PageSize)
+                .ToListAsync();
+
+            return new PagedReservationResult
+            {
+                Items = items,
+                TotalCount = totalCount,
+                Page = query.Page,
+                PageSize = query.PageSize
+            };
+        }
+
+        private static DateTime ToUtc(DateTime value)
+        {
+            return value.Kind switch
+            {
+                DateTimeKind.Utc => value,
+                DateTimeKind.Local => value.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+            };
+        }
+
         public async Task<List<EnergyReservation>> GetProsumerHistoryAsync(string nic)
         {
             // Returns every reservation (any status) for the given prosumer, newest first
@@ -37,6 +157,22 @@ namespace API.Services
                 .Find(r => r.ProsumerNic == nic)
                 .SortByDescending(r => r.CreatedAt)
                 .ToListAsync();
+        }
+
+        private async Task<string> GenerateReservationIdAsync()
+        {
+            // Builds a short public ID like RES-48213907 (8 random digits) and retries if it is already taken
+            for (var attempt = 0; attempt < MaximumIdAttempts; attempt++)
+            {
+                var candidate = $"RES-{System.Security.Cryptography.RandomNumberGenerator.GetInt32(10_000_000, 100_000_000)}";
+
+                if (!await _reservations.Find(r => r.ReservationId == candidate).AnyAsync())
+                {
+                    return candidate;
+                }
+            }
+
+            throw new InvalidOperationException("A unique reservation ID could not be generated. Please try again.");
         }
 
         public async Task<EnergyReservation?> GetReservationByIdAsync(string reservationId)
@@ -139,7 +275,7 @@ namespace API.Services
 
             var reservarion = new EnergyReservation
             {
-                ReservationId = $"RES={Guid.NewGuid():N}",
+                ReservationId = await GenerateReservationIdAsync(),
                 ProsumerNic = prosumerNic,
                 StationId = stationId,
                 SlotId = slotId,
@@ -1020,7 +1156,52 @@ namespace API.Services
                     "The reservation status changed before this update could be completed.");
             }
 
+            // A declined reservation must give its slot back, exactly like a cancellation does
+            if (normalizedStatus == "Declined")
+            {
+                await ReleaseSlotOrRollbackDeclineAsync(reservation, updatedReservation);
+            }
+
             return updatedReservation;
+        }
+
+        private async Task ReleaseSlotOrRollbackDeclineAsync(
+            EnergyReservation original,
+            EnergyReservation declined)
+        {
+            // Releases the declined reservation's slot; if that is impossible, restores the previous state
+            if (await ReleaseSlotAsync(original.SlotId, original.StationId))
+            {
+                return;
+            }
+
+            var slotState = await GetSlotStateAsync(original.SlotId);
+
+            if (slotState.Exists && slotState.IsAvailable)
+            {
+                return;
+            }
+
+            var rollbackFilter = Builders<EnergyReservation>.Filter.And(
+                Builders<EnergyReservation>.Filter.Eq(r => r.ReservationId, original.ReservationId),
+                Builders<EnergyReservation>.Filter.Eq(r => r.Status, "Declined"),
+                Builders<EnergyReservation>.Filter.Eq(r => r.UpdatedAt, declined.UpdatedAt));
+
+            var rollbackUpdate = Builders<EnergyReservation>.Update
+                .Set(r => r.Status, original.Status)
+                .Set(r => r.UpdatedAt, original.UpdatedAt);
+
+            if (original.Qr != null)
+            {
+                rollbackUpdate = rollbackUpdate.Set(r => r.Qr!.Status, original.Qr.Status);
+            }
+
+            var rollbackResult = await _reservations.UpdateOneAsync(rollbackFilter, rollbackUpdate);
+
+            throw new InvalidOperationException(
+                rollbackResult.ModifiedCount == 1
+                    ? "Decline failed because the associated slot could not be released."
+                    : "The reservation was declined, but its slot could not be released and the reservation state could not be restored.");
         }
 
         private static bool IsValidStatusTransition(
