@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Grid Operator slot management: pick a day on the calendar or search the month, then switch slots on or off.
+     Mirrors the web slot page for Grid Operators. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/manageRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <!-- Header: back, title, station switcher -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="4dp"
+        android:paddingEnd="8dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/backButton"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="@string/back"
+            app:icon="@drawable/ic_arrow_back"
+            app:iconTint="@color/on_surface" />
+
+        <LinearLayout
+            android:id="@+id/stationSwitcher"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:enabled="false"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/manage_slots"
+                android:textColor="@color/on_surface"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/headerStationText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawablePadding="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/border_slate" />
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Shown when the station list (used for switching) can't be loaded -->
+            <LinearLayout
+                android:id="@+id/stationsErrorBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_error_banner"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="4dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/stationsErrorText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:textColor="@color/on_error_container"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/stationsRetryButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/retry"
+                    android:textColor="@color/on_error_container" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/deactivatedNotice"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_error_banner"
+                android:paddingStart="12dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="12dp"
+                android:paddingBottom="8dp"
+                android:textColor="@color/on_error_container"
+                android:textSize="13sp"
+                android:visibility="gone" />
+
+            <!-- Why the last availability change failed, e.g. a 409 because a reservation still holds the slot -->
+            <LinearLayout
+                android:id="@+id/actionErrorBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:background="@drawable/bg_error_banner"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="4dp"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_error"
+                    app:tint="@color/on_error_container" />
+
+                <TextView
+                    android:id="@+id/actionErrorText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:accessibilityLiveRegion="polite"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:textColor="@color/on_error_container"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/actionErrorDismissButton"
+                    style="@style/Widget.Material3.Button.IconButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/dismiss"
+                    app:icon="@drawable/ic_close"
+                    app:iconTint="@color/on_error_container" />
+            </LinearLayout>
+
+            <!-- Search the calendar month's slots, and the button that shows or hides the calendar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.textfield.TextInputLayout
+                    android:id="@+id/slotSearchLayout"
+                    style="@style/Widget.SmartSolar.TextField"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    app:endIconMode="clear_text"
+                    app:startIconDrawable="@drawable/ic_search">
+
+                    <com.google.android.material.textfield.TextInputEditText
+                        android:id="@+id/slotSearchInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:imeOptions="actionSearch"
+                        android:importantForAutofill="no"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:textSize="14sp" />
+                </com.google.android.material.textfield.TextInputLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/calendarToggleButton"
+                    style="@style/Widget.SmartSolar.ToggleIconButton"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_marginStart="8dp"
+                    android:contentDescription="@string/show_calendar"
+                    app:icon="@drawable/ic_calendar" />
+            </LinearLayout>
+
+            <!-- Pick a day: hidden until the calendar button is pressed -->
+            <LinearLayout
+                android:id="@+id/calendarCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/pick_a_day"
+                        android:textAppearance="@style/TextAppearance.SmartSolar.Title" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/todayButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:minHeight="36dp"
+                        android:text="@string/today"
+                        android:textColor="@color/primary" />
+                </LinearLayout>
+
+                <com.example.smart_solar_mobile.views.MonthCalendarView
+                    android:id="@+id/calendarView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content" />
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@color/border_slate" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center_vertical"
+                    android:minHeight="28dp"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:background="@drawable/bg_legend_marked" />
+
+                    <TextView
+                        android:id="@+id/legendText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:layout_weight="1"
+                        android:text="@string/legend_has_slots"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp" />
+
+                    <!-- "N days in September", "Loading…", or a tappable "Couldn't load, retry" -->
+                    <TextView
+                        android:id="@+id/monthStatusText"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:accessibilityLiveRegion="polite"
+                        android:fontFeatureSettings="tnum"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Slot list -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/listTitleText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textAppearance="@style/TextAppearance.SmartSolar.Title"
+                    android:textSize="15sp" />
+
+                <TextView
+                    android:id="@+id/listCountText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:accessibilityLiveRegion="polite"
+                    android:fontFeatureSettings="tnum"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <com.google.android.material.progressindicator.LinearProgressIndicator
+                android:id="@+id/slotsProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:indeterminate="true"
+                android:visibility="gone"
+                app:indicatorColor="@color/secondary"
+                app:trackColor="@color/surface_container" />
+
+            <LinearLayout
+                android:id="@+id/slotsErrorBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_error_banner"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="4dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/slotsErrorText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:textColor="@color/on_error_container"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/slotsRetryButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/retry"
+                    android:textColor="@color/on_error_container" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/emptyState"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_card"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:padding="20dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/emptyTitleText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:textColor="@color/on_surface"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:id="@+id/emptyMessageText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:gravity="center"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/clearSearchButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/clear_search"
+                    android:textColor="@color/primary"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- One item_manage_slot row per slot, added in code -->
+            <LinearLayout
+                android:id="@+id/slotsContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_card"
+                android:divider="@drawable/divider_slate"
+                android:orientation="vertical"
+                android:showDividers="middle"
+                android:visibility="gone" />
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>
