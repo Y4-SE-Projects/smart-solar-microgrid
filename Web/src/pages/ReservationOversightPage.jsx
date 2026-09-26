@@ -1,7 +1,8 @@
 // File: ReservationOversightPage.jsx
 // Purpose: GridOperator reservation workspace and future live-list coordinator.
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { fetchReservations } from '../services/reservationApi';
 import ManualReservationModal from '../components/reservations/ManualReservationModal';
 import ReservationPolicyBanner from '../components/reservations/ReservationPolicyBanner';
 import ReservationToolbar from '../components/reservations/ReservationToolbar';
@@ -10,6 +11,7 @@ import ReservationTable from '../components/reservations/ReservationTable';
 import ReservationPagination from '../components/reservations/ReservationPagination';
 import EditReservationModal from '../components/reservations/EditReservationModal';
 import CancelReservationModal from '../components/reservations/CancelReservationModal';
+import ReviewReservationModal from '../components/reservations/ReviewReservationModal';
 
 const INITIAL_FILTERS = {
     status: 'All',
@@ -27,19 +29,88 @@ export default function ReservationOversightPage() {
     const [isManualModalOpen, setIsManualModalOpen] = useState(false);
     const [selectedReservation, setSelectedReservation] = useState(null);
     const [selectedReservationForCancel, setSelectedReservationForCancel] = useState(null);
+    const [reviewTarget, setReviewTarget] = useState(null); // { reservation, action: 'Approved' | 'Declined' }
     const [actionResult, setActionResult] = useState(null);
 
-    const [listState] = useState({
+    const [listState, setListState] = useState({
         reservations: null,
         totalCount: null,
-        isLoading: false,
+        isLoading: true,
         error: '',
     });
+    const [reloadKey, setReloadKey] = useState(0);
+    const [debouncedSearch, setDebouncedSearch] = useState('');
 
-    // MEMBER 04 INTEGRATION: replace this boundary with a loader that maps
-    // filters to the final operator list/search contract and updates listState.
-    // Use the same reload after create, edit, and cancel.
-    const refreshReservations = null;
+    // Waits for the operator to stop typing before the search reaches the server.
+    useEffect(() => {
+        const timer = window.setTimeout(
+            () => setDebouncedSearch(filters.searchText.trim()),
+            300
+        );
+        return () => window.clearTimeout(timer);
+    }, [filters.searchText]);
+
+    // Loads the current page from the server whenever a filter, the page, or reloadKey changes.
+    useEffect(() => {
+        let cancelled = false;
+
+        fetchReservations({
+            page: filters.page,
+            pageSize: filters.pageSize,
+            status: filters.status,
+            search: debouncedSearch,
+            stationId: filters.stationId,
+            dateFrom: filters.dateFrom,
+            dateTo: filters.dateTo,
+        })
+            .then((result) => {
+                if (cancelled) return;
+
+                // The last page can disappear (e.g. after a cancel); step back to the new last page.
+                const lastPage = Math.max(1, Math.ceil(result.totalCount / filters.pageSize));
+                if (result.items.length === 0 && filters.page > lastPage) {
+                    setFilters((current) => ({ ...current, page: lastPage }));
+                    return;
+                }
+
+                setListState({
+                    reservations: result.items,
+                    totalCount: result.totalCount,
+                    isLoading: false,
+                    error: '',
+                });
+            })
+            .catch((error) => {
+                if (cancelled) return;
+                setListState({
+                    reservations: null,
+                    totalCount: null,
+                    isLoading: false,
+                    error:
+                        error.response?.data?.message ||
+                        'Could not load reservations. Please try again.',
+                });
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        filters.page,
+        filters.pageSize,
+        filters.status,
+        filters.stationId,
+        filters.dateFrom,
+        filters.dateTo,
+        debouncedSearch,
+        reloadKey,
+    ]);
+
+    // Shows the loading state and reloads the current page ( used by Refresh, Retry, and after create/edit/cancel ).
+    const refreshReservations = useCallback(() => {
+        setListState((current) => ({ ...current, isLoading: true, error: '' }));
+        setReloadKey((value) => value + 1);
+    }, []);
 
     const hasAdvancedFilters = Boolean(
         filters.stationId || filters.dateFrom || filters.dateTo
@@ -65,6 +136,12 @@ export default function ReservationOversightPage() {
     function handleCancelled(result) {
         setActionResult(result);
         setSelectedReservationForCancel(null);
+        refreshReservations?.();
+    }
+
+    function handleReviewed(result) {
+        setActionResult(result);
+        setReviewTarget(null);
         refreshReservations?.();
     }
 
@@ -169,6 +246,14 @@ export default function ReservationOversightPage() {
                         setActionResult(null);
                         setSelectedReservationForCancel(reservation);
                     }}
+                    onApprove={(reservation) => {
+                        setActionResult(null);
+                        setReviewTarget({ reservation, action: 'Approved' });
+                    }}
+                    onDecline={(reservation) => {
+                        setActionResult(null);
+                        setReviewTarget({ reservation, action: 'Declined' });
+                    }}
                     isLoading={listState.isLoading}
                     error={listState.error}
                     onRetry={refreshReservations}
@@ -203,6 +288,16 @@ export default function ReservationOversightPage() {
                     reservation={selectedReservation}
                     onClose={() => setSelectedReservation(null)}
                     onUpdated={handleUpdated}
+                />
+            )}
+
+            {reviewTarget && (
+                <ReviewReservationModal
+                    key={`${reviewTarget.reservation.reservationId}-${reviewTarget.action}`}
+                    reservation={reviewTarget.reservation}
+                    action={reviewTarget.action}
+                    onClose={() => setReviewTarget(null)}
+                    onCompleted={handleReviewed}
                 />
             )}
 
