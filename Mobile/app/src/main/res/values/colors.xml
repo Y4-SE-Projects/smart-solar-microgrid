@@ -8,6 +8,7 @@
     <color name="primary_container">#044839</color>
     <color name="on_primary">#FFFFFF</color>
     <color name="secondary">#006C4A</color>
+    <color name="secondary_ring">#66006C4A</color>
     <color name="surface">#FAF8FF</color>
     <color name="surface_container_low">#F2F3FF</color>
     <color name="surface_container">#EAEDFF</color>

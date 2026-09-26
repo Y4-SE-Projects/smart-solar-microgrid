@@ -89,6 +89,20 @@
         <item name="android:fontFamily">sans-serif-medium</item>
     </style>
 
+    <!-- Square icon button that stays filled while its panel is open (e.g. the calendar toggle); set selected in code -->
+    <style name="Widget.SmartSolar.ToggleIconButton" parent="Widget.Material3.Button.IconButton">
+        <item name="backgroundTint">@color/role_toggle_background</item>
+        <item name="iconTint">@color/role_toggle_content</item>
+        <item name="strokeColor">@color/toggle_button_stroke</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">8dp</item>
+        <item name="iconPadding">0dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:padding">0dp</item>
+    </style>
+
     <!-- Full-width primary action button -->
     <style name="Widget.SmartSolar.PrimaryButton" parent="Widget.Material3.Button">
         <item name="backgroundTint">@color/primary_button_background</item>
