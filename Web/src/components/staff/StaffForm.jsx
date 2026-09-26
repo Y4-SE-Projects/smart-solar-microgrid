@@ -10,7 +10,7 @@
  * Author: IT23218512
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Roles } from '../../constants/roles';
 import { formatRole } from '../../utils/formatters';
 
@@ -68,7 +68,7 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
   const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
-  // Clears a field's error as soon as it is edited, so a correction doesn't sit next to a stale complaint.
+ // Escape closes the dialog, except mid-submission — the request is already on its way to the server.
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === 'Escape' && !isSubmitting) onCancel();
@@ -87,8 +87,7 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
     };
   }, []);
 
-  // Clears a field's error as soon as it is edited, so a correction doesn't
-  // sit next to a stale complaint.
+  // Clears a field's error as soon as it is edited, so a correction doesn't sit next to a stale complaint.
   function handleChange(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
     setFieldErrors((current) => {
