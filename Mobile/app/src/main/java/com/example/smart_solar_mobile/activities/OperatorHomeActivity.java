@@ -4,12 +4,16 @@
 
 package com.example.smart_solar_mobile.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
@@ -48,6 +52,9 @@ public class OperatorHomeActivity extends AppCompatActivity {
     private String restoredStationId;
     private Call<ApiResponse<List<SolarStation>>> stationsCall;
     private Call<ApiResponse<List<EnergyBookingSlot>>> slotsCall;
+    // Opens Manage Slots and hears back which station the operator ended up on there
+    private final ActivityResultLauncher<Intent> manageSlotsLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), this::onManageSlotsClosed);
 
     private TextView headerStationText;
     private TextView operatorInitialsText;
@@ -91,6 +98,7 @@ public class OperatorHomeActivity extends AppCompatActivity {
         findViewById(R.id.stationsRetryButton).setOnClickListener(v -> loadStations());
         findViewById(R.id.slotsRetryButton).setOnClickListener(v -> loadTodaySlots());
         refreshSlotsButton.setOnClickListener(v -> loadTodaySlots());
+        findViewById(R.id.manageSlotsButton).setOnClickListener(v -> openManageSlots());
 
         if (savedInstanceState != null) {
             restoredStationId = savedInstanceState.getString(STATE_SELECTED_STATION_ID);
@@ -262,6 +270,31 @@ public class OperatorHomeActivity extends AppCompatActivity {
         }
         String selectedId = selectedStation == null ? null : selectedStation.stationId;
         StationPickerDialog.show(this, stations, selectedId, this::selectStation);
+    }
+
+    private void openManageSlots() {
+        // Opens slot management for the selected station
+        if (selectedStation != null) {
+            manageSlotsLauncher.launch(ManageSlotsActivity.intentFor(this, selectedStation));
+        }
+    }
+
+    private void onManageSlotsClosed(ActivityResult result) {
+        // Follows the station the operator switched to on Manage Slots (onRestart already refreshed the same station)
+        Intent data = result.getData();
+        if (result.getResultCode() != RESULT_OK || data == null) {
+            return;
+        }
+        String stationId = data.getStringExtra(ManageSlotsActivity.RESULT_STATION_ID);
+        if (stationId == null || (selectedStation != null && stationId.equals(selectedStation.stationId))) {
+            return;
+        }
+        for (SolarStation station : stations) {
+            if (station.stationId.equals(stationId)) {
+                selectStation(station);
+                return;
+            }
+        }
     }
 
     private void selectStation(SolarStation station) {
