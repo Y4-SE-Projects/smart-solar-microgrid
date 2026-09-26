@@ -1,52 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Grid Operator home shell. Slot availability and the QR scanner get added here (see mobile_app_ui/grid_operator_dispatch_console). -->
+<!-- Grid Operator console, based on mobile_app_ui/grid_operator_dispatch_console. Everything below the header follows the selected station. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/homeRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
-    <!-- Top bar -->
+    <!-- Header: title, selected station, sign out -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="56dp"
+        android:layout_height="64dp"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:paddingStart="16dp"
-        android:paddingEnd="8dp">
+        android:paddingEnd="4dp">
 
-        <FrameLayout
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="@drawable/bg_logo_tile">
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/logo" />
 
-            <ImageView
-                android:layout_width="20dp"
-                android:layout_height="20dp"
-                android:layout_gravity="center"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_bolt"
-                app:tint="@color/secondary_fixed" />
-        </FrameLayout>
-
-        <TextView
+        <!-- Station switcher: tapping the title or the station under it opens the searchable station picker -->
+        <LinearLayout
+            android:id="@+id/stationSwitcher"
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:text="@string/app_name"
-            android:textColor="@color/primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:clickable="true"
+            android:enabled="false"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            android:gravity="center_vertical"
+            android:orientation="vertical"
+            android:paddingStart="4dp"
+            android:paddingEnd="4dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:text="@string/operator_title"
+                android:textColor="@color/on_surface"
+                android:textSize="16sp" />
+
+            <!-- The chevron is added in code only while there are stations to switch between -->
+            <TextView
+                android:id="@+id/headerStationText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:drawablePadding="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="@string/station_loading"
+                android:textColor="@color/on_surface_variant"
+                android:textSize="12sp" />
+        </LinearLayout>
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/signOutButton"
-            style="@style/Widget.Material3.Button.TextButton.Icon"
+            style="@style/Widget.Material3.Button.IconButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/home_sign_out"
-            android:textColor="@color/primary"
+            android:contentDescription="@string/home_sign_out"
             app:icon="@drawable/ic_logout"
             app:iconTint="@color/primary" />
     </LinearLayout>
@@ -56,43 +75,506 @@
         android:layout_height="1dp"
         android:background="@color/border_slate" />
 
-    <!-- Signed-in user card, filled from the saved session -->
-    <LinearLayout
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:background="@drawable/bg_card"
-        android:orientation="vertical"
-        android:padding="16dp">
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-        <TextView
-            android:id="@+id/greetingText"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:fontFamily="sans-serif-medium"
-            android:textColor="@color/on_surface"
-            android:textSize="20sp" />
+            android:orientation="vertical"
+            android:padding="16dp">
 
-        <TextView
-            android:id="@+id/identifierText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:textColor="@color/on_surface_variant"
-            android:textSize="14sp" />
+            <!-- Operator card -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="12dp">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:background="@drawable/bg_chip_active"
-            android:fontFamily="sans-serif-medium"
-            android:paddingStart="8dp"
-            android:paddingTop="2dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="2dp"
-            android:text="@string/login_role_operator"
-            android:textColor="@color/primary_container"
-            android:textSize="11sp" />
-    </LinearLayout>
+                <TextView
+                    android:id="@+id/operatorInitialsText"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/bg_avatar"
+                    android:fontFamily="sans-serif-medium"
+                    android:gravity="center"
+                    android:importantForAccessibility="no"
+                    android:textColor="@color/primary"
+                    android:textSize="14sp"
+                    tools:text="DS" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/operatorNameText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:fontFamily="sans-serif-medium"
+                        android:maxLines="1"
+                        android:textColor="@color/on_surface"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/operatorRoleText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:text="@string/operator_role"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Shown when the station list can't be loaded -->
+            <LinearLayout
+                android:id="@+id/stationsErrorBanner"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_error_banner"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingEnd="4dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/stationsErrorText"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingTop="8dp"
+                    android:paddingBottom="8dp"
+                    android:textColor="@color/on_error_container"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/stationsRetryButton"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/retry"
+                    android:textColor="@color/on_error_container" />
+            </LinearLayout>
+
+            <!-- Everything for the selected station -->
+            <LinearLayout
+                android:id="@+id/stationContent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/deactivatedNotice"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_error_banner"
+                    android:paddingStart="12dp"
+                    android:paddingTop="8dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="8dp"
+                    android:textColor="@color/on_error_container"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <!-- Station details -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <FrameLayout
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_icon_tile">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_bolt"
+                                app:tint="@color/secondary" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/stationNameText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:layout_weight="1"
+                            android:ellipsize="end"
+                            android:fontFamily="sans-serif-medium"
+                            android:maxLines="1"
+                            android:textColor="@color/on_surface"
+                            android:textSize="16sp" />
+
+                        <TextView
+                            android:id="@+id/stationStatusChip"
+                            style="@style/Widget.SmartSolar.StatusChip"
+                            android:layout_marginStart="8dp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:baselineAligned="false"
+                        android:orientation="horizontal">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <!-- Separate ImageView keeps the icon at 14dp; a compound drawable would draw at 24dp -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                tools:ignore="UseCompoundDrawables">
+
+                                <ImageView
+                                    android:layout_width="14dp"
+                                    android:layout_height="14dp"
+                                    android:importantForAccessibility="no"
+                                    android:src="@drawable/ic_schedule"
+                                    app:tint="@color/on_surface_variant" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:text="@string/station_hours"
+                                    android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/stationHoursText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:fontFamily="sans-serif-medium"
+                                android:textColor="@color/on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <!-- Separate ImageView keeps the icon at 14dp; a compound drawable would draw at 24dp -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                tools:ignore="UseCompoundDrawables">
+
+                                <ImageView
+                                    android:layout_width="14dp"
+                                    android:layout_height="14dp"
+                                    android:importantForAccessibility="no"
+                                    android:src="@drawable/ic_bolt"
+                                    app:tint="@color/on_surface_variant" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:text="@string/station_capacity"
+                                    android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/stationCapacityText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:fontFamily="sans-serif-medium"
+                                android:textColor="@color/on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <!-- Separate ImageView keeps the icon at 14dp; a compound drawable would draw at 24dp -->
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                tools:ignore="UseCompoundDrawables">
+
+                                <ImageView
+                                    android:layout_width="14dp"
+                                    android:layout_height="14dp"
+                                    android:importantForAccessibility="no"
+                                    android:src="@drawable/ic_battery"
+                                    app:tint="@color/on_surface_variant" />
+
+                                <TextView
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="4dp"
+                                    android:text="@string/station_battery_slots"
+                                    android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                            </LinearLayout>
+
+                            <TextView
+                                android:id="@+id/stationBatteryText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:fontFamily="sans-serif-medium"
+                                android:textColor="@color/on_surface"
+                                android:textSize="14sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Today's slot counts -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_card"
+                    android:orientation="vertical"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/today_slots_title"
+                            android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+
+                        <TextView
+                            android:id="@+id/todayDateText"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:baselineAligned="false"
+                        android:divider="@drawable/divider_slate"
+                        android:orientation="horizontal"
+                        android:showDividers="middle">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/metricTotalText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_empty"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
+                                android:textColor="@color/primary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_total"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/metricAvailableText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_empty"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
+                                android:textColor="@color/secondary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_available"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/metricUnavailableText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_empty"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
+                                android:textColor="@color/alert_danger" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_unavailable"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Opens slot management for the selected station (screen comes in the next round) -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/manageSlotsButton"
+                    style="@style/Widget.SmartSolar.PrimaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/manage_slots"
+                    app:icon="@drawable/ic_calendar"
+                    app:iconGravity="textStart" />
+
+                <!-- Today's schedule -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/today_schedule"
+                        android:textAppearance="@style/TextAppearance.SmartSolar.Title" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/refreshSlotsButton"
+                        style="@style/Widget.Material3.Button.IconButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/refresh"
+                        app:icon="@drawable/ic_refresh"
+                        app:iconTint="@color/on_surface_variant" />
+                </LinearLayout>
+
+                <com.google.android.material.progressindicator.LinearProgressIndicator
+                    android:id="@+id/slotsProgress"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:indeterminate="true"
+                    android:visibility="gone"
+                    app:indicatorColor="@color/secondary"
+                    app:trackColor="@color/surface_container" />
+
+                <LinearLayout
+                    android:id="@+id/slotsErrorBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_error_banner"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="4dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/slotsErrorText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:paddingTop="8dp"
+                        android:paddingBottom="8dp"
+                        android:textColor="@color/on_error_container"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/slotsRetryButton"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/retry"
+                        android:textColor="@color/on_error_container" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/slotsEmptyText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_card"
+                    android:gravity="center"
+                    android:padding="16dp"
+                    android:text="@string/slots_empty_today"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <!-- One item_today_slot row per slot, added in code -->
+                <LinearLayout
+                    android:id="@+id/todaySlotsContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:background="@drawable/bg_card"
+                    android:divider="@drawable/divider_slate"
+                    android:orientation="vertical"
+                    android:showDividers="middle"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
 </LinearLayout>

@@ -33,5 +33,45 @@
     <string name="home_sign_out">Sign out</string>
     <string name="home_greeting">Hello, %1$s</string>
     <string name="home_nic">NIC: %1$s</string>
-    <string name="home_username">Username: %1$s</string>
+    <string name="retry">Retry</string>
+    <string name="refresh">Refresh</string>
+
+    <!-- Grid Operator console -->
+    <string name="operator_title">Operator Grid Control</string>
+    <string name="operator_role">Grid Operator</string>
+    <string name="operator_role_at_station">Grid Operator • %1$s</string>
+    <string name="operator_header_station">%1$s • %2$s</string>
+    <string name="change_station">change station</string>
+    <string name="station_loading">Loading stations…</string>
+    <string name="station_none">No stations registered yet</string>
+    <string name="station_unavailable">Stations unavailable</string>
+    <string name="station_meta">%1$s · %2$s</string>
+    <string name="station_status_active">Active</string>
+    <string name="station_status_deactivated">Deactivated</string>
+    <string name="station_deactivated_notice">%1$s is deactivated. Prosumers can\'t book its slots until a Backoffice user reactivates it.</string>
+    <string name="station_hours">Hours</string>
+    <string name="station_capacity">Capacity</string>
+    <string name="station_battery_slots">Battery slots</string>
+    <string name="station_capacity_value">%1$s kWh</string>
+    <string name="today_slots_title">Today\'s slots</string>
+    <string name="metric_total">Total</string>
+    <string name="metric_available">Available</string>
+    <string name="metric_unavailable">Unavailable</string>
+    <string name="metric_empty">–</string>
+    <string name="manage_slots">Manage Slots</string>
+    <string name="today_schedule">Today\'s schedule</string>
+    <string name="slots_empty_today">No slots are scheduled at this station today.</string>
+    <string name="slot_time_range">%1$s – %2$s</string>
+    <string name="slot_available">Available</string>
+    <string name="slot_unavailable">Unavailable</string>
+
+    <!-- Station picker -->
+    <string name="picker_title">Select station</string>
+    <string name="picker_search_hint">Search by ID or name</string>
+    <string name="picker_empty">No stations match.</string>
+
+    <!-- Durations -->
+    <string name="duration_minutes">%1$d min</string>
+    <string name="duration_hours">%1$d h</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
 </resources>
