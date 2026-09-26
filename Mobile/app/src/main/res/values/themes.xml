@@ -54,6 +54,55 @@
         <item name="android:textColor">@color/on_surface</item>
     </style>
 
+    <!-- Small uppercase caption above a value, e.g. "CAPACITY" -->
+    <style name="TextAppearance.SmartSolar.Overline" parent="">
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0.04</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
+    <!-- Large count in a metric card, with fixed-width digits so numbers don't jump -->
+    <style name="TextAppearance.SmartSolar.Metric" parent="">
+        <item name="android:textSize">28sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFeatureSettings">tnum</item>
+    </style>
+
+    <!-- Section heading inside a screen -->
+    <style name="TextAppearance.SmartSolar.Title" parent="">
+        <item name="android:textSize">14sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/on_surface</item>
+    </style>
+
+    <!-- Compact status badge; pair it with a bg_chip_* background -->
+    <style name="Widget.SmartSolar.StatusChip" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- Square icon button that stays filled while its panel is open (e.g. the calendar toggle); set selected in code -->
+    <style name="Widget.SmartSolar.ToggleIconButton" parent="Widget.Material3.Button.IconButton">
+        <item name="backgroundTint">@color/role_toggle_background</item>
+        <item name="iconTint">@color/role_toggle_content</item>
+        <item name="strokeColor">@color/toggle_button_stroke</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="cornerRadius">8dp</item>
+        <item name="iconPadding">0dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="android:padding">0dp</item>
+    </style>
+
     <!-- Full-width primary action button -->
     <style name="Widget.SmartSolar.PrimaryButton" parent="Widget.Material3.Button">
         <item name="backgroundTint">@color/primary_button_background</item>

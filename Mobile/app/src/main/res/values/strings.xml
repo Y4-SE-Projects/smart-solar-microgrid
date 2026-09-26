@@ -33,5 +33,83 @@
     <string name="home_sign_out">Sign out</string>
     <string name="home_greeting">Hello, %1$s</string>
     <string name="home_nic">NIC: %1$s</string>
-    <string name="home_username">Username: %1$s</string>
+    <string name="retry">Retry</string>
+    <string name="refresh">Refresh</string>
+
+    <!-- Grid Operator console -->
+    <string name="operator_title">Operator Grid Control</string>
+    <string name="operator_role">Grid Operator</string>
+    <string name="operator_role_at_station">Grid Operator • %1$s</string>
+    <string name="operator_header_station">%1$s • %2$s</string>
+    <string name="change_station">change station</string>
+    <string name="station_loading">Loading stations…</string>
+    <string name="station_none">No stations registered yet</string>
+    <string name="station_unavailable">Stations unavailable</string>
+    <string name="station_meta">%1$s · %2$s</string>
+    <string name="station_status_active">Active</string>
+    <string name="station_status_deactivated">Deactivated</string>
+    <string name="station_deactivated_notice">%1$s is deactivated. Prosumers can\'t book its slots until a Backoffice user reactivates it.</string>
+    <string name="station_hours">Hours</string>
+    <string name="station_capacity">Capacity</string>
+    <string name="station_battery_slots">Battery slots</string>
+    <string name="station_capacity_value">%1$s kWh</string>
+    <string name="today_slots_title">Today\'s slots</string>
+    <string name="metric_total">Total</string>
+    <string name="metric_available">Available</string>
+    <string name="metric_unavailable">Unavailable</string>
+    <string name="metric_empty">–</string>
+    <string name="manage_slots">Manage Slots</string>
+    <string name="today_schedule">Today\'s schedule</string>
+    <string name="slots_empty_today">No slots are scheduled at this station today.</string>
+    <string name="slot_time_range">%1$s – %2$s</string>
+    <string name="slot_available">Available</string>
+    <string name="slot_unavailable">Unavailable</string>
+
+    <!-- Manage Slots (mirrors the web slot page for Grid Operators) -->
+    <string name="back">Back</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="station_deactivated_slots_notice">%1$s is deactivated. Prosumers can\'t book its slots, but you can still change their availability.</string>
+    <string name="action_error">%1$s: %2$s</string>
+    <string name="pick_a_day">Pick a day</string>
+    <string name="show_calendar">Show calendar</string>
+    <string name="hide_calendar">Hide calendar</string>
+    <string name="today">Today</string>
+    <string name="previous_month">Previous month</string>
+    <string name="next_month">Next month</string>
+    <string name="legend_has_slots">Has slots</string>
+    <string name="legend_has_matches">Has matches</string>
+    <string name="day_has_slots">%1$s, has slots</string>
+    <string name="day_has_matches">%1$s, has matches</string>
+    <string name="loading">Loading…</string>
+    <string name="month_load_failed_retry">Couldn\'t load, retry</string>
+    <string name="search_month_slots">Search %1$s slots</string>
+    <string name="matches_in_month">Matches in %1$s</string>
+    <string name="empty_day_title">No slots on %1$s</string>
+    <string name="empty_day_pick_highlighted">Pick a highlighted day to see its slots.</string>
+    <string name="empty_month_none">%1$s has no slots yet.</string>
+    <string name="empty_search_title">No slots in %1$s match “%2$s”</string>
+    <string name="empty_search_hint">Try a slot ID, a time such as 08:00, a weekday, or available / unavailable.</string>
+    <string name="clear_search">Clear search</string>
+    <string name="slot_meta">%1$s · %2$s</string>
+    <string name="slot_toggle_description">Availability for %1$s</string>
+    <string name="search_word_available">available</string>
+    <string name="search_word_unavailable">unavailable</string>
+    <plurals name="days_in_month">
+        <item quantity="one">%1$d day in %2$s</item>
+        <item quantity="other">%1$d days in %2$s</item>
+    </plurals>
+    <plurals name="slot_count">
+        <item quantity="one">%1$d slot</item>
+        <item quantity="other">%1$d slots</item>
+    </plurals>
+
+    <!-- Station picker -->
+    <string name="picker_title">Select station</string>
+    <string name="picker_search_hint">Search by ID or name</string>
+    <string name="picker_empty">No stations match.</string>
+
+    <!-- Durations -->
+    <string name="duration_minutes">%1$d min</string>
+    <string name="duration_hours">%1$d h</string>
+    <string name="duration_hours_minutes">%1$d h %2$d min</string>
 </resources>
