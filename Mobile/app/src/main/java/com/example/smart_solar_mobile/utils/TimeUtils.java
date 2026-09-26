@@ -47,6 +47,80 @@ public final class TimeUtils {
         return new SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(date);
     }
 
+    public static String formatLongDate(Date date) {
+        // Local date for list headings, e.g. "Saturday, 26 September"
+        return new SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(date);
+    }
+
+    public static String formatMonthYear(Date date) {
+        // Local month and year, e.g. "September 2026"
+        return new SimpleDateFormat("LLLL yyyy", Locale.getDefault()).format(date);
+    }
+
+    public static String formatMonthName(Date date) {
+        // Local month name, e.g. "September"
+        return new SimpleDateFormat("LLLL", Locale.getDefault()).format(date);
+    }
+
+    public static String formatWeekday(Date date) {
+        // Local weekday name, e.g. "Saturday"
+        return new SimpleDateFormat("EEEE", Locale.getDefault()).format(date);
+    }
+
+    public static String formatWeekdayShort(Date date) {
+        // Short local weekday name for calendar headings, e.g. "Sat"
+        return new SimpleDateFormat("EEE", Locale.getDefault()).format(date);
+    }
+
+    public static String dayKey(Date date) {
+        // Local calendar day as "yyyy-MM-dd", for grouping slots by day
+        return new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(date);
+    }
+
+    public static int dayOfMonth(Date date) {
+        // Local day of the month, 1 to 31
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        return calendar.get(Calendar.DAY_OF_MONTH);
+    }
+
+    public static Date startOfDay(Date date) {
+        // Local midnight at the start of the given day
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        return calendar.getTime();
+    }
+
+    public static Date startOfMonth(Date date) {
+        // Local midnight on the first day of the given month
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(startOfDay(date));
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+        return calendar.getTime();
+    }
+
+    public static Date addMonths(Date date, int months) {
+        // The same point in time the given number of months later (or earlier when negative)
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(date);
+        calendar.add(Calendar.MONTH, months);
+        return calendar.getTime();
+    }
+
+    public static boolean isSameLocalMonth(Date a, Date b) {
+        // True when both instants fall in the same month in the phone's time zone
+        Calendar first = Calendar.getInstance();
+        first.setTime(a);
+        Calendar second = Calendar.getInstance();
+        second.setTime(b);
+        return first.get(Calendar.YEAR) == second.get(Calendar.YEAR)
+                && first.get(Calendar.MONTH) == second.get(Calendar.MONTH);
+    }
+
     public static String monthKey(Date date) {
         // Local month in the "yyyy-MM" form the slots endpoint's month filter expects
         return new SimpleDateFormat("yyyy-MM", Locale.US).format(date);
