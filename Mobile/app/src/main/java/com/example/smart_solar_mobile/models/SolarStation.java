@@ -4,7 +4,12 @@
 
 package com.example.smart_solar_mobile.models;
 
-public class SolarStation {
+import java.io.Serializable;
+
+// Serializable so a station can be handed to another screen in an Intent
+public class SolarStation implements Serializable {
+    private static final long serialVersionUID = 1L;
+
     // Mongo ObjectId as a string; stationId is the human-readable ID used in routes
     public String id;
     public String stationId;
