@@ -38,3 +38,10 @@ export function isThisMonth(value) {
 export function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count === 1 ? singular : plural}`;
 }
+
+// Turns a stored role value into its display form. 
+// The API stores roles as single words ("GridOperator"), which need spacing before they are shown.
+export function formatRole(role) {
+  if (!role) return '—';
+  return role.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
