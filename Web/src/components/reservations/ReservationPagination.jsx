@@ -1,9 +1,12 @@
 // File: ReservationPagination.jsx
 // Purpose: Rows-per-page and server-backed pagination presentation.
 
-import CustomSelect from "../ui/CustomSelect";
+import Dropdown from '../ui/Dropdown';
 
-const PAGE_SIZES = [10, 25, 50];
+const PAGE_SIZES = [10, 25, 50].map((size) => ({
+    value: size,
+    label: String(size),
+}));
 
 function visiblePages(currentPage, totalPages) {
     const candidates = new Set(
@@ -60,13 +63,12 @@ export default function ReservationPagination({
                     Rows per page:
                 </label>
                 <div className="w-24">
-                    <CustomSelect
+                    <Dropdown
                         id="reservation-page-size"
+                        label="Rows per page"
                         value={pageSize}
                         options={PAGE_SIZES}
                         onChange={onPageSizeChange}
-                        getOptionValue={(size) => size}
-                        getOptionLabel={(size) => String(size)}
                         disabled={isLoading}
                     />
                 </div>

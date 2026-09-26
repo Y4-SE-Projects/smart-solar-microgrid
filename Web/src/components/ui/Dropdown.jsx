@@ -70,21 +70,23 @@ function findEnabled(list, from, step) {
 }
 
 export default function Dropdown({
+  id: controlId,
   label,
   value,
   options,
   onChange,
   placeholder = 'Select an option',
   disabled = false,
+  required = false,
   variant = 'field',
   className = '',
   searchable = false,
   searchPlaceholder = 'Search…',
   emptyText = 'No matches',
 }) {
-  const id = useId();
-  const listId = `${id}-list`;
-  const optionId = (index) => `${id}-option-${index}`;
+  const generatedId = useId();
+  const listId = `${generatedId}-list`;
+  const optionId = (index) => `${generatedId}-option-${index}`;
 
   const triggerRef = useRef(null);
   const popupRef = useRef(null);
@@ -295,9 +297,11 @@ export default function Dropdown({
     <>
       <button
         ref={triggerRef}
+        id={controlId}
         type="button"
         role={searchable ? undefined : 'combobox'}
         aria-label={label}
+        aria-required={!searchable && required ? true : undefined}
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-controls={isOpen ? listId : undefined}
@@ -362,6 +366,7 @@ export default function Dropdown({
                     type="text"
                     role="combobox"
                     aria-label={`${label}: ${searchPlaceholder}`}
+                    aria-required={required || undefined}
                     aria-expanded="true"
                     aria-controls={listId}
                     aria-autocomplete="list"

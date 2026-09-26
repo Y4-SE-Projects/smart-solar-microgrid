@@ -3,7 +3,7 @@
 
 import { useEffect, useId, useRef } from 'react';
 
-export default function Modal({ title, description, onClose, children, maxWidthClassName = 'max-w-lg' }) {
+export default function Modal({ title, description, onClose, children, maxWidthClassName = 'max-w-lg', scrollable = true }) {
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef(null);
@@ -39,7 +39,7 @@ export default function Modal({ title, description, onClose, children, maxWidthC
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         tabIndex={-1}
-        className={`relative w-full ${maxWidthClassName} bg-surface-container-lowest rounded-2xl shadow-xl p-space-xl max-h-[90vh] overflow-y-auto outline-none animate-dialog-in motion-reduce:animate-none`}
+        className={`relative w-full ${maxWidthClassName} bg-surface-container-lowest rounded-2xl shadow-xl p-space-xl ${scrollable ? 'max-h-[90vh] overflow-y-auto' : 'overflow-visible'} outline-none animate-dialog-in motion-reduce:animate-none`}
       >
         <div className="flex items-start justify-between gap-3 mb-space-lg">
           <div className="min-w-0">
