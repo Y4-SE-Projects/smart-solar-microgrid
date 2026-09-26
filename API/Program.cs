@@ -11,7 +11,9 @@ using API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Security.Claims;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,11 +29,47 @@ builder.Services.AddSingleton<JwtTokenService>();
 // The credentials used to create the first Backoffice account on startup if one doesn't already exist.
 builder.Services.Configure<SeedAdminSettings>(builder.Configuration.GetSection("SeedAdminSettings"));
 
+// QR-VERIFICATION: settings + startup guard. The signing secret must never be empty or short.
+builder.Services.Configure<QrSettings>(builder.Configuration.GetSection("QrSettings"));
+var qrSettings = builder.Configuration.GetSection("QrSettings").Get<QrSettings>();
+if (qrSettings == null || string.IsNullOrWhiteSpace(qrSettings.SigningSecret) || qrSettings.SigningSecret.Length < 32)
+{
+    throw new InvalidOperationException(
+        "QrSettings:SigningSecret is missing or shorter than 32 characters. Set it in appsettings.json, user-secrets, or the QrSettings__SigningSecret environment variable.");
+}
+builder.Services.AddSingleton<QrService>();
+
 // Application services
 builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<StationService>();
 builder.Services.AddScoped<SlotService>();
 builder.Services.AddScoped<ReservationOperationsService>();
+builder.Services.AddScoped<QrReservationService>(); // QR-VERIFICATION
+
+// QR-VERIFICATION: rate limit for verify-qr, per authenticated operator ( IP as a fallback )
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("qr-verify", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "anonymous",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = qrSettings.VerifyRequestsPerMinute,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            }));
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { success = false, code = "RATE_LIMITED", message = "Too many verification attempts. Please slow down." },
+            token);
+    };
+});
 
 // Controllers
 builder.Services.AddControllers();
@@ -172,6 +210,7 @@ app.Use(async (context, next) =>
 // Order matters: Authentication before Authorization, both before endpoints are mapped.
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter(); // QR-VERIFICATION
 
 app.MapControllers();
 
