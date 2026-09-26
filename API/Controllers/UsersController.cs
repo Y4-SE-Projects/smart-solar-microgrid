@@ -110,11 +110,6 @@ namespace API.Controllers
                 return Unauthorized(new { success = false, message = "Invalid credentials." });
             }
 
-            if (!user.IsActive)
-            {
-                return Unauthorized(new { success = false, message = "This account has been deactivated." });
-            }
-
             // Enforce that each role only authenticates through its allowed platform.
             // (Prosumer = Mobile only, Backoffice = Web only, GridOperator = both)
             var clientType = Request.Headers["X-Client-Type"].FirstOrDefault();
@@ -127,6 +122,27 @@ namespace API.Controllers
             if (user.Role == Roles.Backoffice && clientType == "Mobile")
             {
                 return Unauthorized(new { success = false, message = "Backoffice accounts must use the web application." });
+            }
+
+            // A deactivated Prosumer is told the state of their account rather than simply refused. 
+            // So the mobile app knows whether to offer "Request Reactivation" or to show a request that is already pending. 
+            // No token is issued either way.
+            if (!user.IsActive)
+            {
+                if (user.Role == Roles.Prosumer)
+                {
+                    return Unauthorized(new
+                    {
+                        success = false,
+                        code = "ACCOUNT_DEACTIVATED",
+                        reactivationRequested = user.ReactivationRequestedAt.HasValue,
+                        rejectionReason = user.ReactivationRejectionReason,
+                        message = "This account has been deactivated."
+                    });
+                }
+
+                // Staff accounts have no self-service route back — only a Backoffice user can restore one.
+                return Unauthorized(new { success = false, message = "This account has been deactivated. Contact a Backoffice administrator." });
             }
 
             var token = _tokenService.GenerateToken(user);
