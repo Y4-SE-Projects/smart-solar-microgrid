@@ -19,12 +19,14 @@ namespace API.Services
         private readonly MongoDbContext _context;
         private readonly IMongoCollection<EnergyReservation> _reservations;
         private readonly UserService _userService;
+        private readonly QrService _qrService; // QR-VERIFICATION
 
-        public ReservationOperationsService(MongoDbContext context, UserService userService)
+        public ReservationOperationsService(MongoDbContext context, UserService userService, QrService qrService)
         {
             // Stores shared dependencies context and gets the EnergyReservation collection
             _context = context;
             _userService = userService;
+            _qrService = qrService; // QR-VERIFICATION
             _reservations = context.GetCollection<EnergyReservation>(MongoCollectionNames.EnergyReservation);
         }
 
@@ -642,6 +644,12 @@ namespace API.Services
                     .Set(r => r.Status, "Cancelled")
                     .Set(r => r.UpdatedAt, cancelledAt);
 
+            // QR-VERIFICATION: a cancelled reservation's QR must stop working immediately
+            if (reservation.Qr != null)
+            {
+                cancellationUpdate = cancellationUpdate.Set(r => r.Qr!.Status, QrStatuses.Revoked);
+            }
+
             var cancelledReservation =
                 await _reservations.FindOneAndUpdateAsync(
                     cancellationFilter,
@@ -696,6 +704,12 @@ namespace API.Services
                 Builders<EnergyReservation>.Update
                     .Set(r => r.Status, reservation.Status)
                     .Set(r => r.UpdatedAt, reservation.UpdatedAt);
+
+            // QR-VERIFICATION: restore the QR status that the cancellation revoked
+            if (reservation.Qr != null)
+            {
+                rollbackUpdate = rollbackUpdate.Set(r => r.Qr!.Status, reservation.Qr.Status);
+            }
 
             var rollbackResult = await _reservations.UpdateOneAsync(
                 rollbackFilter,
@@ -976,6 +990,19 @@ namespace API.Services
             var update = Builders<EnergyReservation>.Update
                 .Set(r => r.Status, normalizedStatus)
                 .Set(r => r.UpdatedAt, DateTime.UtcNow);
+
+            // QR-VERIFICATION: approval issues the signed QR; any other outcome retires an existing QR
+            if (normalizedStatus == "Approved")
+            {
+                var (qr, qrCodeData) = _qrService.CreateInitial(reservation.ReservationId);
+                update = update
+                    .Set(r => r.Qr, qr)
+                    .Set(r => r.QrCodeData, qrCodeData);
+            }
+            else if (reservation.Qr != null)
+            {
+                update = update.Set(r => r.Qr!.Status, QrStatuses.Revoked);
+            }
 
             var updatedReservation = await _reservations
                 .FindOneAndUpdateAsync(

@@ -8,6 +8,7 @@ using API.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
 using API.DTOs;
+using System.Text.RegularExpressions;
 
 namespace API.Controllers
 {
@@ -15,6 +16,14 @@ namespace API.Controllers
     [Route("api/reservations")]
     public class ReservationOperationsController : ControllerBase
     {
+        private const int MaxIdLength = 64;
+
+        private static readonly Regex NicPattern =
+            new(@"^(\d{9}[VvXx]|\d{12})$", RegexOptions.Compiled);
+
+        private static readonly HashSet<string> GridOperatorAllowedStatuses =
+            new(StringComparer.OrdinalIgnoreCase) { "Approved", "Declined", "Completed" };
+
         private readonly ReservationOperationsService _service;
 
         public ReservationOperationsController(ReservationOperationsService service)
@@ -367,35 +376,18 @@ namespace API.Controllers
             }
         }
 
+        [Authorize(Roles = Roles.Prosumer)]
         [HttpGet("prosumer/{nic}")]
         public async Task<IActionResult> GetProsumerHistory(string nic)
         {
-            // Validates the NIC, gets the history from the service and wraps it in the standard response shape
+            // Returns the reservation history only when the authenticated Prosumer owns the requested NIC
             if (string.IsNullOrWhiteSpace(nic))
             {
                 return BadRequest(new { success = false, message = "NIC is required." });
             }
 
-            var reservations = await _service.GetProsumerHistoryAsync(nic);
-            return Ok(new { success = true, data = reservations });
-        }
-
-        [Authorize(Roles = Roles.Prosumer)]
-        [HttpGet("prosumer/{nic}/pending")]
-        public async Task<IActionResult> GetPendingReservations(string nic)
-        {
-            // Returns pending reservations only when the authenticated Prosumer owns the requested NIC
-            if (string.IsNullOrWhiteSpace(nic))
-            {
-                return BadRequest(new
-                {
-                    success = false,
-                    message = "NIC is required."
-                });
-            }
-
             var requestedNic = nic.Trim();
-            var authenticatedNic = User.FindFirst("nic")?.Value.Trim();
+            var authenticatedNic = User.FindFirst("nic")?.Value?.Trim();
 
             if (string.IsNullOrWhiteSpace(authenticatedNic))
             {
@@ -413,19 +405,73 @@ namespace API.Controllers
                     new
                     {
                         success = false,
-                        message = "A Prosumer may view only their own pending reservations."
-                    }
-                );   
+                        message = "A Prosumer may view only their own reservation history."
+                    });
             }
 
-            var reservations =
-                await _service.GetPendingReservationAsync(authenticatedNic);
-
-            return Ok(new
+            try
             {
-                success = true,
-                data = reservations
-            });
+                var reservations = await _service.GetProsumerHistoryAsync(authenticatedNic);
+                return Ok(new { success = true, data = reservations });
+            }
+            catch (Exception)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message = "Retrieving reservation history failed."
+                    });
+            }
+        }
+
+        [Authorize(Roles = Roles.GridOperator)]
+        [HttpGet("prosumer/{nic}/pending")]
+        public async Task<IActionResult> GetPendingReservations(string nic)
+        {
+            // Lets a GridOperator review the pending reservations of any Prosumer
+            if (string.IsNullOrWhiteSpace(nic))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "NIC is required."
+                });
+            }
+
+            var requestedNic = nic.Trim();
+
+            if (!IsValidNicFormat(requestedNic))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "NIC format is invalid."
+                });
+            }
+
+            try
+            {
+                var reservations =
+                    await _service.GetPendingReservationAsync(requestedNic);
+
+                return Ok(new
+                {
+                    success = true,
+                    data = reservations
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message = "Retrieving pending reservations failed."
+                    });
+            }
         }
 
         [Authorize(Roles = Roles.Prosumer)]
@@ -478,17 +524,30 @@ namespace API.Controllers
             });
         }
 
+        [Authorize(Roles = Roles.GridOperator)]
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateReservationStatus(
             string id,
-            [FromBody] EnergyReservation request)
+            [FromBody] UpdateReservationStatusRequest? request)
         {
+            // Only the status field is bound, so no other reservation field can be over-posted
             if (string.IsNullOrWhiteSpace(id))
             {
                 return BadRequest(new
                 {
                     success = false,
                     message = "Reservation ID is required."
+                });
+            }
+
+            var reservationId = id.Trim();
+
+            if (reservationId.Length > MaxIdLength)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Reservation ID is invalid."
                 });
             }
 
@@ -501,12 +560,24 @@ namespace API.Controllers
                 });
             }
 
+            var requestedStatus = request.Status.Trim();
+
+            // Cancellation is excluded on purpose: only the cancel endpoint releases the reserved slot
+            if (!GridOperatorAllowedStatuses.Contains(requestedStatus))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Status must be Approved, Declined, or Completed. Use the cancel endpoint to cancel a reservation."
+                });
+            }
+
             try
             {
                 var reservation =
                     await _service.UpdateReservationStatusAsync(
-                        id,
-                        request.Status);
+                        reservationId,
+                        requestedStatus);
 
                 if (reservation == null)
                 {
@@ -540,6 +611,22 @@ namespace API.Controllers
                     message = ex.Message
                 });
             }
+            catch (Exception)
+            {
+                return StatusCode(
+                    StatusCodes.Status500InternalServerError,
+                    new
+                    {
+                        success = false,
+                        message = "Reservation status update failed."
+                    });
+            }
+        }
+
+        // Accepts old (9 digits + V/X) and new (12 digits) NIC formats
+        private static bool IsValidNicFormat(string nic)
+        {
+            return NicPattern.IsMatch(nic);
         }
     }
 }
