@@ -77,8 +77,17 @@ namespace API.DTOs
         public string? Reason { get; set; }
     }
 
+    // Body for PUT /api/users/staff/{username} — a Backoffice user editing a Backoffice or GridOperator account.
+    // Username and Role can not be changed.
+    public class UpdateStaffRequest
+    {
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+    }
+
     // Safe shape returned by profile-related endpoints.
-    // Deliberately excludes PasswordHash. That should never leave the server.
+    // Deliberately excludes PasswordHash — that should never leave the server.
     public class UserProfileResponse
     {
         public string Nic { get; set; } = string.Empty;

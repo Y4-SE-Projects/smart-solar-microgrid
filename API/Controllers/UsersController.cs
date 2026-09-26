@@ -359,6 +359,80 @@ namespace API.Controllers
             return Ok(new { success = true, data });
         }
 
+        // Updates a staff member's contact details. ( Backoffice only )
+        // Username and Role aren't editable here.
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("staff/{username}")]
+        public async Task<IActionResult> UpdateStaff(string username, [FromBody] UpdateStaffRequest request)
+        {
+            var user = await _userService.FindByUsernameAsync(username);
+            if (user == null || user.Role == Roles.Prosumer)
+            {
+                return NotFound(new { success = false, message = "Staff account not found." });
+            }
+
+            await _userService.UpdateStaffProfileAsync(username, request.FullName, request.Email, request.Phone);
+
+            return Ok(new { success = true, message = "Staff account updated." });
+        }
+
+        // Switches off a staff account's access. ( Backoffice only )
+        // Deactivating rather than deleting keeps the account's history intact.
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("staff/{username}/deactivate")]
+        public async Task<IActionResult> DeactivateStaff(string username)
+        {
+            var user = await _userService.FindByUsernameAsync(username);
+            if (user == null || user.Role == Roles.Prosumer)
+            {
+                return NotFound(new { success = false, message = "Staff account not found." });
+            }
+
+            if (!user.IsActive)
+            {
+                return BadRequest(new { success = false, message = "This account is already deactivated." });
+            }
+
+            // Locking yourself out mid-session helps nobody, and the account would then need another Backoffice user to restore it.
+            var callerUsername = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.Equals(callerUsername, username, StringComparison.Ordinal))
+            {
+                return BadRequest(new { success = false, message = "You cannot deactivate your own account." });
+            }
+
+            // Deactivating the last active Backoffice account one would leave nobody able to administer the system.
+            if (user.Role == Roles.Backoffice && await _userService.CountActiveBackofficeAsync() <= 1)
+            {
+                return BadRequest(new { success = false, message = "This is the last active Backoffice account and cannot be deactivated." });
+            }
+
+            await _userService.SetStaffActiveAsync(username, false);
+
+            return Ok(new { success = true, message = "Staff account deactivated." });
+        }
+
+        // Restores a deactivated staff account. ( Backoffice only )
+        // Separate from the Prosumer reactivate endpoint, which is keyed by NIC.
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("staff/{username}/reactivate")]
+        public async Task<IActionResult> ReactivateStaff(string username)
+        {
+            var user = await _userService.FindByUsernameAsync(username);
+            if (user == null || user.Role == Roles.Prosumer)
+            {
+                return NotFound(new { success = false, message = "Staff account not found." });
+            }
+
+            if (user.IsActive)
+            {
+                return BadRequest(new { success = false, message = "This account is already active." });
+            }
+
+            await _userService.SetStaffActiveAsync(username, true);
+
+            return Ok(new { success = true, message = "Staff account reactivated." });
+        }
+
         // Verifies a NIC and password for the two public reactivation endpoints.
         // Returns null when the NIC is unknown, the password is wrong, or the account isn't a Prosumer. 
         private async Task<User?> AuthenticateProsumerAsync(string nic, string password)

@@ -157,6 +157,34 @@ namespace API.Services
             return await _users.Find(u => u.Role == Roles.Backoffice || u.Role == Roles.GridOperator).ToListAsync();
         }
 
+        // Updates the editable contact fields on a staff account, keyed by username.
+        // Username and Role are never touched here.
+        public async Task UpdateStaffProfileAsync(string username, string fullName, string email, string phone)
+        {
+            var update = Builders<User>.Update
+                .Set(u => u.FullName, fullName)
+                .Set(u => u.Email, email)
+                .Set(u => u.Phone, phone);
+
+            await _users.UpdateOneAsync(u => u.Username == username, update);
+        }
+
+        // Enables or disables a staff account's ability to sign in..
+        public async Task SetStaffActiveAsync(string username, bool isActive)
+        {
+            var update = Builders<User>.Update.Set(u => u.IsActive, isActive);
+
+            await _users.UpdateOneAsync(u => u.Username == username, update);
+        }
+
+        // How many Backoffice accounts can currently sign in.
+        // Used to stop the last one being deactivated. 
+        // ( Reaching zero would leave the system with no way to administer itself. )
+        public async Task<long> CountActiveBackofficeAsync()
+        {
+            return await _users.CountDocumentsAsync(u => u.Role == Roles.Backoffice && u.IsActive);
+        }
+
         // True, if at least one Backoffice account already exists.
         // Used only at startup to decide whether the first Backoffice account needs to be seeded.
         public async Task<bool> AnyBackofficeExistsAsync()
