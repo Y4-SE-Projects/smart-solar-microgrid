@@ -185,11 +185,11 @@ namespace API.Services
             return await _users.CountDocumentsAsync(u => u.Role == Roles.Backoffice && u.IsActive);
         }
 
-        // True, if at least one Backoffice account already exists.
-        // Used only at startup to decide whether the first Backoffice account needs to be seeded.
-        public async Task<bool> AnyBackofficeExistsAsync()
+        // True, if at least one Backoffice account exists and can currently sign in.
+        // Used only at startup to decide whether a Backoffice account needs seeding.
+        public async Task<bool> AnyActiveBackofficeExistsAsync()
         {
-            return await _users.Find(u => u.Role == Roles.Backoffice).AnyAsync();
+            return await _users.Find(u => u.Role == Roles.Backoffice && u.IsActive).AnyAsync();
         }
     }
 }

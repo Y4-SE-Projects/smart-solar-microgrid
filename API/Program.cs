@@ -23,7 +23,7 @@ builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 builder.Services.AddSingleton<JwtTokenService>();
 
-// Seed-admin configuration. 
+// Seed-admin configuration.
 // The credentials used to create the first Backoffice account on startup if one doesn't already exist.
 builder.Services.Configure<SeedAdminSettings>(builder.Configuration.GetSection("SeedAdminSettings"));
 
@@ -110,7 +110,7 @@ catch (Exception ex)
 
 // Seed the first Backoffice account if none exists yet.
 // Register now refuses to create Backoffice/GridOperator accounts unless the caller is already an authenticated Backoffice user. 
-// So without this seed there would be no way to create the very first one. 
+// So without this seed there would be no way to create the very first one.
 // ( Runs once per startup and is a no-op on every run after the first Backoffice account exists. Therefore, it's safe to leave in place permanently rather than removing it after first use. )
 using (var scope = app.Services.CreateScope())
 {
@@ -120,35 +120,54 @@ using (var scope = app.Services.CreateScope())
         var seedSettings = scope.ServiceProvider
             .GetRequiredService<Microsoft.Extensions.Options.IOptions<SeedAdminSettings>>().Value;
 
-        var anyBackofficeExists = await userService.AnyBackofficeExistsAsync();
-        if (!anyBackofficeExists)
+        var anyActiveBackoffice = await userService.AnyActiveBackofficeExistsAsync();
+        if (!anyActiveBackoffice)
         {
             if (string.IsNullOrWhiteSpace(seedSettings.Username) || string.IsNullOrWhiteSpace(seedSettings.Password))
             {
-                Console.WriteLine("No Backoffice account exists and SeedAdminSettings is not configured — skipping seed. Add a SeedAdminSettings section to appsettings.json.");
+                Console.WriteLine("No active Backoffice account exists and SeedAdminSettings is not configured — skipping seed. Add a SeedAdminSettings section to appsettings.json.");
             }
             else
             {
-                var seedUser = new User
-                {
-                    Username = seedSettings.Username,
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedSettings.Password),
-                    Role = Roles.Backoffice,
-                    FullName = seedSettings.FullName,
-                    Email = seedSettings.Email,
-                    Phone = seedSettings.Phone,
-                    IsActive = true,
-                    CreatedAt = DateTime.UtcNow
-                };
+                // Register checks the username is free before inserting, and this path has to do the same. 
+                // Otherwise a username already held by a GridOperator would end up on two documents. 
+                // Login would authenticate against whichever one MongoDB happened to return first.
+                var existing = await userService.FindByUsernameAsync(seedSettings.Username);
 
-                await userService.CreateUserAsync(seedUser);
-                Console.WriteLine($"Seeded initial Backoffice account: \"{seedSettings.Username}\". Log in and change this password, or create your real admin accounts and stop using this one.");
+                if (existing == null)
+                {
+                    var seedUser = new User
+                    {
+                        Username = seedSettings.Username,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedSettings.Password),
+                        Role = Roles.Backoffice,
+                        FullName = seedSettings.FullName,
+                        Email = seedSettings.Email,
+                        Phone = seedSettings.Phone,
+                        IsActive = true,
+                        CreatedAt = DateTime.UtcNow
+                    };
+
+                    await userService.CreateUserAsync(seedUser);
+                    Console.WriteLine($"Seeded initial Backoffice account: \"{seedSettings.Username}\". Create your real admin accounts and stop using this one.");
+                }
+                else if (existing.Role == Roles.Backoffice)
+                {
+                    // The seed account is still in the database but was deactivated, which is one way a 
+                    // system ends up with nobody able to administer it. Restoring it is the recovery path. 
+                    await userService.SetStaffActiveAsync(seedSettings.Username, true);
+                    Console.WriteLine($"No active Backoffice account found — restored the existing seed account \"{seedSettings.Username}\".");
+                }
+                else
+                {
+                    Console.WriteLine($"No active Backoffice account exists, but the username \"{seedSettings.Username}\" already belongs to a {existing.Role} account. Set a different SeedAdminSettings:Username so the seed can be created.");
+                }
             }
         }
     }
     catch (Exception ex)
     {
-        // Never let a seeding failure prevent the API from starting. 
+        // Never let a seeding failure prevent the API from starting.
         // ( The rest of the system (login, all other endpoints) works regardless )
         Console.WriteLine($"Backoffice seed check FAILED: {ex.Message}");
     }
