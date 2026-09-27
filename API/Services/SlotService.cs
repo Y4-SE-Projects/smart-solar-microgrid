@@ -109,8 +109,7 @@ namespace API.Services
             var utcNow = DateTime.UtcNow;
             var windowEnd = utcNow.AddDays(MaxUpcomingWindowDays);
 
-            // upcomingOnly also caps at the 7-day reservation window — a slot further out
-            // than that can't be booked yet, so there's no point listing it as "upcoming".
+            // upcomingOnly also caps at the 7-day reservation window, a slot further out than that can't be booked yet, so there's no point listing it as "upcoming".
             var query = upcomingOnly
                 ? _slots.Find(s => s.StationId == stationId && s.StartTime > utcNow && s.StartTime <= windowEnd)
                 : _slots.Find(s => s.StationId == stationId);
