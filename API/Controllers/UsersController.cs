@@ -19,6 +19,11 @@ namespace API.Controllers
         private readonly UserService _userService;
         private readonly JwtTokenService _tokenService;
 
+        // Shortest password the API will store, applied wherever one is set.
+        // The rule lives here rather than only in the web form, so it holds for every
+        // client and for anything hitting the API directly.
+        private const int MinimumPasswordLength = 8;
+
         // Constructor: DI supplies the shared UserService and JwtTokenService.
         public UsersController(UserService userService, JwtTokenService tokenService)
         {
@@ -37,6 +42,11 @@ namespace API.Controllers
             if (!validRoles.Contains(request.Role))
             {
                 return BadRequest(new { success = false, message = "Role must be Backoffice, GridOperator, or Prosumer." });
+            }
+
+            if (string.IsNullOrEmpty(request.Password) || request.Password.Length < MinimumPasswordLength)
+            {
+                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
             }
 
             // Prosumers are a mobile-only role, so their sign-up belongs to the mobile app.
@@ -417,6 +427,33 @@ namespace API.Controllers
             await _userService.SetStaffActiveAsync(username, false);
 
             return Ok(new { success = true, message = "Staff account deactivated." });
+        }
+
+        // Resets a staff member's password. ( Backoffice only )
+        // The existing password isn't required — an administrator resetting a forgotten
+        // password has no way of knowing it. This is why the endpoint is Backoffice-gated
+        // and why it only reaches staff accounts.
+        //
+        // Note the reset doesn't end any session the account already has: tokens are
+        // stateless, so one issued before the change stays valid until it expires.
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("staff/{username}/password")]
+        public async Task<IActionResult> ResetStaffPassword(string username, [FromBody] ResetStaffPasswordRequest request)
+        {
+            var user = await _userService.FindByUsernameAsync(username);
+            if (user == null || user.Role == Roles.Prosumer)
+            {
+                return NotFound(new { success = false, message = "Staff account not found." });
+            }
+
+            if (string.IsNullOrEmpty(request.NewPassword) || request.NewPassword.Length < MinimumPasswordLength)
+            {
+                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+            }
+
+            await _userService.SetStaffPasswordAsync(username, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
+
+            return Ok(new { success = true, message = "Password reset. Share the new password with the account holder." });
         }
 
         // Restores a deactivated staff account. ( Backoffice only )

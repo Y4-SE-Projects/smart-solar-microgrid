@@ -86,6 +86,13 @@ namespace API.DTOs
         public string Phone { get; set; } = string.Empty;
     }
 
+    // Body for PUT /api/users/staff/{username}/password — Backoffice resetting a staff member's password.
+    // ( The account's current password is deliberately not required. )
+    public class ResetStaffPasswordRequest
+    {
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
     // Safe shape returned by profile-related endpoints.
     // Deliberately excludes PasswordHash — that should never leave the server.
     public class UserProfileResponse

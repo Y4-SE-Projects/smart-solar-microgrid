@@ -169,7 +169,16 @@ namespace API.Services
             await _users.UpdateOneAsync(u => u.Username == username, update);
         }
 
-        // Enables or disables a staff account's ability to sign in..
+        // Replaces a staff account's stored password hash.
+        // Takes the finished hash rather than the plain text.
+        public async Task SetStaffPasswordAsync(string username, string passwordHash)
+        {
+            var update = Builders<User>.Update.Set(u => u.PasswordHash, passwordHash);
+
+            await _users.UpdateOneAsync(u => u.Username == username, update);
+        }
+
+        // Enables or disables a staff account's ability to sign in.
         public async Task SetStaffActiveAsync(string username, bool isActive)
         {
             var update = Builders<User>.Update.Set(u => u.IsActive, isActive);
