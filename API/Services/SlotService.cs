@@ -11,6 +11,12 @@ namespace API.Services
 {
     public class SlotService
     {
+        // Mirrors ReservationOperationsService.MaximumCreationWindowDays: a reservation can
+        // never be scheduled more than 7 days out, so a slot starting further away than that
+        // isn't bookable yet either — upcomingOnly hides it for the same reason, not a
+        // separately-stated rule. Keep this in sync if that constant ever changes.
+        private const int MaxUpcomingWindowDays = 7;
+
         // Typed handles to the collections this service works with
         private readonly IMongoCollection<EnergyBookingSlot> _slots;
         private readonly IMongoCollection<SolarStation> _stations;
@@ -101,8 +107,12 @@ namespace API.Services
             }
 
             var utcNow = DateTime.UtcNow;
+            var windowEnd = utcNow.AddDays(MaxUpcomingWindowDays);
+
+            // upcomingOnly also caps at the 7-day reservation window — a slot further out
+            // than that can't be booked yet, so there's no point listing it as "upcoming".
             var query = upcomingOnly
-                ? _slots.Find(s => s.StationId == stationId && s.StartTime > utcNow)
+                ? _slots.Find(s => s.StationId == stationId && s.StartTime > utcNow && s.StartTime <= windowEnd)
                 : _slots.Find(s => s.StationId == stationId);
 
             return await query
@@ -128,9 +138,10 @@ namespace API.Services
             var from = monthStart.AddDays(-1);
             var to = monthStart.AddMonths(1).AddDays(1);
             var utcNow = DateTime.UtcNow;
+            var windowEnd = utcNow.AddDays(MaxUpcomingWindowDays);
 
             var query = upcomingOnly
-                ? _slots.Find(s => s.StationId == stationId && s.StartTime >= from && s.StartTime < to && s.StartTime > utcNow)
+                ? _slots.Find(s => s.StationId == stationId && s.StartTime >= from && s.StartTime < to && s.StartTime > utcNow && s.StartTime <= windowEnd)
                 : _slots.Find(s => s.StationId == stationId && s.StartTime >= from && s.StartTime < to);
 
             return await query
