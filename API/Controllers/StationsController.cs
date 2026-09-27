@@ -304,9 +304,10 @@ namespace API.Controllers
         }
 
         // Get slots from a single station, or only one month's slots when month=yyyy-MM is given.
+        // Pass upcomingOnly=true to exclude slots that have already started (checked against the server's own clock, not anything the caller sends).
         [Authorize]
         [HttpGet("{stationId}/slots")]
-        public async Task<IActionResult> GetSlotsForStation(string stationId, [FromQuery] string? month)
+        public async Task<IActionResult> GetSlotsForStation(string stationId, [FromQuery] string? month, [FromQuery] bool upcomingOnly = false)
         {
             if (string.IsNullOrWhiteSpace(stationId))
             {
@@ -321,7 +322,7 @@ namespace API.Controllers
 
             if (string.IsNullOrWhiteSpace(month))
             {
-                slots = await _slotService.GetSlotsForStationAsync(stationId);
+                slots = await _slotService.GetSlotsForStationAsync(stationId, upcomingOnly);
             }
             else
             {
@@ -335,7 +336,7 @@ namespace API.Controllers
                     });
                 }
 
-                slots = await _slotService.GetSlotsForStationInMonthAsync(stationId, monthStart.Year, monthStart.Month);
+                slots = await _slotService.GetSlotsForStationInMonthAsync(stationId, monthStart.Year, monthStart.Month, upcomingOnly);
             }
 
             // Service returns null, when the station itself doesn't exist. 200 if station exist but no slots (empty list)

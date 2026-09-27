@@ -53,6 +53,8 @@
   --color-background: #faf8ff;
   --color-on-background: #131b2e;
   --color-surface-variant: #dae2fd;
+  --color-yellow-container: #fef08a;
+  --color-on-yellow: #713f12;
 
   /* Custom semantic tokens layered on top of the Material-3 set */
   --color-mint-surface: #C8EFC1;
