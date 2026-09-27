@@ -88,8 +88,8 @@ namespace API.Services
             return $"{slot.StartTime + utcOffset:HH:mm}-{slot.EndTime + utcOffset:HH:mm}";
         }
 
-        // Lists every slot for a station, chronological order.
-        public async Task<List<EnergyBookingSlot>?> GetSlotsForStationAsync(string stationId)
+        // Lists every slot for a station, chronological order. When upcomingOnly is true, slots whose StartTime has already passed are excluded
+        public async Task<List<EnergyBookingSlot>?> GetSlotsForStationAsync(string stationId, bool upcomingOnly = false)
         {
             var station = await _stations
                 .Find(s => s.StationId == stationId)
@@ -100,14 +100,19 @@ namespace API.Services
                 return null;
             }
 
-            return await _slots
-                .Find(s => s.StationId == stationId)
+            var utcNow = DateTime.UtcNow;
+            var query = upcomingOnly
+                ? _slots.Find(s => s.StationId == stationId && s.StartTime > utcNow)
+                : _slots.Find(s => s.StationId == stationId);
+
+            return await query
                 .SortBy(s => s.StartTime)
                 .ToListAsync();
         }
 
-        // Lists a station's slots that start in one calendar month, in chronological order
-        public async Task<List<EnergyBookingSlot>?> GetSlotsForStationInMonthAsync(string stationId, int year, int month)
+        // Lists a station's slots that start in one calendar month, in chronological order.
+        // Same upcomingOnly meaning as GetSlotsForStationAsync.
+        public async Task<List<EnergyBookingSlot>?> GetSlotsForStationInMonthAsync(string stationId, int year, int month, bool upcomingOnly = false)
         {
             var station = await _stations
                 .Find(s => s.StationId == stationId)
@@ -122,9 +127,13 @@ namespace API.Services
             var monthStart = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
             var from = monthStart.AddDays(-1);
             var to = monthStart.AddMonths(1).AddDays(1);
+            var utcNow = DateTime.UtcNow;
 
-            return await _slots
-                .Find(s => s.StationId == stationId && s.StartTime >= from && s.StartTime < to)
+            var query = upcomingOnly
+                ? _slots.Find(s => s.StationId == stationId && s.StartTime >= from && s.StartTime < to && s.StartTime > utcNow)
+                : _slots.Find(s => s.StationId == stationId && s.StartTime >= from && s.StartTime < to);
+
+            return await query
                 .SortBy(s => s.StartTime)
                 .ToListAsync();
         }
