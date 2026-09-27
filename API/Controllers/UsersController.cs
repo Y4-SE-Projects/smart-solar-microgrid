@@ -39,6 +39,14 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "Role must be Backoffice, GridOperator, or Prosumer." });
             }
 
+            // Prosumers are a mobile-only role, so their sign-up belongs to the mobile app.
+            var clientType = Request.Headers["X-Client-Type"].FirstOrDefault();
+
+            if (request.Role == Roles.Prosumer && clientType == "Web")
+            {
+                return Unauthorized(new { success = false, message = "Prosumer accounts must be registered from the mobile app." });
+            }
+
             if (request.Role != Roles.Prosumer)
             {
                 if (!(User.Identity?.IsAuthenticated ?? false) || !User.IsInRole(Roles.Backoffice))
