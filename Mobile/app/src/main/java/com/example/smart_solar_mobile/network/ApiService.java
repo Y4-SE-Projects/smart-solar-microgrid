@@ -1,10 +1,14 @@
 package com.example.smart_solar_mobile.network;
 
 import com.example.smart_solar_mobile.models.AuthResponseData;
+import com.example.smart_solar_mobile.models.CreateReservationRequest;
+import com.example.smart_solar_mobile.models.DashboardCounts;
 import com.example.smart_solar_mobile.models.EnergyBookingSlot;
 import com.example.smart_solar_mobile.models.LoginRequest;
+import com.example.smart_solar_mobile.models.ReservationData;
 import com.example.smart_solar_mobile.models.SetSlotAvailabilityRequest;
 import com.example.smart_solar_mobile.models.SolarStation;
+import com.example.smart_solar_mobile.models.UpdateReservationRequest;
 
 import java.util.List;
 
@@ -22,6 +26,27 @@ public interface ApiService {
 
     @POST("users/login")
     Call<ApiResponse<AuthResponseData>> login(@Body LoginRequest request);
+
+    @POST("reservations")
+    Call<ApiResponse<ReservationData>> createReservation(
+            @Body CreateReservationRequest request);
+
+    @PUT("reservations/{id}")
+    Call<ApiResponse<ReservationData>> updateReservation(
+            @Path("id") String reservationId,
+            @Body UpdateReservationRequest request);
+
+    @PUT("reservations/{id}/cancel")
+    Call<ApiResponse<ReservationData>> cancelReservation(
+            @Path("id") String reservationId);
+
+    @GET("reservations/prosumer/{nic}/pending")
+    Call<ApiResponse<List<ReservationData>>> getPendingReservations(
+            @Path("nic") String nic);
+
+    @GET("reservations/prosumer/{nic}/dashboard-counts")
+    Call<DashboardCounts> getDashboardCounts(
+            @Path("nic") String nic);
 
     // Every station, active and deactivated, sorted by stationId
     @GET("stations")

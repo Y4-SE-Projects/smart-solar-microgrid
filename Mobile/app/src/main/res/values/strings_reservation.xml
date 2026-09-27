@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="home_reservation_title">Reserve an energy slot</string>
+    <string name="home_reservation_body">Choose a live station and an available time.</string>
+    <string name="home_reservation_action">Create Reservation</string>
+
+    <string name="reservation_title">Create Reservation</string>
+    <string name="reservation_subtitle">Choose a station and an available energy slot</string>
+    <string name="reservation_booking_for">BOOKING FOR</string>
+    <string name="reservation_station_section">SELECT STATION</string>
+    <string name="reservation_choose_station">Choose station</string>
+    <string name="reservation_change_station">Change station</string>
+    <string name="reservation_station_hint">Select an active microgrid hub</string>
+    <string name="reservation_station_hours">Hours · %1$s</string>
+    <string name="reservation_station_capacity">Capacity · %1$s kWh</string>
+    <string name="reservation_loading_stations">Loading stations…</string>
+    <string name="reservation_stations_error_title">Stations could not be loaded</string>
+    <string name="reservation_no_stations_title">No active stations</string>
+    <string name="reservation_no_stations_body">There are no active stations available for booking. Try again later.</string>
+
+    <string name="reservation_slots_section">AVAILABLE ENERGY SLOTS</string>
+    <string name="reservation_refresh_slots">Refresh available slots</string>
+    <string name="reservation_select_station_first">Select a station to begin</string>
+    <string name="reservation_select_station_first_body">Its live bookable time slots will appear here.</string>
+    <string name="reservation_loading_slots">Loading available slots…</string>
+    <string name="reservation_slots_error_title">Slots could not be loaded</string>
+    <string name="reservation_no_slots_title">No available energy slots</string>
+    <string name="reservation_no_slots_body">There are currently no bookable slots at this station. Choose another station or try again later.</string>
+    <plurals name="reservation_available_count">
+        <item quantity="one">%1$d available slot</item>
+        <item quantity="other">%1$d available slots</item>
+    </plurals>
+    <string name="reservation_slot_id">Slot · %1$s</string>
+    <string name="reservation_selected">Selected</string>
+    <string name="reservation_slot_description">%1$s, %2$s, slot %3$s, %4$s</string>
+
+    <string name="reservation_summary_title">Selected booking</string>
+    <string name="reservation_policy_title">Reservation policy</string>
+    <string name="reservation_policy_body">HelioGrid validates scheduling and slot availability when you create a reservation.</string>
+    <string name="reservation_create">Create Reservation</string>
+    <string name="reservation_creating">Creating Reservation…</string>
+    <string name="reservation_incomplete_response">The server did not return a reservation. Please check your booking before trying again.</string>
+    <string name="reservation_created_title">Reservation created</string>
+    <string name="reservation_created_message">Your reservation was confirmed by HelioGrid.</string>
+    <string name="reservation_done">Done</string>
+</resources>
