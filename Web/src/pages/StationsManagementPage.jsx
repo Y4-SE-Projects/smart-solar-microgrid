@@ -181,37 +181,21 @@ export default function StationsManagementPage() {
           <span className="text-outline">system availability</span>
         </KpiCard>
 
-        <KpiCard icon="power_off" label="Deactivated" value={kpis.inactive} unit="Stations" iconBgClass="bg-surface-container-high text-outline">
-          <span className="text-outline font-medium">Awaiting reactivation or removal</span>
-        </KpiCard>
-
         <KpiCard
           icon="bolt"
           label="Total Grid Capacity"
           value={kpis.totalCapacityKWh.toLocaleString()}
           unit="kWh"
-          iconBgClass="bg-surface-container-high text-operational-blue"
+          iconBgClass="bg-yellow-container text-on-yellow"
         >
           <span className="text-secondary font-bold">{kpis.totalBatterySlots}</span>
           <span className="text-outline">battery slots provisioned</span>
         </KpiCard>
-      </section>
 
-      {/* Reservation Protection Policy Banner */}
-      <div className="bg-surface-container-low p-5 mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-border-slate rounded-2xl shadow-sm">
-        <div className="flex items-center gap-3.5">
-          <div className="w-10 h-10 rounded-full bg-surface-container-high text-operational-blue flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[20px]">verified_user</span>
-          </div>
-          <div>
-            <h2 className="text-sm font-semibold text-on-surface">Reservation Protection Policy</h2>
-            <p className="text-xs text-on-surface-variant mt-0.5 leading-relaxed">
-              Stations with active reservations cannot be deactivated or deleted until all ongoing charging sessions
-              and scheduled bookings are resolved.
-            </p>
-          </div>
-        </div>
-      </div>
+        <KpiCard icon="verified_user" label="Reservation Protection Policy" iconBgClass="bg-surface-container-high text-operational-blue">
+          <span className="text-outline font-medium">Stations with active reservations cannot be deactivated or deleted until all ongoing charging sessions and scheduled bookings are resolved.</span>
+        </KpiCard>
+      </section>
 
       {actionError && (
         <div
