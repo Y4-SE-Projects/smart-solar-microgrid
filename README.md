@@ -109,18 +109,22 @@ smart-solar-microgrid/
 | **Grid Operator** | Web + Mobile | Update battery slot availability, monitor and manage reservations, scan and verify prosumer QR codes, finalize energy transfers |
 | **Solar Prosumer** | Mobile only | Register/manage own profile, reserve/modify/cancel energy slots, view booking history and dashboard, receive transaction QR codes |
 
+Platform access is enforced by the API at login, not merely by which app a user happens to open. A Prosumer authenticating from the web client is refused, as is a Backoffice user authenticating from mobile.
+
 ## Features
  
 ### Web Application
 - Role-based login (Backoffice / Grid Operator)
-- User management: create Backoffice/Grid Operator accounts, view and reactivate deactivated prosumer accounts
+- Prosumer management: full account directory, reactivation request queue, approve or reject requests
+- Staff management: create Backoffice/Grid Operator accounts, edit their details, disable and restore access, reset passwords
 - Microgrid node management: create/update/deactivate solar hubs (GPS location, capacity, battery slots)
 - Energy slot reservation management: create, update, cancel bookings
 - Responsive UI built with Tailwind CSS & React.js
 ### Mobile Application
 - Pure native Android with local SQLite persistence
 - Prosumer registration using NIC as the primary key
-- Profile editing and account deactivation requests
+- Profile editing and self-service account deactivation
+- Reactivation flow: a deactivated prosumer can request reinstatement at login, track a pending request, or withdraw it
 - Reserve, modify, and cancel energy slots
 - Secure transaction QR code generation upon reservation approval
 - Dashboard showing active/pending reservation counts
@@ -130,6 +134,7 @@ smart-solar-microgrid/
 ### Web Service (API)
 - FAT service architecture — all validation and business rules enforced centrally
 - MongoDB integration for all persistent data
+- JWT bearer authentication with role claims, verified on every protected endpoint
 - RESTful endpoints consumed identically by both web and mobile clients
 
 ## Database Design
@@ -138,10 +143,24 @@ MongoDB collections used by the system:
  
 | Collection | Purpose | Key Fields |
 |---|---|---|
-| **Users** | Backoffice, Grid Operator, and Prosumer accounts | NIC (prosumer primary key), username, role, password hash, active status |
+| **Users** | Backoffice, Grid Operator, and Prosumer accounts | NIC (prosumer primary key), username, role, password hash, active status, reactivation request state |
 | **SolarStationInfo** | Microgrid node/hub details | Station ID, GPS coordinates, capacity (kW/h), battery slot count, schedule, active status |
 | **EnergyBookingSlots** | Available slots per station | Slot ID, station reference, time slot, availability status |
 | **EnergyReservation** | Prosumer trading reservations | Reservation ID, prosumer NIC, station/slot reference, scheduled time, status, QR code data |
+
+### Prosumer Account States
+
+A prosumer account is always in exactly one of three states. The API derives the
+state from stored flags rather than keeping a separate status field, so the two can
+never contradict each other, and returns it as `status` on every account response.
+
+| State | Condition | Meaning |
+|---|---|---|
+| `Active` | `isActive: true` | Can sign in and make reservations |
+| `Deactivated` | `isActive: false`, no reactivation request | Left voluntarily; no action outstanding |
+| `PendingReactivation` | `isActive: false`, reactivation requested | Waiting in the Backoffice queue |
+
+Staff accounts use `isActive` alone: they have no self-service route back, so only a Backoffice user can restore one.
  
 ## Getting Started
  
@@ -160,7 +179,8 @@ MongoDB collections used by the system:
 ```bash
 cd API
 cp appsettings.Example.json appsettings.json
-# Edit appsettings.json with your MongoDB connection string
+# Edit appsettings.json with your MongoDB connection string, JWT signing key,
+# and SeedAdminSettings (see below)
 dotnet restore
 dotnet run
 ```
@@ -173,26 +193,73 @@ dotnet publish -c Release -o ./publish
  
 Then configure a new site in IIS Manager pointing to the `publish` folder.
 
+#### The first Backoffice account
+
+Creating a Backoffice or Grid Operator account requires an already-authenticated
+Backoffice caller, so the very first one cannot be created through the API. It is
+seeded at startup instead, from the `SeedAdminSettings` section of
+`appsettings.json`:
+
+```json
+"SeedAdminSettings": {
+  "Username": "admin",
+  "Password": "PUT-A-STRONG-PASSWORD-HERE",
+  "FullName": "System Administrator",
+  "Email": "admin@heliogrid.local",
+  "Phone": "0000000000"
+}
+```
+
+The seed runs on every startup but does nothing while an **active** Backoffice
+account already exists, so it is safe to leave in place permanently. If every
+Backoffice account has been deactivated, a restart restores the seed account
+(keeping its existing password) rather than creating a duplicate.
+
+Nothing is emailed or displayed: the credentials are whatever is configured here,
+known to whoever set up the deployment. Sign in with them, create real
+administrator accounts, and stop using the seed account.
+
 ### Web Application Setup
  
 ```bash
 cd Web
 cp .env.example .env 
-# then add API Base url to VITE_API_URL
+# then set VITE_API_BASE_URL to the API's base URL, including /api
+# e.g. VITE_API_BASE_URL=http://localhost:5000/api
 npm install
 npm run dev
 ```
 ## API Endpoint Contract
 
+### Users & Authentication
+
 | Method | Route | Purpose | Auth/Role |
 |---|---|---|---|
-| POST | `/api/users/register` | Register user (web sends Backoffice/GridOperator, mobile sends Prosumer) | Public |
-| POST | `/api/users/login` | Returns role + basic profile on success | Public |
-| GET | `/api/users/{nic}` | Get prosumer profile | Authenticated |
-| PUT | `/api/users/{nic}` | Update prosumer profile | Prosumer (own record) |
-| PUT | `/api/users/{nic}/deactivate` | Request deactivation | Prosumer (own record) |
-| PUT | `/api/users/{nic}/reactivate` | Reactivate account | Backoffice only |
-| GET | `/api/users/pending-deactivation` | List accounts pending review | Backoffice only |
+| POST | `/api/users/register` | Register a user. Prosumer sign-up is public and mobile-only; Backoffice/GridOperator accounts require an authenticated Backoffice caller | Public / Backoffice |
+| POST | `/api/users/login` | Authenticate and return a JWT with role and profile. Reports account state for a deactivated prosumer instead of a flat refusal | Public |
+| GET | `/api/users/{nic}` | Get a prosumer's own profile | Prosumer (own record) |
+| PUT | `/api/users/{nic}` | Update a prosumer's own profile | Prosumer (own record) |
+| PUT | `/api/users/{nic}/deactivate` | Prosumer deactivates their own account | Prosumer (own record) |
+| POST | `/api/users/reactivation-request` | Deactivated prosumer requests reinstatement (NIC + password) | Public |
+| POST | `/api/users/reactivation-request/cancel` | Withdraw a pending reactivation request | Public |
+| GET | `/api/users/reactivation-requests` | List prosumers awaiting reactivation, oldest request first | Backoffice only |
+| PUT | `/api/users/{nic}/reactivate` | Approve a request, or restore any deactivated prosumer | Backoffice only |
+| PUT | `/api/users/{nic}/reject-reactivation` | Decline a pending request, with an optional reason | Backoffice only |
+| GET | `/api/users/prosumers` | List every prosumer account with its status | Backoffice only |
+| GET | `/api/users/staff` | List every Backoffice/GridOperator account | Backoffice only |
+| PUT | `/api/users/staff/{username}` | Edit a staff member's contact details | Backoffice only |
+| PUT | `/api/users/staff/{username}/deactivate` | Disable a staff account's access | Backoffice only |
+| PUT | `/api/users/staff/{username}/reactivate` | Restore a staff account | Backoffice only |
+| PUT | `/api/users/staff/{username}/password` | Reset a staff member's password | Backoffice only |
+
+The two reactivation endpoints are public by necessity: a deactivated account is
+never issued a token, so its owner cannot reach an authorized endpoint. Re-sending
+the NIC and password authenticates those calls.
+
+### Stations, Slots & Reservations
+
+| Method | Route | Purpose | Auth/Role |
+|---|---|---|---|
 | GET | `/api/stations` | List all stations | Any authenticated |
 | GET | `/api/stations/nearby?lat=&lng=&radiusKm=` | Stations near a point | Any authenticated |
 | POST | `/api/stations` | Create station | Backoffice only |
@@ -207,12 +274,30 @@ npm run dev
 | PUT | `/api/reservations/{id}/approve` | Approve + generate QR data | GridOperator |
 | POST | `/api/reservations/verify-qr` | Verify scanned QR against server, finalize transfer | GridOperator |
 
+### Response Shape
+
+Every endpoint answers with the same envelope, so both clients parse results identically:
+
+```json
+{ "success": true,  "data": { } }          // or "message" for write operations
+{ "success": false, "message": "..." }     // with a non-2xx status
+```
+
 ## Business Rules
  
 These rules are enforced **exclusively within the Web API**:
- 
+
+### Reservations
 - Energy slot reservations must be scheduled within **7 days** of creation.
 - Updating or cancelling a reservation requires at least **12 hours' notice**.
 - A microgrid node cannot be deactivated while it has **active energy reservations**.
-- Only a **Backoffice** user can reactivate a deactivated prosumer account.
 - QR codes are verified against live server data before any energy transfer is finalized.
+
+### Accounts
+- A prosumer's **NIC is the primary key** and must be unique.
+- A deactivated prosumer **cannot register again with the same NIC** — reactivation is the only route back.
+- Only a **Backoffice** user can reactivate a deactivated prosumer account.
+- Prosumers cannot authenticate from the web client; Backoffice users cannot authenticate from mobile.
+- Passwords are **BCrypt-hashed** before storage and must be at least **8 characters**.
+- A Backoffice user **cannot deactivate their own account**.
+- The **last active Backoffice account cannot be deactivated** — creating one requires an authenticated Backoffice caller, so reaching zero would leave the system unadministerable.
