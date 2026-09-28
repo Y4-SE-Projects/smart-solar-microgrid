@@ -29,6 +29,8 @@ public class ProsumerHomeActivity extends AppCompatActivity {
 
         findViewById(R.id.signOutButton).setOnClickListener(v ->
                 SessionManager.getInstance().endSession(() -> Navigator.openLogin(this, false)));
+        findViewById(R.id.findStationButton).setOnClickListener(v ->
+                startActivity(new Intent(this, StationMapActivity.class)));
 
         findViewById(R.id.createReservationButton).setOnClickListener(v ->
                 startActivity(new Intent(this, CreateReservationActivity.class)));
