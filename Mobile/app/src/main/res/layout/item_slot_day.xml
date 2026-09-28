@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One day in the station popup: a heading ("Today", "Tomorrow", "Mon, 29 Sep") over a card of that day's slots -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/dayHeaderText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+
+    <!-- item_today_slot rows are added here in code -->
+    <LinearLayout
+        android:id="@+id/daySlotsCard"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:background="@drawable/bg_card"
+        android:divider="@drawable/divider_slate"
+        android:orientation="vertical"
+        android:showDividers="middle" />
+</LinearLayout>

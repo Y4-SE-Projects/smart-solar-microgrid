@@ -19,7 +19,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Shows the signed-in Prosumer and opens the reservation creation screen.
+        // Shows the signed-in Prosumer and opens the station map to start a reservation.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_prosumer_home);
         InsetsHelper.applyEdgeToEdge(this, findViewById(R.id.homeRoot));
@@ -29,9 +29,9 @@ public class ProsumerHomeActivity extends AppCompatActivity {
 
         findViewById(R.id.signOutButton).setOnClickListener(v ->
                 SessionManager.getInstance().endSession(() -> Navigator.openLogin(this, false)));
-
+        // Booking starts on the map: pick a station there, then reserve one of its slots
         findViewById(R.id.createReservationButton).setOnClickListener(v ->
-                startActivity(new Intent(this, CreateReservationActivity.class)));
+                startActivity(new Intent(this, StationMapActivity.class)));
 
         findViewById(R.id.viewReservationsButton).setOnClickListener(v ->
                 startActivity(new Intent(this, ReservationHistoryActivity.class)));

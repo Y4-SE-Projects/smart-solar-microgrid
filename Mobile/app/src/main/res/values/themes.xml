@@ -103,6 +103,16 @@
         <item name="android:padding">0dp</item>
     </style>
 
+    <!-- Radius filter chip on the station map: solid white so it reads over map tiles, dark green when chosen -->
+    <style name="Widget.SmartSolar.RadiusChip" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/radius_chip_background</item>
+        <item name="android:textColor">@color/radius_chip_text</item>
+        <item name="chipStrokeColor">@color/border_slate</item>
+        <item name="chipStrokeWidth">1dp</item>
+        <item name="checkedIconVisible">false</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
     <!-- Full-width primary action button -->
     <style name="Widget.SmartSolar.PrimaryButton" parent="Widget.Material3.Button">
         <item name="backgroundTint">@color/primary_button_background</item>

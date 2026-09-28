@@ -1,14 +1,19 @@
 // File: CreateReservationActivity.java
-// Purpose: Prosumer creation of a reservation using live stations, slots, and the API.
+// Purpose: Prosumer reservation for the station chosen on the map: pick one of the next 7 days, then an available slot.
 
 package com.example.smart_solar_mobile.activities;
 
+import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.IntentCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.core.widget.NestedScrollView;
@@ -30,6 +35,7 @@ import com.google.android.material.button.MaterialButton;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
@@ -38,39 +44,41 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class CreateReservationActivity extends AppCompatActivity {
-    private static final String STATE_STATION_ID = "selected_station_id";
+    public static final String EXTRA_STATION = "station";
+    private static final int DAYS_SHOWN = 7;
+    private static final String STATE_SELECTED_DAY = "selected_day";
     private static final String STATE_SLOT_ID = "selected_slot_id";
     private static final String STATE_CREATED_ID = "created_reservation_id";
     private static final String STATE_CREATED_STATUS = "created_reservation_status";
 
-    private final List<SolarStation> activeStations = new ArrayList<>();
     private final DecimalFormat capacityFormat = new DecimalFormat("0.##");
+    // Every available upcoming slot at the station; the day row filters these on the phone.
+    private final List<EnergyBookingSlot> upcomingSlots = new ArrayList<>();
+    private final List<Date> days = new ArrayList<>();
+    private final List<View> dayChips = new ArrayList<>();
 
     private SolarStation selectedStation;
+    private Date selectedDay;
     private EnergyBookingSlot selectedSlot;
     private ReservationData createdReservation;
-    private String restoredStationId;
     private String restoredSlotId;
 
-    private Call<ApiResponse<List<SolarStation>>> stationsCall;
     private Call<ApiResponse<List<EnergyBookingSlot>>> slotsCall;
     private Call<ApiResponse<ReservationData>> createCall;
 
-    private boolean stationsLoading;
     private boolean slotsLoading;
     private boolean submitting;
 
     private ReservationSlotAdapter slotAdapter;
     private NestedScrollView reservationScroll;
     private RecyclerView slotsList;
+    private LinearLayout dayRow;
 
     private TextView bookingNicText;
     private TextView stationNameText;
     private TextView stationIdText;
     private TextView stationScheduleText;
     private TextView stationCapacityText;
-    private TextView stationStateTitle;
-    private TextView stationStateMessage;
     private TextView slotsStateTitle;
     private TextView slotsStateMessage;
     private TextView availableCountText;
@@ -83,9 +91,6 @@ public class CreateReservationActivity extends AppCompatActivity {
     private TextView createdIdText;
     private TextView createdStatusText;
 
-    private View stationLoadingView;
-    private View stationStateCard;
-    private View slotsPromptCard;
     private View slotsLoadingView;
     private View slotsStateCard;
     private View selectedSummaryCard;
@@ -94,19 +99,29 @@ public class CreateReservationActivity extends AppCompatActivity {
     private View bottomActionBar;
     private View submitProgress;
 
-    private MaterialButton stationButton;
-    private MaterialButton retryStationsButton;
     private MaterialButton refreshSlotsButton;
     private MaterialButton retrySlotsButton;
     private MaterialButton createButton;
 
+    public static Intent intentFor(Context context, SolarStation station) {
+        // Builds the intent the map's station popup uses to open this screen for one station.
+        return new Intent(context, CreateReservationActivity.class).putExtra(EXTRA_STATION, station);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Builds the booking screen, restores selection, and checks the Prosumer session.
+        // Builds the booking screen for the station passed in, restores selection, and checks the Prosumer session.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_reservation);
         InsetsHelper.applyEdgeToEdge(this, findViewById(R.id.createReservationRoot));
         bindViews();
+
+        selectedStation = IntentCompat.getSerializableExtra(getIntent(), EXTRA_STATION, SolarStation.class);
+        if (selectedStation == null) {
+            // This screen is only reached from a station on the map
+            finish();
+            return;
+        }
 
         slotAdapter = new ReservationSlotAdapter(this::onSlotSelected);
         slotsList.setLayoutManager(new LinearLayoutManager(this));
@@ -114,8 +129,6 @@ public class CreateReservationActivity extends AppCompatActivity {
         slotsList.setAdapter(slotAdapter);
 
         findViewById(R.id.backButton).setOnClickListener(v -> finish());
-        stationButton.setOnClickListener(v -> openStationPicker());
-        retryStationsButton.setOnClickListener(v -> loadStations());
         refreshSlotsButton.setOnClickListener(v ->
                 loadSlots(selectedSlot == null ? null : selectedSlot.slotId));
         retrySlotsButton.setOnClickListener(v -> loadSlots(null));
@@ -123,8 +136,11 @@ public class CreateReservationActivity extends AppCompatActivity {
         findViewById(R.id.doneButton).setOnClickListener(v -> finish());
 
         if (savedInstanceState != null) {
-            restoredStationId = savedInstanceState.getString(STATE_STATION_ID);
             restoredSlotId = savedInstanceState.getString(STATE_SLOT_ID);
+            long restoredDay = savedInstanceState.getLong(STATE_SELECTED_DAY, 0);
+            if (restoredDay != 0) {
+                selectedDay = new Date(restoredDay);
+            }
             String createdId = savedInstanceState.getString(STATE_CREATED_ID);
             if (createdId != null) {
                 createdReservation = new ReservationData();
@@ -136,7 +152,7 @@ public class CreateReservationActivity extends AppCompatActivity {
         }
 
         renderStation();
-        showSlotsPrompt();
+        buildDayRow();
         updateActions();
 
         SessionManager.getInstance().loadSession(session -> {
@@ -149,16 +165,18 @@ public class CreateReservationActivity extends AppCompatActivity {
                 return;
             }
             bookingNicText.setText(session.identifier);
-            loadStations();
+            loadSlots(restoredSlotId);
+            restoredSlotId = null;
         });
     }
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
-        // Retains the selection and confirmed result across screen recreation.
+        // Retains the chosen day, slot and confirmed result across screen recreation.
         super.onSaveInstanceState(outState);
-        outState.putString(STATE_STATION_ID,
-                selectedStation == null ? restoredStationId : selectedStation.stationId);
+        if (selectedDay != null) {
+            outState.putLong(STATE_SELECTED_DAY, selectedDay.getTime());
+        }
         outState.putString(STATE_SLOT_ID,
                 selectedSlot == null ? restoredSlotId : selectedSlot.slotId);
         if (createdReservation != null) {
@@ -170,7 +188,6 @@ public class CreateReservationActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         // Stops callbacks from writing into a destroyed screen.
-        if (stationsCall != null) stationsCall.cancel();
         if (slotsCall != null) slotsCall.cancel();
         if (createCall != null) createCall.cancel();
         super.onDestroy();
@@ -180,13 +197,12 @@ public class CreateReservationActivity extends AppCompatActivity {
         // Finds the existing XML views once.
         reservationScroll = findViewById(R.id.reservationScroll);
         slotsList = findViewById(R.id.slotsList);
+        dayRow = findViewById(R.id.dayRow);
         bookingNicText = findViewById(R.id.bookingNicText);
         stationNameText = findViewById(R.id.stationNameText);
         stationIdText = findViewById(R.id.stationIdText);
         stationScheduleText = findViewById(R.id.stationScheduleText);
         stationCapacityText = findViewById(R.id.stationCapacityText);
-        stationStateTitle = findViewById(R.id.stationStateTitle);
-        stationStateMessage = findViewById(R.id.stationStateMessage);
         slotsStateTitle = findViewById(R.id.slotsStateTitle);
         slotsStateMessage = findViewById(R.id.slotsStateMessage);
         availableCountText = findViewById(R.id.availableCountText);
@@ -199,9 +215,6 @@ public class CreateReservationActivity extends AppCompatActivity {
         createdIdText = findViewById(R.id.createdIdText);
         createdStatusText = findViewById(R.id.createdStatusText);
 
-        stationLoadingView = findViewById(R.id.stationLoadingView);
-        stationStateCard = findViewById(R.id.stationStateCard);
-        slotsPromptCard = findViewById(R.id.slotsPromptCard);
         slotsLoadingView = findViewById(R.id.slotsLoadingView);
         slotsStateCard = findViewById(R.id.slotsStateCard);
         selectedSummaryCard = findViewById(R.id.selectedSummaryCard);
@@ -210,145 +223,16 @@ public class CreateReservationActivity extends AppCompatActivity {
         bottomActionBar = findViewById(R.id.bottomActionBar);
         submitProgress = findViewById(R.id.submitProgress);
 
-        stationButton = findViewById(R.id.stationButton);
-        retryStationsButton = findViewById(R.id.retryStationsButton);
         refreshSlotsButton = findViewById(R.id.refreshSlotsButton);
         retrySlotsButton = findViewById(R.id.retrySlotsButton);
         createButton = findViewById(R.id.createButton);
     }
 
-    private void loadStations() {
-        // Loads live stations; the picker receives only active records.
-        if (stationsCall != null) stationsCall.cancel();
-        stationsLoading = true;
-        stationLoadingView.setVisibility(View.VISIBLE);
-        stationStateCard.setVisibility(View.GONE);
-        updateActions();
-
-        stationsCall = NetworkManager.getInstance().getApiService().getStations();
-        final Call<ApiResponse<List<SolarStation>>> call = stationsCall;
-        call.enqueue(new Callback<ApiResponse<List<SolarStation>>>() {
-            @Override
-            public void onResponse(@NonNull Call<ApiResponse<List<SolarStation>>> request,
-                                   @NonNull Response<ApiResponse<List<SolarStation>>> response) {
-                // Uses only the latest station reply for this screen.
-                if (isFinishing() || isDestroyed() || call != stationsCall || call.isCanceled()) {
-                    return;
-                }
-                stationsLoading = false;
-                stationLoadingView.setVisibility(View.GONE);
-                ApiResponse<List<SolarStation>> body = response.body();
-                if (!response.isSuccessful() || body == null || body.data == null) {
-                    showStationState(R.string.reservation_stations_error_title,
-                            ApiErrorParser.getMessage(CreateReservationActivity.this, response));
-                    updateActions();
-                    return;
-                }
-
-                activeStations.clear();
-                for (SolarStation station : body.data) {
-                    if (station != null && station.isActive
-                            && station.stationId != null
-                            && !station.stationId.trim().isEmpty()) {
-                        activeStations.add(station);
-                    }
-                }
-
-                if (activeStations.isEmpty()) {
-                    selectedStation = null;
-                    selectedSlot = null;
-                    renderStation();
-                    showSlotsPrompt();
-                    showStationState(R.string.reservation_no_stations_title,
-                            getString(R.string.reservation_no_stations_body));
-                } else {
-                    stationStateCard.setVisibility(View.GONE);
-                    SolarStation restored = findStation(restoredStationId);
-                    restoredStationId = null;
-                    if (restored != null) {
-                        selectStation(restored, restoredSlotId);
-                        restoredSlotId = null;
-                    } else {
-                        renderStation();
-                    }
-                }
-                updateActions();
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<ApiResponse<List<SolarStation>>> request,
-                                  @NonNull Throwable error) {
-                // Keeps a visible retry state for network failures.
-                if (isFinishing() || isDestroyed() || call != stationsCall || call.isCanceled()) {
-                    return;
-                }
-                stationsLoading = false;
-                stationLoadingView.setVisibility(View.GONE);
-                showStationState(R.string.reservation_stations_error_title,
-                        getString(R.string.error_network));
-                updateActions();
-            }
-        });
-    }
-
-    private SolarStation findStation(String stationId) {
-        // Finds a previously selected station only among currently active stations.
-        if (stationId == null) return null;
-        for (SolarStation station : activeStations) {
-            if (stationId.equals(station.stationId)) return station;
-        }
-        return null;
-    }
-
-    private void showStationState(int title, String message) {
-        // Presents an empty or failed station load with a Retry action.
-        stationStateTitle.setText(title);
-        stationStateMessage.setText(message);
-        stationStateCard.setVisibility(View.VISIBLE);
-    }
-
-    private void openStationPicker() {
-        // Opens Member 02's searchable picker with active stations only.
-        if (submitting || createdReservation != null || activeStations.isEmpty()) return;
-        StationPickerDialog.show(this, activeStations,
-                selectedStation == null ? null : selectedStation.stationId,
-                station -> {
-                    if (!submitting && createdReservation == null && station.isActive) {
-                        selectStation(station, null);
-                    }
-                });
-    }
-
-    private void selectStation(SolarStation station, String slotIdToRestore) {
-        // Changes station, clears the previous slot, and loads this station's live slots.
-        if (station == null || !station.isActive) return;
-        if (selectedStation != null
-                && station.stationId.equals(selectedStation.stationId)
-                && slotIdToRestore == null) {
-            return;
-        }
-        selectedStation = station;
-        selectedSlot = null;
-        renderStation();
-        hideCreateError();
-        renderSummary();
-        loadSlots(slotIdToRestore);
-    }
-
     private void renderStation() {
-        // Shows real station fields, or a neutral invitation before selection.
-        if (selectedStation == null) {
-            stationNameText.setText(R.string.reservation_choose_station);
-            stationIdText.setText(R.string.reservation_station_hint);
-            stationScheduleText.setVisibility(View.GONE);
-            stationCapacityText.setVisibility(View.GONE);
-            stationButton.setText(R.string.reservation_choose_station);
-            return;
-        }
+        // Shows the real fields of the station chosen on the map.
         stationNameText.setText(selectedStation.name == null
                 ? selectedStation.stationId : selectedStation.name);
         stationIdText.setText(selectedStation.stationId);
-        stationButton.setText(R.string.reservation_change_station);
 
         boolean hasSchedule = selectedStation.schedule != null
                 && !selectedStation.schedule.trim().isEmpty();
@@ -366,114 +250,193 @@ public class CreateReservationActivity extends AppCompatActivity {
         }
     }
 
-    private void showSlotsPrompt() {
-        // Asks for a station before any slot request has been made.
-        slotsPromptCard.setVisibility(View.VISIBLE);
-        slotsLoadingView.setVisibility(View.GONE);
-        slotsStateCard.setVisibility(View.GONE);
-        slotsList.setVisibility(View.GONE);
-        availableCountText.setVisibility(View.GONE);
-        selectedSummaryCard.setVisibility(View.GONE);
-        updateActions();
+    private void buildDayRow() {
+        // Adds one button for each of the next 7 days, starting today; tapping one filters the slots to that day.
+        dayRow.removeAllViews();
+        days.clear();
+        dayChips.clear();
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTime(TimeUtils.startOfDay(new Date()));
+        LayoutInflater inflater = getLayoutInflater();
+        for (int i = 0; i < DAYS_SHOWN; i++) {
+            Date day = calendar.getTime();
+            View chip = inflater.inflate(R.layout.item_day_chip, dayRow, false);
+            TextView weekdayText = chip.findViewById(R.id.dayChipWeekday);
+            TextView numberText = chip.findViewById(R.id.dayChipNumber);
+            weekdayText.setText(i == 0 ? getString(R.string.today) : TimeUtils.formatWeekdayShort(day));
+            numberText.setText(String.valueOf(TimeUtils.dayOfMonth(day)));
+            chip.setOnClickListener(v -> selectDay(day));
+            dayRow.addView(chip);
+            days.add(day);
+            dayChips.add(chip);
+            calendar.add(Calendar.DAY_OF_MONTH, 1);
+        }
+        renderDayRow();
+    }
+
+    private void renderDayRow() {
+        // Marks the chosen day and puts a dot on the days that have open slots.
+        for (int i = 0; i < days.size(); i++) {
+            Date day = days.get(i);
+            View chip = dayChips.get(i);
+            int count = countSlotsOn(day);
+            chip.setSelected(selectedDay != null && TimeUtils.isSameLocalDay(day, selectedDay));
+            chip.findViewById(R.id.dayChipDot).setVisibility(count > 0 ? View.VISIBLE : View.INVISIBLE);
+            chip.setContentDescription(getString(R.string.reservation_day_description,
+                    TimeUtils.formatLongDate(day),
+                    getResources().getQuantityString(R.plurals.reservation_available_count, count, count)));
+        }
+    }
+
+    private int countSlotsOn(Date day) {
+        // Counts the loaded available slots that start on the given local day.
+        int count = 0;
+        for (EnergyBookingSlot slot : upcomingSlots) {
+            Date start = TimeUtils.parseApiDate(slot.startTime);
+            if (start != null && TimeUtils.isSameLocalDay(start, day)) count++;
+        }
+        return count;
+    }
+
+    private Date firstDayWithSlots() {
+        // The first of the 7 days that has an open slot, or today when none do.
+        for (Date day : days) {
+            if (countSlotsOn(day) > 0) return day;
+        }
+        return days.get(0);
+    }
+
+    private boolean isShownDay(Date day) {
+        // True when the day is one of the 7 in the row (a restored day can fall out of it overnight).
+        if (day == null) return false;
+        for (Date shown : days) {
+            if (TimeUtils.isSameLocalDay(shown, day)) return true;
+        }
+        return false;
+    }
+
+    private void selectDay(Date day) {
+        // Filters the slot list to the tapped day; a slot picked on another day is cleared.
+        if (slotsLoading || submitting || createdReservation != null) return;
+        if (selectedDay != null && TimeUtils.isSameLocalDay(day, selectedDay)) return;
+        selectedDay = day;
+        hideCreateError();
+        showDaySlots(selectedSlot == null ? null : selectedSlot.slotId);
     }
 
     private void loadSlots(String slotIdToKeep) {
-        // Loads all months for the selected station so a valid week boundary is not lost.
+        // Loads the station's upcoming slots once; the 7-day row then filters them on the phone.
         if (selectedStation == null) return;
         if (slotsCall != null) slotsCall.cancel();
 
         String stationId = selectedStation.stationId;
         selectedSlot = null;
+        upcomingSlots.clear();
         slotAdapter.setSlots(new ArrayList<>(), null);
         slotsLoading = true;
-        slotsPromptCard.setVisibility(View.GONE);
         slotsLoadingView.setVisibility(View.VISIBLE);
         slotsStateCard.setVisibility(View.GONE);
         slotsList.setVisibility(View.GONE);
         availableCountText.setVisibility(View.GONE);
+        renderDayRow();
         renderSummary();
         updateActions();
 
-        slotsCall = NetworkManager.getInstance().getApiService()
-                .getStationSlots(stationId, null);
+        slotsCall = NetworkManager.getInstance().getApiService().getUpcomingSlots(stationId);
         final Call<ApiResponse<List<EnergyBookingSlot>>> call = slotsCall;
         call.enqueue(new Callback<ApiResponse<List<EnergyBookingSlot>>>() {
             @Override
             public void onResponse(@NonNull Call<ApiResponse<List<EnergyBookingSlot>>> request,
                                    @NonNull Response<ApiResponse<List<EnergyBookingSlot>>> response) {
-                // Ignores late replies after a station change.
-                if (isFinishing() || isDestroyed() || call != slotsCall || call.isCanceled()
-                        || selectedStation == null
-                        || !stationId.equals(selectedStation.stationId)) {
+                // Ignores late or replaced replies.
+                if (isFinishing() || isDestroyed() || call != slotsCall || call.isCanceled()) {
                     return;
                 }
                 slotsLoading = false;
                 slotsLoadingView.setVisibility(View.GONE);
                 ApiResponse<List<EnergyBookingSlot>> body = response.body();
                 if (!response.isSuccessful() || body == null || body.data == null) {
-                    showSlotsState(R.string.reservation_slots_error_title,
+                    showSlotsState(getString(R.string.reservation_slots_error_title),
                             ApiErrorParser.getMessage(CreateReservationActivity.this, response),
                             true);
+                    renderDayRow();
                     updateActions();
                     return;
                 }
 
-                List<EnergyBookingSlot> available = new ArrayList<>();
                 for (EnergyBookingSlot slot : body.data) {
                     if (slot != null && slot.isAvailable
                             && stationId.equals(slot.stationId)
                             && slot.slotId != null && !slot.slotId.trim().isEmpty()
                             && TimeUtils.parseApiDate(slot.startTime) != null
                             && TimeUtils.parseApiDate(slot.endTime) != null) {
-                        available.add(slot);
+                        upcomingSlots.add(slot);
                     }
                 }
 
-                slotAdapter.setSlots(available, slotIdToKeep);
-                selectedSlot = null;
-                if (slotIdToKeep != null) {
-                    for (EnergyBookingSlot slot : available) {
-                        if (slotIdToKeep.equals(slot.slotId)) {
-                            selectedSlot = slot;
-                            break;
-                        }
-                    }
+                // Keeps the day chosen before (e.g. across rotation), otherwise starts on the first day with slots.
+                if (!isShownDay(selectedDay)) {
+                    selectedDay = firstDayWithSlots();
                 }
-
-                availableCountText.setText(getResources().getQuantityString(
-                        R.plurals.reservation_available_count,
-                        available.size(), available.size()));
-                availableCountText.setVisibility(View.VISIBLE);
-                if (available.isEmpty()) {
-                    showSlotsState(R.string.reservation_no_slots_title,
-                            getString(R.string.reservation_no_slots_body), false);
-                } else {
-                    slotsStateCard.setVisibility(View.GONE);
-                    slotsList.setVisibility(View.VISIBLE);
-                }
-                renderSummary();
-                updateActions();
+                showDaySlots(slotIdToKeep);
             }
 
             @Override
             public void onFailure(@NonNull Call<ApiResponse<List<EnergyBookingSlot>>> request,
                                   @NonNull Throwable error) {
-                // Leaves station selection usable when only its slot request fails.
-                if (isFinishing() || isDestroyed() || call != slotsCall || call.isCanceled()
-                        || selectedStation == null
-                        || !stationId.equals(selectedStation.stationId)) {
+                // Keeps a visible retry state when the slot request fails.
+                if (isFinishing() || isDestroyed() || call != slotsCall || call.isCanceled()) {
                     return;
                 }
                 slotsLoading = false;
                 slotsLoadingView.setVisibility(View.GONE);
-                showSlotsState(R.string.reservation_slots_error_title,
+                showSlotsState(getString(R.string.reservation_slots_error_title),
                         getString(R.string.error_network), true);
+                renderDayRow();
                 updateActions();
             }
         });
     }
 
-    private void showSlotsState(int title, String message, boolean retry) {
+    private void showDaySlots(String slotIdToKeep) {
+        // Shows the chosen day's available slots, keeping the picked slot if it is on that day.
+        List<EnergyBookingSlot> daySlots = new ArrayList<>();
+        for (EnergyBookingSlot slot : upcomingSlots) {
+            Date start = TimeUtils.parseApiDate(slot.startTime);
+            if (start != null && TimeUtils.isSameLocalDay(start, selectedDay)) daySlots.add(slot);
+        }
+
+        selectedSlot = null;
+        if (slotIdToKeep != null) {
+            for (EnergyBookingSlot slot : daySlots) {
+                if (slotIdToKeep.equals(slot.slotId)) {
+                    selectedSlot = slot;
+                    break;
+                }
+            }
+        }
+        slotAdapter.setSlots(daySlots, selectedSlot == null ? null : selectedSlot.slotId);
+
+        availableCountText.setText(getResources().getQuantityString(
+                R.plurals.reservation_available_count, daySlots.size(), daySlots.size()));
+        availableCountText.setVisibility(View.VISIBLE);
+        if (upcomingSlots.isEmpty()) {
+            showSlotsState(getString(R.string.reservation_no_slots_title),
+                    getString(R.string.reservation_no_slots_body), false);
+        } else if (daySlots.isEmpty()) {
+            showSlotsState(getString(R.string.reservation_day_no_slots_title,
+                            TimeUtils.formatShortDate(selectedDay)),
+                    getString(R.string.reservation_day_no_slots_body), false);
+        } else {
+            slotsStateCard.setVisibility(View.GONE);
+            slotsList.setVisibility(View.VISIBLE);
+        }
+        renderDayRow();
+        renderSummary();
+        updateActions();
+    }
+
+    private void showSlotsState(String title, String message, boolean retry) {
         // Gives empty and failed slot lists distinct, readable states.
         slotsStateTitle.setText(title);
         slotsStateMessage.setText(message);
@@ -609,15 +572,14 @@ public class CreateReservationActivity extends AppCompatActivity {
     private void updateActions() {
         // Enables only actions whose required live data is ready.
         if (slotAdapter == null) return;
-        stationButton.setEnabled(!stationsLoading && !submitting
-                && createdReservation == null && !activeStations.isEmpty());
-        refreshSlotsButton.setEnabled(selectedStation != null && !slotsLoading
-                && !submitting && createdReservation == null);
+        boolean canChoose = !slotsLoading && !submitting && createdReservation == null;
+        for (View chip : dayChips) {
+            chip.setEnabled(canChoose);
+        }
+        refreshSlotsButton.setEnabled(selectedStation != null && canChoose);
         createButton.setEnabled(selectedStation != null && selectedSlot != null
-                && selectedStation.isActive && selectedSlot.isAvailable
-                && !slotsLoading && !submitting && createdReservation == null);
-        slotAdapter.setInteractionEnabled(!slotsLoading && !submitting
-                && createdReservation == null);
+                && selectedStation.isActive && selectedSlot.isAvailable && canChoose);
+        slotAdapter.setInteractionEnabled(canChoose);
         bottomActionBar.setVisibility(
                 createdReservation == null ? View.VISIBLE : View.GONE);
     }
