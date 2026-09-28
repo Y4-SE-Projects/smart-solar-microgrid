@@ -1,4 +1,4 @@
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <string name="app_name">HelioGrid</string>
 
     <!-- Login -->
@@ -102,6 +102,33 @@
         <item quantity="one">%1$d slot</item>
         <item quantity="other">%1$d slots</item>
     </plurals>
+
+    <!-- Find a station (Prosumer map) -->
+    <string name="find_station">Find a station</string>
+    <string name="nearby_stations">Nearby stations</string>
+    <string name="radius_km">%1$d km</string>
+    <string name="my_location">My location</string>
+    <string name="locating">Finding your location…</string>
+    <string name="searching_stations">Looking for stations…</string>
+    <plurals name="stations_within">
+        <item quantity="one">%1$d station within %2$d km</item>
+        <item quantity="other">%1$d stations within %2$d km</item>
+    </plurals>
+    <string name="no_stations_within">No stations within %1$d km. Try a wider radius.</string>
+    <string name="location_permission_needed">Allow location access to find stations near you.</string>
+    <string name="allow_location">Allow location</string>
+    <string name="open_settings">Open settings</string>
+    <string name="location_unavailable">Couldn\'t get your location. Make sure location is turned on, then try again.</string>
+    <string name="location_settings">Location settings</string>
+    <string name="map_error_auth">The map couldn\'t load: Google rejected the Maps key. Check MAPS_API_KEY and its restrictions.</string>
+    <string name="map_error_load">The map couldn\'t load. Check your internet connection.</string>
+    <string name="distance_km_away">%1$s km away</string>
+    <string name="distance_m_away">%1$d m away</string>
+    <string name="upcoming_slots">Upcoming slots</string>
+    <string name="slots_open_count" tools:ignore="PluralsCandidate">%1$d of %2$d open</string>
+    <string name="upcoming_slots_hint">Slots at this station that are open for booking.</string>
+    <string name="no_upcoming_slots">No upcoming slots are open for booking at this station.</string>
+    <string name="tomorrow">Tomorrow</string>
 
     <!-- Station picker -->
     <string name="picker_title">Select station</string>
