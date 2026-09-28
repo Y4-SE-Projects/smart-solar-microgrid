@@ -26,9 +26,10 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        manifestPlaceholders["MAPS_API_KEY"] = localProperties.getProperty("MAPS_API_KEY", "")
 
         buildConfigField "String", "API_BASE_URL", "\"${apiBaseUrl}\""
+        // Google Maps JavaScript API key for the station map WebView (same key the Web app uses)
+        buildConfigField "String", "MAPS_API_KEY", "\"${localProperties.getProperty('MAPS_API_KEY', '')}\""
     }
 
     buildFeatures {
@@ -64,7 +65,6 @@ dependencies {
     implementation libs.room.runtime
     annotationProcessor libs.room.compiler
 
-    implementation libs.play.services.maps
     implementation libs.play.services.location
 
     implementation(libs.zxing.embedded) {

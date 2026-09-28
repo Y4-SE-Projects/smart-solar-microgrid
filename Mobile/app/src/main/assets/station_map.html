@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!-- File: station_map.html
+     Purpose: Google Maps (JavaScript API) page shown in StationMapActivity's WebView. It only draws what the
+              Java side sends through window.HelioMap, and reports marker taps back through the "Android" bridge.
+     Author: IT23215856 -->
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <style>
+        html, body, #map { height: 100%; margin: 0; padding: 0; background: #eceff1; }
+    </style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    // HelioGrid colours from res/values/colors.xml
+    var STATION_GREEN = '#006C4A';
+    var USER_BLUE = '#2180E6';
+    // Material "place" pin, drawn in the station colour
+    var PIN_PATH = 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z';
+
+    var map = null;
+    var searchCircle = null;
+    var userMarker = null;
+    var stationMarkers = [];
+
+    // Google calls this when the API key is rejected
+    window.gm_authFailure = function () {
+        Android.onMapError('auth');
+    };
+
+    // Called by the Maps script once it has loaded
+    function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: { lat: 0, lng: 0 },
+            zoom: 2,
+            disableDefaultUI: true,
+            clickableIcons: false,
+            gestureHandling: 'greedy'
+        });
+        Android.onMapReady();
+    }
+
+    // Called if the Maps script can't be downloaded at all
+    function onMapsScriptError() {
+        Android.onMapError('load');
+    }
+
+    window.HelioMap = {
+        // Draws the search radius and the user's position, and frames the whole circle
+        showSearch: function (lat, lng, radiusMeters, paddingTop, paddingBottom) {
+            var center = { lat: lat, lng: lng };
+            if (searchCircle) { searchCircle.setMap(null); }
+            if (userMarker) { userMarker.setMap(null); }
+            searchCircle = new google.maps.Circle({
+                map: map,
+                center: center,
+                radius: radiusMeters,
+                strokeColor: STATION_GREEN,
+                strokeWeight: 2,
+                fillColor: STATION_GREEN,
+                fillOpacity: 0.12,
+                clickable: false
+            });
+            userMarker = new google.maps.Marker({
+                map: map,
+                position: center,
+                clickable: false,
+                zIndex: 1,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 7,
+                    fillColor: USER_BLUE,
+                    fillOpacity: 1,
+                    strokeColor: '#FFFFFF',
+                    strokeWeight: 2
+                }
+            });
+            map.fitBounds(searchCircle.getBounds(), { top: paddingTop, bottom: paddingBottom, left: 24, right: 24 });
+        },
+
+        // Replaces the station markers; each item is { stationId, title, lat, lng }
+        showStations: function (stations) {
+            stationMarkers.forEach(function (marker) { marker.setMap(null); });
+            stationMarkers = stations.map(function (station) {
+                var marker = new google.maps.Marker({
+                    map: map,
+                    position: { lat: station.lat, lng: station.lng },
+                    title: station.title,
+                    zIndex: 2,
+                    icon: {
+                        path: PIN_PATH,
+                        fillColor: STATION_GREEN,
+                        fillOpacity: 1,
+                        strokeColor: '#FFFFFF',
+                        strokeWeight: 1.5,
+                        scale: 1.7,
+                        anchor: new google.maps.Point(12, 22)
+                    }
+                });
+                marker.addListener('click', function () {
+                    Android.onStationSelected(station.stationId);
+                });
+                return marker;
+            });
+        }
+    };
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=__MAPS_API_KEY__&callback=initMap&v=weekly"
+        async defer onerror="onMapsScriptError()"></script>
+</body>
+</html>
