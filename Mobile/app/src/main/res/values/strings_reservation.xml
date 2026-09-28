@@ -43,4 +43,73 @@
     <string name="reservation_created_title">Reservation created</string>
     <string name="reservation_created_message">Your reservation was confirmed by HelioGrid.</string>
     <string name="reservation_done">Done</string>
+
+    <!-- Prosumer home: view reservations card -->
+    <string name="home_history_title">Your reservations</string>
+    <string name="home_history_body">View all your bookings and their current status.</string>
+    <string name="home_history_action">View Reservations</string>
+
+    <!-- Reservation history screen -->
+    <string name="history_title">My Reservations</string>
+    <string name="history_subtitle">All your bookings, newest first</string>
+    <string name="history_loading">Loading your reservations…</string>
+    <string name="history_error_title">Reservations could not be loaded</string>
+    <string name="history_empty_title">No reservations yet</string>
+    <string name="history_empty_body">Reservations you create will appear here.</string>
+    <string name="history_empty_filtered_title">No matching reservations</string>
+    <string name="history_empty_filtered_body">Try a different filter.</string>
+    <string name="history_item_meta">%1$s · %2$s</string>
+
+    <string name="filter_all">All</string>
+    <string name="reservation_status_pending">Pending</string>
+    <string name="reservation_status_approved">Approved</string>
+    <string name="reservation_status_declined">Declined</string>
+    <string name="reservation_status_completed">Completed</string>
+    <string name="reservation_status_cancelled">Cancelled</string>
+
+    <!-- Reservation detail -->
+    <string name="detail_title">Reservation Details</string>
+    <string name="detail_reference">Reference #%1$s</string>
+    <string name="detail_copy_id">Copy ID</string>
+    <string name="detail_copied">Reservation ID copied</string>
+    <string name="detail_datetime_value">%1$s at %2$s</string>
+
+    <string name="detail_status_pending_title">Booking Request Submitted!</string>
+    <string name="detail_status_pending_body">Your energy slot reservation has been created and sent to the station operator for approval.</string>
+    <string name="detail_status_approved_title">Reservation Approved!</string>
+    <string name="detail_status_approved_body">Your reservation is confirmed. Show the QR pass at the terminal to begin your energy transfer.</string>
+    <string name="detail_status_declined_title">Reservation Declined</string>
+    <string name="detail_status_declined_body">The station operator declined this reservation.</string>
+    <string name="detail_status_completed_title">Energy Transfer Completed</string>
+    <string name="detail_status_completed_body">This reservation\'s energy transfer has been completed.</string>
+    <string name="detail_status_cancelled_title">Reservation Cancelled</string>
+    <string name="detail_status_cancelled_body">This reservation has been cancelled.</string>
+
+    <string name="detail_summary_title">Reservation Summary</string>
+    <string name="detail_summary_station">Station</string>
+    <string name="detail_summary_datetime">Date &amp; Time</string>
+    <string name="detail_summary_nic">Prosumer NIC</string>
+
+    <string name="detail_qr_title">Terminal QR Pass</string>
+    <string name="detail_qr_gate_access">Gate Access</string>
+    <string name="detail_qr_loading">Loading your QR pass…</string>
+    <string name="detail_qr_locked_title">Awaiting Operator Approval</string>
+    <string name="detail_qr_locked_body">Your QR transfer pass will activate automatically once approved by the station operator.</string>
+    <string name="detail_qr_active_body">Present this QR code to the station operator to begin your energy transfer.</string>
+    <string name="detail_qr_used_title">QR Pass Already Used</string>
+    <string name="detail_qr_used_body">This reservation\'s energy transfer has already been completed.</string>
+    <string name="detail_qr_error_title">QR Pass Could Not Be Loaded</string>
+    <string name="detail_regenerate_qr">Regenerate QR</string>
+    <string name="detail_regenerating_qr">Regenerating…</string>
+    <string name="detail_regenerate_confirm_title">Regenerate QR?</string>
+    <string name="detail_regenerate_confirm_body">Your previous QR will stop working. Continue?</string>
+    <string name="detail_regenerate_success">QR regenerated successfully.</string>
+    <string name="continue_action">Continue</string>
+    <string name="cancel">Cancel</string>
+
+    <string name="detail_notice_modification_title">12-Hour Modification Notice</string>
+    <string name="detail_notice_modification_body">Reservation updates and cancellations require at least 12 hours\' notice.</string>
+
+    <string name="detail_view_bookings">View My Bookings</string>
+    <string name="detail_back_home">Back to Home</string>
 </resources>
