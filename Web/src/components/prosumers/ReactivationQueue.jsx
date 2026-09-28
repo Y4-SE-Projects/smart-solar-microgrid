@@ -1,13 +1,14 @@
 /* File: ReactivationQueue.jsx
- * Purpose: The priority queue at the top of Prosumer Management with every deactivated account 
- *          awaiting Backoffice action, from GET /api/users/pending-deactivation.
+ * Purpose: The priority queue at the top of Prosumer Management, listing the deactivated accounts
+ *          that have asked to be restored, from GET /api/users/reactivation-requests.
+ *          Not every deactivated account appears here — only those whose owner requested reactivation.
  *          Owns how many rows are revealed. Three rows show by default and the footer buttons grow the list.
  *
  *          Props:
- *              pending      - the deactivated accounts
+ *              pending      - the accounts awaiting a Backoffice decision
  *              isLoading    - true while the lists are being fetched
  *              onReactivate - called with the account whose Reactivate button was clicked
- * 
+ *
  * Author: IT23218512
  */
 
@@ -47,7 +48,7 @@ export default function ReactivationQueue({ pending, isLoading, onReactivate }) 
             )}
           </div>
           <p className="text-body-sm text-on-surface-variant">
-            Deactivated accounts awaiting Backoffice review.
+            Deactivated accounts that have asked to be restored.
           </p>
         </div>
       </div>

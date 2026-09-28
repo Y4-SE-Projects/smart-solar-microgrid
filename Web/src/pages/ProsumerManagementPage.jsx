@@ -1,13 +1,13 @@
 /* File: ProsumerManagementPage.jsx
  * Purpose: Backoffice screen for reviewing solar prosumer accounts and processing reactivation requests.
  *          This file handles orchestration only.
- *          ( loading the account data, holding the account selected for reactivation, 
- *          sending that request and reporting the result. ) 
+ *          ( loading the account data, holding the account selected for reactivation,
+ *          sending that request and reporting the result. )
  * Author: IT23218512
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getProsumers, getPendingDeactivation, reactivateProsumer } from '../services/usersApi';
+import { getProsumers, getReactivationRequests, reactivateProsumer } from '../services/usersApi';
 import { isThisMonth } from '../utils/formatters';
 import MetricCard from '../components/common/MetricCard';
 import AlertBanner from '../components/common/AlertBanner';
@@ -26,14 +26,14 @@ export default function ProsumerManagementPage() {
   const [actionError, setActionError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Loads both lists together, on mount and again after a successful reactivation. 
+  // Loads both lists together, on mount and again after a successful reactivation.
   const loadAccounts = useCallback(async () => {
     setIsLoading(true);
     setLoadError('');
     try {
       const [allProsumers, pendingAccounts] = await Promise.all([
         getProsumers(),
-        getPendingDeactivation(),
+        getReactivationRequests(),
       ]);
       setProsumers(allProsumers);
       setPending(pendingAccounts);
