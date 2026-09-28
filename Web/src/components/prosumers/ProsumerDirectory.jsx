@@ -4,7 +4,7 @@
  *          Filtering here is presentation only; the account data and the rules governing it stay with the API.
  *
  *          Props:
- *              prosumers    - every Prosumer account, active and deactivated
+ *              prosumers    - every Prosumer account, whatever its state
  *              isLoading    - true while the lists are being fetched
  *              onReactivate - called with the account whose Reactivate button was clicked
  *
@@ -16,6 +16,7 @@ import SearchInput from '../common/SearchInput';
 import FilterPills from '../common/FilterPills';
 import Pagination from '../common/Pagination';
 import StatusChip from '../common/StatusChip';
+import { AccountStatus, resolveAccountStatus } from '../../constants/accountStatus';
 import { formatDate } from '../../utils/formatters';
 
 const ROWS_PER_PAGE = 10;
@@ -25,20 +26,31 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
 
-  const totalCount = prosumers.length;
-  const activeCount = prosumers.filter((prosumer) => prosumer.isActive).length;
+  // Resolve each account's status once; so the counts, the filter and the row chip all read the same value rather than each deriving it separately.
+  const rows = useMemo(
+    () => prosumers.map((prosumer) => ({ ...prosumer, resolvedStatus: resolveAccountStatus(prosumer) })),
+    [prosumers]
+  );
+
+  const totalCount = rows.length;
+  const activeCount = rows.filter((row) => row.resolvedStatus === AccountStatus.Active).length;
+  const pendingCount = rows.filter(
+    (row) => row.resolvedStatus === AccountStatus.PendingReactivation
+  ).length;
+  const deactivatedCount = rows.filter(
+    (row) => row.resolvedStatus === AccountStatus.Deactivated
+  ).length;
 
   const filteredProsumers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    return prosumers.filter((prosumer) => {
-      if (statusFilter === 'active' && !prosumer.isActive) return false;
-      if (statusFilter === 'deactivated' && prosumer.isActive) return false;
+    return rows.filter((row) => {
+      if (statusFilter !== 'all' && row.resolvedStatus !== statusFilter) return false;
       if (!query) return true;
-      return [prosumer.nic, prosumer.fullName, prosumer.email].some((field) =>
+      return [row.nic, row.fullName, row.email].some((field) =>
         (field ?? '').toLowerCase().includes(query)
       );
     });
-  }, [prosumers, searchTerm, statusFilter]);
+  }, [rows, searchTerm, statusFilter]);
 
   // A narrower filter can leave fewer results than the current page covers, which would otherwise render an empty table on a valid page number.
   useEffect(() => {
@@ -59,7 +71,7 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
           <div>
             <h2 className="text-headline-sm font-bold text-primary">All Registered Prosumers</h2>
             <p className="text-body-sm text-on-surface-variant">
-              Every prosumer account held by the service, active or deactivated.
+              Every prosumer account held by the service, whatever its state.
             </p>
           </div>
           <div className="flex items-center gap-1 text-body-sm text-outline font-medium">
@@ -79,8 +91,9 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
             onChange={setStatusFilter}
             options={[
               { key: 'all', label: 'All', count: totalCount },
-              { key: 'active', label: 'Active', count: activeCount },
-              { key: 'deactivated', label: 'Deactivated', count: totalCount - activeCount },
+              { key: AccountStatus.Active, label: 'Active', count: activeCount },
+              { key: AccountStatus.PendingReactivation, label: 'In Queue', count: pendingCount },
+              { key: AccountStatus.Deactivated, label: 'Deactivated', count: deactivatedCount },
             ]}
           />
         </div>
@@ -115,51 +128,56 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
                 </td>
               </tr>
             ) : (
-              pageRows.map((prosumer) => (
-                <tr
-                  key={prosumer.nic}
-                  className={`hover:bg-surface-container-low/40 transition-colors ${
-                    prosumer.isActive ? '' : 'bg-surface-container-low/20'
-                  }`}
-                >
-                  <td
-                    className={`py-3.5 px-6 whitespace-nowrap text-body-sm font-semibold tabular-nums ${
-                      prosumer.isActive ? 'text-primary' : 'text-alert-danger'
+              pageRows.map((prosumer) => {
+                const isActive = prosumer.resolvedStatus === AccountStatus.Active;
+
+                return (
+                  <tr
+                    key={prosumer.nic}
+                    className={`hover:bg-surface-container-low/40 transition-colors ${
+                      isActive ? '' : 'bg-surface-container-low/20'
                     }`}
                   >
-                    {prosumer.nic}
-                  </td>
-                  <td className="py-3.5 px-5 whitespace-nowrap font-semibold text-on-surface">
-                    {prosumer.fullName}
-                  </td>
-                  <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant">
-                    {prosumer.email}
-                  </td>
-                  <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant tabular-nums">
-                    {prosumer.phone}
-                  </td>
-                  <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant tabular-nums">
-                    {formatDate(prosumer.createdAt)}
-                  </td>
-                  <td className="py-3.5 px-5 whitespace-nowrap">
-                    <StatusChip isActive={prosumer.isActive} />
-                  </td>
-                  <td className="py-3.5 px-6 text-right whitespace-nowrap">
-                    {/* Reactivation is the only write action Backoffice holds over a prosumer account, so active rows have none. */}
-                    {prosumer.isActive ? (
-                      <span className="text-body-sm text-outline">—</span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onReactivate(prosumer)}
-                        className="px-3 py-1.5 rounded-full bg-mint-surface text-primary text-body-sm font-semibold hover:bg-secondary-container transition-colors"
-                      >
-                        Reactivate
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))
+                    <td
+                      className={`py-3.5 px-6 whitespace-nowrap text-body-sm font-semibold tabular-nums ${
+                        isActive ? 'text-primary' : 'text-alert-danger'
+                      }`}
+                    >
+                      {prosumer.nic}
+                    </td>
+                    <td className="py-3.5 px-5 whitespace-nowrap font-semibold text-on-surface">
+                      {prosumer.fullName}
+                    </td>
+                    <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant">
+                      {prosumer.email}
+                    </td>
+                    <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant tabular-nums">
+                      {prosumer.phone}
+                    </td>
+                    <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant tabular-nums">
+                      {formatDate(prosumer.createdAt)}
+                    </td>
+                    <td className="py-3.5 px-5 whitespace-nowrap">
+                      <StatusChip status={prosumer.resolvedStatus} />
+                    </td>
+                    <td className="py-3.5 px-6 text-right whitespace-nowrap">
+                      {/* Reactivation is the only write action Backoffice holds over a prosumer account, so active rows have none. 
+                          Declining a request is deliberately not offered here That belongs to the queue, where requests are worked. */}
+                      {isActive ? (
+                        <span className="text-body-sm text-outline">—</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => onReactivate(prosumer)}
+                          className="px-3 py-1.5 rounded-full bg-mint-surface text-primary text-body-sm font-semibold hover:bg-secondary-container transition-colors"
+                        >
+                          Reactivate
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

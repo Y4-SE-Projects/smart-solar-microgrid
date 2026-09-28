@@ -8,6 +8,7 @@
  *              pending      - the accounts awaiting a Backoffice decision
  *              isLoading    - true while the lists are being fetched
  *              onReactivate - called with the account whose Reactivate button was clicked
+ *              onReject     - called with the account whose Decline button was clicked
  *
  * Author: IT23218512
  */
@@ -17,7 +18,7 @@ import { getInitials, formatDate, pluralize } from '../../utils/formatters';
 
 const QUEUE_PAGE_SIZE = 3;
 
-export default function ReactivationQueue({ pending, isLoading, onReactivate }) {
+export default function ReactivationQueue({ pending, isLoading, onReactivate, onReject }) {
   const [visibleCount, setVisibleCount] = useState(QUEUE_PAGE_SIZE);
 
   // Collapse back to the default whenever the queue itself changes.
@@ -71,6 +72,7 @@ export default function ReactivationQueue({ pending, isLoading, onReactivate }) 
                   <th className="py-3 px-6 whitespace-nowrap">Prosumer (NIC &amp; Name)</th>
                   <th className="py-3 px-5 whitespace-nowrap">Contact</th>
                   <th className="py-3 px-5 whitespace-nowrap">Deactivated</th>
+                  <th className="py-3 px-5 whitespace-nowrap">Requested</th>
                   <th className="py-3 px-5">Declared Reason</th>
                   <th className="py-3 px-6 text-right whitespace-nowrap">Backoffice Action</th>
                 </tr>
@@ -101,11 +103,18 @@ export default function ReactivationQueue({ pending, isLoading, onReactivate }) 
                       <span className="text-body-sm text-on-surface tabular-nums">
                         {formatDate(prosumer.deactivatedAt)}
                       </span>
-                      {prosumer.daysElapsed !== null && prosumer.daysElapsed !== undefined && (
-                        <span className="block text-label-sm text-outline tabular-nums">
-                          {pluralize(prosumer.daysElapsed, 'day')} elapsed
-                        </span>
-                      )}
+                    </td>
+                    {/* How long the request has been waiting is what orders this queue, so it gets the day count rather than the deactivation date. */}
+                    <td className="py-4 px-5 whitespace-nowrap">
+                      <span className="text-body-sm text-on-surface tabular-nums">
+                        {formatDate(prosumer.reactivationRequestedAt)}
+                      </span>
+                      {prosumer.daysSinceRequest !== null &&
+                        prosumer.daysSinceRequest !== undefined && (
+                          <span className="block text-label-sm text-alert-danger font-semibold tabular-nums">
+                            {pluralize(prosumer.daysSinceRequest, 'day')} waiting
+                          </span>
+                        )}
                     </td>
                     <td className="py-4 px-5">
                       {/* The reason is optional on the deactivation request, so many rows legitimately have none. */}
@@ -118,14 +127,23 @@ export default function ReactivationQueue({ pending, isLoading, onReactivate }) 
                       )}
                     </td>
                     <td className="py-4 px-6 text-right whitespace-nowrap">
-                      <button
-                        type="button"
-                        onClick={() => onReactivate(prosumer)}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-on-primary hover:bg-primary-container text-body-sm font-semibold shadow-sm transition-colors"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">check_circle</span>
-                        <span>Reactivate</span>
-                      </button>
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => onReject(prosumer)}
+                          className="px-4 py-2 rounded-full border border-border-slate bg-surface-container-lowest text-on-surface-variant hover:bg-error-container hover:text-alert-danger hover:border-transparent text-body-sm font-semibold transition-colors"
+                        >
+                          Decline
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onReactivate(prosumer)}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-on-primary hover:bg-primary-container text-body-sm font-semibold shadow-sm transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">check_circle</span>
+                          <span>Approve</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

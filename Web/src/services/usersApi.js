@@ -24,6 +24,14 @@ export function reactivateProsumer(nic) {
   return apiClient.put(`/users/${nic}/reactivate`).then((response) => response.data);
 }
 
+// Declines a pending reactivation request. ( Backoffice only )
+// The account stays deactivated and leaves the queue, but the reason is kept so the Prosumer is told why the next time they try to log in.
+export function rejectReactivation(nic, reason) {
+  return apiClient
+    .put(`/users/${nic}/reject-reactivation`, { reason })
+    .then((response) => response.data);
+}
+
 // Lists every Backoffice/GridOperator account. ( Backoffice only )
 export function getStaff() {
   return apiClient.get('/users/staff').then((response) => response.data.data ?? []);
