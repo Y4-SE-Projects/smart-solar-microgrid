@@ -1,12 +1,15 @@
 /* File: StaffForm.jsx
- * Purpose: Form for creating a Backoffice or Grid Operator account through POST /api/users/register.
+ * Purpose: Form; for creating a Backoffice or Grid Operator account through POST /api/users/register,
+ *                for editing a Backoffice or Grid Operator account through PUT /api/users/staff/{username}.
  *
  *          Props:
+ *              mode         - 'create' (default) or 'edit'
+ *              member       - the staff account being edited; ignored when creating
  *              isSubmitting - true while the request is in flight
  *              error        - message from a failed attempt
- *              onSubmit     - called with the register payload
+ *              onSubmit     - called with the register or update payload
  *              onCancel     - closes the form
- * 
+ *
  * Author: IT23218512
  */
 
@@ -14,7 +17,7 @@ import { useState, useEffect } from 'react';
 import { Roles } from '../../constants/roles';
 import { formatRole } from '../../utils/formatters';
 
-// Roles this screen can create. 
+// Roles this screen can create.
 // Prosumer is deliberately absent. Prosumers self-register from the mobile app with an NIC.
 const STAFF_ROLES = [Roles.GridOperator, Roles.Backoffice];
 
@@ -63,12 +66,32 @@ function Field({
   );
 }
 
-export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+export default function StaffForm({
+  mode = 'create',
+  member = null,
+  isSubmitting,
+  error,
+  onSubmit,
+  onCancel,
+}) {
+  const isEdit = mode === 'edit';
+
+  const [form, setForm] = useState(() =>
+    isEdit && member
+      ? {
+          ...EMPTY_FORM,
+          role: member.role,
+          username: member.username,
+          fullName: member.fullName ?? '',
+          email: member.email ?? '',
+          phone: member.phone ?? '',
+        }
+      : EMPTY_FORM
+  );
   const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
 
- // Escape closes the dialog, except mid-submission — the request is already on its way to the server.
+ // Escape closes the dialog, except mid-submission when the request is already on its way to the server.
   useEffect(() => {
     function handleKeyDown(event) {
       if (event.key === 'Escape' && !isSubmitting) onCancel();
@@ -77,8 +100,7 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isSubmitting, onCancel]);
 
-  // Stops the page behind the dialog from scrolling while it is open, and
-  // restores whatever the previous value was on close.
+  // Stops the page behind the dialog from scrolling while it is open, and restores whatever the previous value was on close.
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -101,10 +123,24 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
   function validate() {
     const errors = {};
 
-    if (!form.username.trim()) {
-      errors.username = 'Username is required.';
-    } else if (/\s/.test(form.username.trim())) {
-      errors.username = 'Username cannot contain spaces.';
+    // The username and the password only exist as inputs when creating an account.
+    if (!isEdit) {
+      if (!form.username.trim()) {
+        errors.username = 'Username is required.';
+      } else if (/\s/.test(form.username.trim())) {
+        errors.username = 'Username cannot contain spaces.';
+      }
+
+      if (!form.password) {
+        errors.password = 'Password is required.';
+      } else if (form.password.length < 8) {
+        errors.password = 'Use at least 8 characters.';
+      }
+
+      // Guards against a typo locking the new account holder (Grid Operator) out, since the password is set on their behalf.
+      if (form.confirmPassword !== form.password) {
+        errors.confirmPassword = 'Passwords do not match.';
+      }
     }
 
     if (!form.fullName.trim()) errors.fullName = 'Full name is required.';
@@ -117,17 +153,6 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
 
     if (!form.phone.trim()) errors.phone = 'Phone number is required.';
 
-    if (!form.password) {
-      errors.password = 'Password is required.';
-    } else if (form.password.length < 8) {
-      errors.password = 'Use at least 8 characters.';
-    }
-
-    // Guards against a typo locking the new account holder (Grid Operator) out, since the password is set on their behalf.
-    if (form.confirmPassword !== form.password) {
-      errors.confirmPassword = 'Passwords do not match.';
-    }
-
     return errors;
   }
 
@@ -136,6 +161,15 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
     const errors = validate();
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) return;
+
+    if (isEdit) {
+      onSubmit({
+        fullName: form.fullName.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+      });
+      return;
+    }
 
     onSubmit({
       role: form.role,
@@ -154,21 +188,24 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
       aria-labelledby="staff-form-title"
       className="fixed inset-0 bg-inverse-surface/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
     >
-      {/* The card is capped at 90% of the viewport and scrolls internally, so
-          the header, the error message and the buttons stay reachable on a
-          short screen. */}
+      {/* The card is capped at 90% of the viewport and scrolls internally. 
+          So the header, the error message and the buttons stay reachable on a short screen. */}
       <div className="bg-surface-container-lowest rounded-2xl w-full max-w-2xl max-h-[90vh] shadow-xl border border-border-slate flex flex-col overflow-hidden">
         <div className="p-5 bg-surface-container-low/50 border-b border-border-slate flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-[18px]">person_add</span>
+              <span className="material-symbols-outlined text-[18px]">
+                {isEdit ? 'edit' : 'person_add'}
+              </span>
             </div>
             <div>
               <h2 id="staff-form-title" className="text-headline-sm font-bold text-primary">
-                Create Staff Account
+                {isEdit ? 'Edit Staff Account' : 'Create Staff Account'}
               </h2>
               <p className="text-body-sm text-on-surface-variant">
-                Staff sign in with a username rather than an NIC.
+                {isEdit
+                  ? 'Username and role are fixed once an account exists.'
+                  : 'Staff sign in with a username rather than an NIC.'}
               </p>
             </div>
           </div>
@@ -185,43 +222,59 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
 
         <form onSubmit={handleSubmit} noValidate className="flex flex-col min-h-0 flex-1">
           <div className="p-6 flex flex-col gap-5 overflow-y-auto">
-            {/* Role */}
-            <div className="flex flex-col gap-1.5">
-              <span className="text-label-md font-medium text-on-surface">Account Role</span>
-              <div className="inline-flex p-1 rounded-full bg-surface-container-low border border-border-slate text-body-sm self-start">
-                {STAFF_ROLES.map((role) => (
-                  <button
-                    key={role}
-                    type="button"
-                    onClick={() => handleChange('role', role)}
-                    className={`px-4 py-1.5 rounded-full transition-colors ${
-                      form.role === role
-                        ? 'bg-surface-container-lowest text-primary font-semibold shadow-sm'
-                        : 'text-on-surface-variant hover:text-on-surface font-medium'
-                    }`}
-                  >
-                    {formatRole(role)}
-                  </button>
-                ))}
+            {isEdit ? (
+              /* Shown rather than edited, so it is clear which account is being changed and also clear that these two values are not on the table. */
+              <div className="p-4 rounded-xl bg-surface-container-low border border-border-slate flex flex-wrap items-center gap-x-8 gap-y-2 text-body-sm">
+                <div>
+                  <span className="text-on-surface-variant">Username: </span>
+                  <strong className="text-on-surface">{form.username}</strong>
+                </div>
+                <div>
+                  <span className="text-on-surface-variant">Role: </span>
+                  <strong className="text-on-surface">{formatRole(form.role)}</strong>
+                </div>
               </div>
-              <span className="text-body-sm text-on-surface-variant">
-                {form.role === Roles.Backoffice
-                  ? 'Full administrative access to the web console.'
-                  : 'Manages slot availability and reservations on web and mobile.'}
-              </span>
-            </div>
+            ) : (
+              /* Role */
+              <div className="flex flex-col gap-1.5">
+                <span className="text-label-md font-medium text-on-surface">Account Role</span>
+                <div className="inline-flex p-1 rounded-full bg-surface-container-low border border-border-slate text-body-sm self-start">
+                  {STAFF_ROLES.map((role) => (
+                    <button
+                      key={role}
+                      type="button"
+                      onClick={() => handleChange('role', role)}
+                      className={`px-4 py-1.5 rounded-full transition-colors ${
+                        form.role === role
+                          ? 'bg-surface-container-lowest text-primary font-semibold shadow-sm'
+                          : 'text-on-surface-variant hover:text-on-surface font-medium'
+                      }`}
+                    >
+                      {formatRole(role)}
+                    </button>
+                  ))}
+                </div>
+                <span className="text-body-sm text-on-surface-variant">
+                  {form.role === Roles.Backoffice
+                    ? 'Full administrative access to the web console.'
+                    : 'Manages slot availability and reservations on web and mobile.'}
+                </span>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field
-                label="Username"
-                name="username"
-                value={form.username}
-                onChange={handleChange}
-                error={fieldErrors.username}
-                placeholder="e.g. j.silva"
-                autoComplete="off"
-                autoFocus
-              />
+              {!isEdit && (
+                <Field
+                  label="Username"
+                  name="username"
+                  value={form.username}
+                  onChange={handleChange}
+                  error={fieldErrors.username}
+                  placeholder="e.g. j.silva"
+                  autoComplete="off"
+                  autoFocus
+                />
+              )}
               <Field
                 label="Full Name"
                 name="fullName"
@@ -230,6 +283,7 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
                 error={fieldErrors.fullName}
                 placeholder="e.g. Jayani Silva"
                 autoComplete="off"
+                autoFocus={isEdit}
               />
               <Field
                 label="Email Address"
@@ -253,54 +307,58 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-label-md font-medium text-on-surface"
-                  htmlFor="staff-password"
-                >
-                  Temporary Password
-                </label>
-                <div className="relative flex items-center">
-                  <input
-                    id="staff-password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={form.password}
-                    onChange={(event) => handleChange('password', event.target.value)}
-                    placeholder="At least 8 characters"
-                    autoComplete="new-password"
-                    className={`w-full h-9 pl-3 pr-10 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all ${
-                      fieldErrors.password ? 'border-alert-danger' : 'border-border-slate'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    onClick={() => setShowPassword((previous) => !previous)}
-                    className="absolute right-2 p-1 text-on-surface-variant hover:text-primary transition-colors focus:outline-none flex items-center justify-center"
+            {/* Passwords are only set at creation. 
+                Changing one afterwards goes through the separate reset dialog, which is the only route the API offers. */}
+            {!isEdit && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-label-md font-medium text-on-surface"
+                    htmlFor="staff-password"
                   >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {showPassword ? 'visibility_off' : 'visibility'}
-                    </span>
-                  </button>
+                    Initial Password
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      id="staff-password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={form.password}
+                      onChange={(event) => handleChange('password', event.target.value)}
+                      placeholder="At least 8 characters"
+                      autoComplete="new-password"
+                      className={`w-full h-9 pl-3 pr-10 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all ${
+                        fieldErrors.password ? 'border-alert-danger' : 'border-border-slate'
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      onClick={() => setShowPassword((previous) => !previous)}
+                      className="absolute right-2 p-1 text-on-surface-variant hover:text-primary transition-colors focus:outline-none flex items-center justify-center"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">
+                        {showPassword ? 'visibility_off' : 'visibility'}
+                      </span>
+                    </button>
+                  </div>
+                  {fieldErrors.password && (
+                    <span className="text-body-sm text-alert-danger">{fieldErrors.password}</span>
+                  )}
                 </div>
-                {fieldErrors.password && (
-                  <span className="text-body-sm text-alert-danger">{fieldErrors.password}</span>
-                )}
-              </div>
 
-              <Field
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                error={fieldErrors.confirmPassword}
-                placeholder="Re-enter the password"
-                autoComplete="new-password"
-              />
-            </div>
+                <Field
+                  label="Confirm Password"
+                  name="confirmPassword"
+                  type="password"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  error={fieldErrors.confirmPassword}
+                  placeholder="Re-enter the password"
+                  autoComplete="new-password"
+                />
+              </div>
+            )}
           </div>
 
           {/* Kept outside the scrolling area so a rejection from the API is visible no matter where the form is scrolled to. */}
@@ -340,7 +398,15 @@ export default function StaffForm({ isSubmitting, error, onSubmit, onCancel }) {
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
               )}
-              <span>{isSubmitting ? 'Creating…' : 'Create Account'}</span>
+              <span>
+                {isSubmitting
+                  ? isEdit
+                    ? 'Saving…'
+                    : 'Creating…'
+                  : isEdit
+                    ? 'Save Changes'
+                    : 'Create Account'}
+              </span>
             </button>
           </div>
         </form>
