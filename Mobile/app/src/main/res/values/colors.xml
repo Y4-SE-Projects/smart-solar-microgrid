@@ -25,4 +25,7 @@
     <color name="chip_danger_border">#FECACA</color>
     <color name="error_container">#FFDAD6</color>
     <color name="on_error_container">#93000A</color>
+    <color name="chip_warning_background">#FEF3C7</color>
+    <color name="chip_warning_border">#FDE68A</color>
+    <color name="alert_warning">#92400E</color>
 </resources>

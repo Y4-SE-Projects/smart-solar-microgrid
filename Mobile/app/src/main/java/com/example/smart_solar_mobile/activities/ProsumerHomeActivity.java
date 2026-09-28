@@ -33,6 +33,9 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         findViewById(R.id.createReservationButton).setOnClickListener(v ->
                 startActivity(new Intent(this, StationMapActivity.class)));
 
+        findViewById(R.id.viewReservationsButton).setOnClickListener(v ->
+                startActivity(new Intent(this, ReservationHistoryActivity.class)));
+
         // Loads the session here too, because Android can reopen the app straight onto this screen.
         SessionManager.getInstance().loadSession(session -> {
             if (session == null || !Roles.PROSUMER.equals(session.role)) {

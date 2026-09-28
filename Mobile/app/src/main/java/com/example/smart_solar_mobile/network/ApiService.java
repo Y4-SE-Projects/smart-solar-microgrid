@@ -5,6 +5,7 @@ import com.example.smart_solar_mobile.models.CreateReservationRequest;
 import com.example.smart_solar_mobile.models.DashboardCounts;
 import com.example.smart_solar_mobile.models.EnergyBookingSlot;
 import com.example.smart_solar_mobile.models.LoginRequest;
+import com.example.smart_solar_mobile.models.QrResponse;
 import com.example.smart_solar_mobile.models.ReservationData;
 import com.example.smart_solar_mobile.models.SetSlotAvailabilityRequest;
 import com.example.smart_solar_mobile.models.SolarStation;
@@ -43,6 +44,19 @@ public interface ApiService {
     @GET("reservations/prosumer/{nic}/pending")
     Call<ApiResponse<List<ReservationData>>> getPendingReservations(
             @Path("nic") String nic);
+
+    // Every reservation for this Prosumer, all statuses, newest created first
+    @GET("reservations/prosumer/{nic}")
+    Call<ApiResponse<List<ReservationData>>> getProsumerReservations(
+            @Path("nic") String nic);
+
+    // Owner only, and only once the reservation is Approved
+    @GET("reservations/{id}/qr")
+    Call<ApiResponse<QrResponse>> getQr(@Path("id") String reservationId);
+
+    // Issues a new nonce and version; the previous QR stops working immediately
+    @PUT("reservations/{id}/regenerate-qr")
+    Call<ApiResponse<QrResponse>> regenerateQr(@Path("id") String reservationId);
 
     @GET("reservations/prosumer/{nic}/dashboard-counts")
     Call<DashboardCounts> getDashboardCounts(

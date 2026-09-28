@@ -134,6 +134,51 @@
                     app:icon="@drawable/ic_arrow_forward"
                     app:iconGravity="textEnd" />
             </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <ImageView
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/bg_icon_tile"
+                    android:importantForAccessibility="no"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_schedule"
+                    app:tint="@color/primary" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/home_history_title"
+                    android:textColor="@color/on_surface"
+                    android:textSize="17sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="@string/home_history_body"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="13sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/viewReservationsButton"
+                    style="@style/Widget.SmartSolar.PrimaryButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/home_history_action"
+                    app:icon="@drawable/ic_arrow_forward"
+                    app:iconGravity="textEnd" />
+            </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>
