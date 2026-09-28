@@ -61,4 +61,13 @@ public interface ApiService {
     @PUT("slots/{slotId}/availability")
     Call<ApiResponse<EnergyBookingSlot>> setSlotAvailability(@Path("slotId") String slotId,
                                                              @Body SetSlotAvailabilityRequest request);
+
+    // Active stations within radiusKm of the given point, nearest first
+    @GET("stations/nearby")
+    Call<ApiResponse<List<SolarStation>>> getNearbyStations(@Query("lat") double lat, @Query("lng") double lng,
+                                                            @Query("radiusKm") double radiusKm);
+
+    // A station's slots that haven't started yet and fall inside the API's booking window, soonest first
+    @GET("stations/{stationId}/slots?upcomingOnly=true")
+    Call<ApiResponse<List<EnergyBookingSlot>>> getUpcomingSlots(@Path("stationId") String stationId);
 }
