@@ -460,7 +460,7 @@ public class StationMapActivity extends AppCompatActivity {
 
     private void openStation(SolarStation station) {
         // Opens the station popup with its distance from the user
-        new StationSlotsSheet(this, station, distanceLabel(station)).show();
+        new StationDetailsSheet(this, station, distanceLabel(station)).show();
     }
 
     private String distanceLabel(SolarStation station) {

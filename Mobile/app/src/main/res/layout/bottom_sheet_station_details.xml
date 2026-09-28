@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Station popup shown by StationSlotsSheet: the station's details and its upcoming slots from the API -->
+<!-- Station popup shown by StationDetailsSheet: the station's details and a button to reserve one of its slots -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -194,99 +194,15 @@
             </LinearLayout>
         </LinearLayout>
 
-        <!-- Upcoming slots -->
-        <LinearLayout
+        <!-- Opens Create Reservation for this station -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/reserveSlotButton"
+            style="@style/Widget.SmartSolar.PrimaryButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
-            android:gravity="center_vertical"
-            android:orientation="horizontal">
-
-            <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="@string/upcoming_slots"
-                android:textAppearance="@style/TextAppearance.SmartSolar.Title"
-                android:textSize="15sp" />
-
-            <TextView
-                android:id="@+id/sheetOpenCountText"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:fontFeatureSettings="tnum"
-                android:textColor="@color/secondary"
-                android:textSize="12sp"
-                android:fontFamily="sans-serif-medium" />
-        </LinearLayout>
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="2dp"
-            android:text="@string/upcoming_slots_hint"
-            android:textColor="@color/on_surface_variant"
-            android:textSize="12sp" />
-
-        <com.google.android.material.progressindicator.LinearProgressIndicator
-            android:id="@+id/sheetProgress"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:indeterminate="true"
-            android:visibility="gone"
-            app:indicatorColor="@color/secondary"
-            app:trackColor="@color/surface_container" />
-
-        <LinearLayout
-            android:id="@+id/sheetErrorBanner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_error_banner"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="12dp"
-            android:paddingEnd="4dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/sheetErrorText"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:paddingTop="8dp"
-                android:paddingBottom="8dp"
-                android:textColor="@color/on_error_container"
-                android:textSize="13sp" />
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/sheetRetryButton"
-                style="@style/Widget.Material3.Button.TextButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/retry"
-                android:textColor="@color/on_error_container" />
-        </LinearLayout>
-
-        <TextView
-            android:id="@+id/sheetEmptyText"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/bg_card"
-            android:gravity="center"
-            android:padding="16dp"
-            android:text="@string/no_upcoming_slots"
-            android:textColor="@color/on_surface_variant"
-            android:textSize="13sp"
-            android:visibility="gone" />
-
-        <!-- A day heading and a card of item_today_slot rows per day, added in code -->
-        <LinearLayout
-            android:id="@+id/sheetSlotsContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical" />
+            android:text="@string/reserve_slot"
+            app:icon="@drawable/ic_calendar"
+            app:iconGravity="textStart" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>
