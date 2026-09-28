@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Station popup shown by StationDetailsSheet: the station's details and a button to reserve one of its slots -->
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="24dp">
+
+        <!-- Station name, ID and distance -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:baselineAligned="false"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <FrameLayout
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@drawable/bg_icon_tile">
+
+                <ImageView
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_bolt"
+                    app:tint="@color/secondary" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/sheetStationName"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/on_surface"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/sheetStationMeta"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:drawablePadding="4dp"
+                    android:gravity="center_vertical"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="12sp"
+                    app:drawableStartCompat="@drawable/ic_near_me"
+                    app:drawableTint="@color/secondary" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Hours, capacity, battery slots -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_card"
+            android:baselineAligned="false"
+            android:orientation="horizontal"
+            android:padding="12dp">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Separate ImageView keeps the icon at 14dp; a compound drawable would draw at 24dp -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    tools:ignore="UseCompoundDrawables">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_schedule"
+                        app:tint="@color/on_surface_variant" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/station_hours"
+                        android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/sheetHoursText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/on_surface"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Separate ImageView keeps the icon at 14dp; a compound drawable would draw at 24dp -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    tools:ignore="UseCompoundDrawables">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_bolt"
+                        app:tint="@color/on_surface_variant" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/station_capacity"
+                        android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/sheetCapacityText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/on_surface"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Separate ImageView keeps the icon at 14dp; a compound drawable would draw at 24dp -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    tools:ignore="UseCompoundDrawables">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_battery"
+                        app:tint="@color/on_surface_variant" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/station_battery_slots"
+                        android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/sheetBatteryText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:textColor="@color/on_surface"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Opens Create Reservation for this station -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/reserveSlotButton"
+            style="@style/Widget.SmartSolar.PrimaryButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="@string/reserve_slot"
+            app:icon="@drawable/ic_calendar"
+            app:iconGravity="textStart" />
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

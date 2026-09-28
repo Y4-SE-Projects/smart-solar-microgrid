@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One day in the reservation screen's 7-day row. The row sets it selected; the dot shows the day has open slots. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="0dp"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="2dp"
+    android:layout_marginEnd="2dp"
+    android:layout_weight="1"
+    android:background="@drawable/bg_day_chip"
+    android:clickable="true"
+    android:focusable="true"
+    android:foreground="?attr/selectableItemBackground"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
+
+    <TextView
+        android:id="@+id/dayChipWeekday"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:textColor="@color/day_chip_secondary_text"
+        android:textSize="11sp" />
+
+    <TextView
+        android:id="@+id/dayChipNumber"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:fontFamily="sans-serif-medium"
+        android:fontFeatureSettings="tnum"
+        android:textColor="@color/day_chip_text"
+        android:textSize="17sp" />
+
+    <View
+        android:id="@+id/dayChipDot"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/bg_dot"
+        android:backgroundTint="@color/day_chip_dot"
+        android:visibility="invisible" />
+</LinearLayout>

@@ -123,6 +123,7 @@
                     android:textColor="@color/on_surface_variant"
                     android:textSize="13sp" />
 
+                <!-- Opens the station map; a station's "Reserve a slot" button continues to Create Reservation -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/createReservationButton"
                     style="@style/Widget.SmartSolar.PrimaryButton"
