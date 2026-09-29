@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="summary_page_title">Reservation Result</string>
+    <string name="summary_back_home">Back to Home</string>
+    <string name="summary_eyebrow">HELIOGRID CONFIRMATION</string>
+    <string name="summary_created_title">Reservation Created</string>
+    <string name="summary_created_message">Your reservation request was saved by HelioGrid. The returned booking details are shown below.</string>
+    <string name="summary_updated_title">Reservation Updated</string>
+    <string name="summary_updated_message">Your reservation changes were saved by HelioGrid. The updated details are shown below.</string>
+    <string name="summary_cancelled_title">Reservation Cancelled</string>
+    <string name="summary_cancelled_message">Your cancellation was confirmed by HelioGrid. The returned reservation details are shown below.</string>
+    <string name="summary_reference_label">RESERVATION REFERENCE</string>
+    <string name="summary_schedule_label">SCHEDULED TIME</string>
+    <string name="summary_details_title">Booking details</string>
+    <string name="summary_station_label">STATION ID</string>
+    <string name="summary_slot_label">SLOT ID</string>
+    <string name="summary_nic_label">PROSUMER NIC</string>
+    <string name="summary_created_at_label">CREATED</string>
+    <string name="summary_updated_at_label">LAST UPDATED</string>
+    <string name="summary_unavailable_eyebrow">DETAILS UNAVAILABLE</string>
+    <string name="summary_unavailable_title">Reservation details unavailable</string>
+    <string name="summary_unavailable_message">The confirmed reservation details could not be displayed. Return Home to continue.</string>
+</resources>

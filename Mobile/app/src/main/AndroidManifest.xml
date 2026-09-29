@@ -51,6 +51,9 @@
             android:name=".activities.CreateReservationActivity"
             android:exported="false" />
         <activity
+            android:name=".activities.ReservationSummaryActivity"
+            android:exported="false" />
+        <activity
             android:name=".activities.ReservationHistoryActivity"
             android:exported="false" />
         <activity
