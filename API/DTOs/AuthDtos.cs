@@ -62,6 +62,14 @@ namespace API.DTOs
         public string? Reason { get; set; }
     }
 
+    // Body for PUT /api/users/{nic}/password — a Prosumer changing their own password.
+    // The current password is required so that a signed-in session alone isn't enough to take over the account.
+    public class ChangePasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
     // Body for POST /api/users/reactivation-request and its /cancel counterpart.
     // These endpoints are public because a deactivated account is never issued a token. 
     // NIC and password is what authenticates the call, and stops anyone's raising requests against a NIC that isn't theirs.

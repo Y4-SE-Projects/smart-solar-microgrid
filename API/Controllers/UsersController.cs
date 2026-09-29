@@ -220,6 +220,49 @@ namespace API.Controllers
             return Ok(new { success = true, message = "Profile updated." });
         }
 
+        // A Prosumer changes their own password. ( Prosumer only, own NIC only )
+        // The current password must be supplied.
+        [Authorize(Roles = Roles.Prosumer)]
+        [HttpPut("{nic}/password")]
+        public async Task<IActionResult> ChangePassword(string nic, [FromBody] ChangePasswordRequest request)
+        {
+            var callerNic = User.FindFirstValue("nic");
+            if (callerNic != nic)
+            {
+                return Forbid();
+            }
+
+            var user = await _userService.FindByNicAsync(nic);
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "User not found." });
+            }
+
+            if (string.IsNullOrEmpty(request.CurrentPassword))
+            {
+                return BadRequest(new { success = false, message = "Current password is required." });
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            {
+                return BadRequest(new { success = false, message = "Current password is incorrect." });
+            }
+
+            if (string.IsNullOrEmpty(request.NewPassword) || request.NewPassword.Length < MinimumPasswordLength)
+            {
+                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+            }
+
+            if (request.NewPassword == request.CurrentPassword)
+            {
+                return BadRequest(new { success = false, message = "New password must be different from the current password." });
+            }
+
+            await _userService.SetProsumerPasswordAsync(nic, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
+
+            return Ok(new { success = true, message = "Password changed." });
+        }
+
         // A Prosumer requests deactivation of their own account, optionally stating why (shown to Backoffice on the review screen).
         // Once deactivated, only a Backoffice user can bring it back.
         [Authorize(Roles = Roles.Prosumer)]
@@ -522,7 +565,8 @@ namespace API.Controllers
             };
         }
 
-        // Collapses IsActive and ReactivationRequestedAt into the single status value both clients display, so neither of them re-implements this rule.
+        // Collapses IsActive and ReactivationRequestedAt into the single status value
+        // both clients display, so neither of them re-implements this rule.
         private static string ResolveStatus(User user)
         {
             if (user.IsActive)
@@ -535,7 +579,7 @@ namespace API.Controllers
                 : AccountStatus.Deactivated;
         }
 
-        // Safe mapping for Backoffice/GridOperator accounts.
+        // Safe mapping for Backoffice/GridOperator accounts
         // (Username-keyed, no NIC/deactivation-reason fields since those are Prosumer-specific).
         private static StaffProfileResponse MapToStaffResponse(User user)
         {

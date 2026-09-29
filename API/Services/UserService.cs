@@ -85,6 +85,15 @@ namespace API.Services
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 
+        // Replaces a Prosumer's stored password hash, keyed by NIC.
+        // Takes the finished hash rather than the plain text, same as SetStaffPasswordAsync.
+        public async Task SetProsumerPasswordAsync(string nic, string passwordHash)
+        {
+            var update = Builders<User>.Update.Set(u => u.PasswordHash, passwordHash);
+
+            await _users.UpdateOneAsync(u => u.Nic == nic, update);
+        }
+
         // Flips IsActive to false. Called when a Prosumer deactivates their own account.
         // Any reactivation request or rejection left from a previous cycle is cleared.
         // Else, a re-deactivated account would re-appear in the Backoffice queue.
