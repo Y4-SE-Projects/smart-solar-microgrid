@@ -23,6 +23,10 @@ const STATUS_STYLES = {
         icon: "cancel",
         classes: "border-alert-danger/20 bg-error-container text-alert-danger",
     },
+    Expired: {
+        icon: "schedule",
+        classes: "border-outline/20 bg-surface-container-high text-on-surface-variant",
+    },
 };
 
 export default function ReservationStatusBadge({ status }) {
