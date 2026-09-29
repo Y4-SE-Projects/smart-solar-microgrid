@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="prosumer_nav_home">Home</string>
+    <string name="prosumer_nav_stations">Stations</string>
+    <string name="prosumer_nav_bookings">Bookings</string>
+    <string name="prosumer_nav_profile">Profile</string>
+    <string name="prosumer_nav_selected_description">%1$s, selected</string>
+    <string name="prosumer_nav_profile_description">Profile, coming soon</string>
+    <string name="prosumer_nav_profile_unavailable">Profile is coming soon.</string>
+</resources>

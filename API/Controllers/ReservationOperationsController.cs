@@ -461,11 +461,11 @@ namespace API.Controllers
             }
         }
 
-        [Authorize(Roles = Roles.GridOperator)]
+        [Authorize(Roles = Roles.Prosumer)]
         [HttpGet("prosumer/{nic}/pending")]
         public async Task<IActionResult> GetPendingReservations(string nic)
         {
-            // Lets a GridOperator review the pending reservations of any Prosumer
+            // Returns only the authenticated Prosumer's own pending reservations.
             if (string.IsNullOrWhiteSpace(nic))
             {
                 return BadRequest(new
@@ -476,6 +476,17 @@ namespace API.Controllers
             }
 
             var requestedNic = nic.Trim();
+            var authenticatedNic = User.FindFirst("nic")?.Value?.Trim();
+
+            if (string.IsNullOrWhiteSpace(authenticatedNic) ||
+                !IsValidNicFormat(authenticatedNic))
+            {
+                return Unauthorized(new
+                {
+                    success = false,
+                    message = "The authenticated Prosumer NIC is missing or invalid."
+                });
+            }
 
             if (!IsValidNicFormat(requestedNic))
             {
@@ -486,10 +497,19 @@ namespace API.Controllers
                 });
             }
 
+            if (!string.Equals(authenticatedNic, requestedNic, StringComparison.Ordinal))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    message = "A Prosumer may view only their own pending reservations."
+                });
+            }
+
             try
             {
                 var reservations =
-                    await _service.GetPendingReservationAsync(requestedNic);
+                    await _service.GetPendingReservationAsync(authenticatedNic);
 
                 return Ok(new
                 {

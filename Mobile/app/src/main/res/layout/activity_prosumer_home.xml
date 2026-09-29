@@ -4,6 +4,7 @@
     android:id="@+id/homeRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface_container_lowest"
     android:orientation="vertical">
 
     <LinearLayout
@@ -50,6 +51,7 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:background="@color/surface"
         android:fillViewport="true">
 
         <LinearLayout
@@ -123,7 +125,7 @@
                     android:textColor="@color/on_surface_variant"
                     android:textSize="13sp" />
 
-                <!-- Opens the station map; a station's "Reserve a slot" button continues to Create Reservation -->
+                <!-- Keeps the Member 02 map and station-details booking path. -->
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/createReservationButton"
                     style="@style/Widget.SmartSolar.PrimaryButton"
@@ -133,6 +135,21 @@
                     android:text="@string/home_reservation_action"
                     app:icon="@drawable/ic_arrow_forward"
                     app:iconGravity="textEnd" />
+
+                <!-- Opens Create Reservation with no preselected map station. -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/directReservationButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/home_reservation_direct_action"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_calendar"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/secondary"
+                    app:strokeColor="@color/border_slate" />
             </LinearLayout>
 
             <LinearLayout
@@ -181,4 +198,9 @@
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <com.example.smart_solar_mobile.views.ProsumerBottomNavigation
+        android:id="@+id/prosumerBottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 </LinearLayout>

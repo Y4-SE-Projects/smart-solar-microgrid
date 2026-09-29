@@ -40,6 +40,7 @@ import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
+import com.example.smart_solar_mobile.views.ProsumerBottomNavigation;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
@@ -99,6 +100,8 @@ public class StationMapActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_station_map);
         InsetsHelper.applyEdgeToEdge(this, findViewById(R.id.mapRoot));
+        ((ProsumerBottomNavigation) findViewById(R.id.prosumerBottomNavigation))
+                .setup(this, ProsumerBottomNavigation.Destination.STATIONS);
 
         mapWebView = findViewById(R.id.mapWebView);
         radiusScroll = findViewById(R.id.radiusScroll);

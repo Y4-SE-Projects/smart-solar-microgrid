@@ -4,6 +4,7 @@
     android:id="@+id/historyRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface_container_lowest"
     android:orientation="vertical">
 
     <LinearLayout
@@ -122,7 +123,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:background="@color/surface">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/historyList"
@@ -195,4 +197,9 @@
                 android:visibility="gone" />
         </LinearLayout>
     </FrameLayout>
+
+    <com.example.smart_solar_mobile.views.ProsumerBottomNavigation
+        android:id="@+id/prosumerBottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 </LinearLayout>

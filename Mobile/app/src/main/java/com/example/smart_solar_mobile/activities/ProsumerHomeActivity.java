@@ -14,24 +14,30 @@ import com.example.smart_solar_mobile.R;
 import com.example.smart_solar_mobile.db.SessionManager;
 import com.example.smart_solar_mobile.models.Roles;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
+import com.example.smart_solar_mobile.views.ProsumerBottomNavigation;
 
 public class ProsumerHomeActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Shows the signed-in Prosumer and opens the station map to start a reservation.
+        // Shows the signed-in Prosumer and offers map and direct booking entries.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_prosumer_home);
         InsetsHelper.applyEdgeToEdge(this, findViewById(R.id.homeRoot));
+        ((ProsumerBottomNavigation) findViewById(R.id.prosumerBottomNavigation))
+                .setup(this, ProsumerBottomNavigation.Destination.HOME);
 
         TextView greetingText = findViewById(R.id.greetingText);
         TextView identifierText = findViewById(R.id.identifierText);
 
         findViewById(R.id.signOutButton).setOnClickListener(v ->
                 SessionManager.getInstance().endSession(() -> Navigator.openLogin(this, false)));
-        // Booking starts on the map: pick a station there, then reserve one of its slots
+        // Keeps the Member 02 nearby-map path and its preselected-station handoff.
         findViewById(R.id.createReservationButton).setOnClickListener(v ->
                 startActivity(new Intent(this, StationMapActivity.class)));
+        // Direct booking works without location permission or a nearby-map result.
+        findViewById(R.id.directReservationButton).setOnClickListener(v ->
+                startActivity(new Intent(this, CreateReservationActivity.class)));
 
         findViewById(R.id.viewReservationsButton).setOnClickListener(v ->
                 startActivity(new Intent(this, ReservationHistoryActivity.class)));
