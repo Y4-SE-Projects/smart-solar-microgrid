@@ -181,6 +181,9 @@ public class ReservationDetailActivity extends AppCompatActivity {
         } else if ("Cancelled".equalsIgnoreCase(status)) {
             title = R.string.detail_status_cancelled_title;
             body = R.string.detail_status_cancelled_body;
+        } else if ("Expired".equalsIgnoreCase(status)) {
+            title = R.string.detail_status_expired_title;
+            body = R.string.detail_status_expired_body;
         } else {
             title = R.string.detail_status_pending_title;
             body = R.string.detail_status_pending_body;
@@ -191,7 +194,8 @@ public class ReservationDetailActivity extends AppCompatActivity {
 
     // The QR card only ever appears for a reservation that can still use one, or already did.
     private void renderQrCard() {
-        if ("Declined".equalsIgnoreCase(status) || "Cancelled".equalsIgnoreCase(status)) {
+        if ("Declined".equalsIgnoreCase(status) || "Cancelled".equalsIgnoreCase(status)
+                || "Expired".equalsIgnoreCase(status)) {
             qrCard.setVisibility(View.GONE);
             return;
         }
