@@ -38,8 +38,23 @@ namespace API.Services
                                 .FirstOrDefaultAsync();
         }
 
+        // Finds an account of any role by the identifier a token carries in its NameIdentifier claim.
+        // ( NIC for a Prosumer, Username for Backoffice/GridOperator; and only returns it while account is still active. )
+        public async Task<User?> FindActiveByIdentifierAsync(string? identifier)
+        {
+            // Guarded because an empty identifier would otherwise match any document whose Nic and Username are both unset.
+            if (string.IsNullOrWhiteSpace(identifier))
+            {
+                return null;
+            }
+
+            return await _users
+                .Find(u => u.IsActive && (u.Nic == identifier || u.Username == identifier))
+                .FirstOrDefaultAsync();
+        }
+
         // True if a user with this NIC already exists (duplicate-registration check).
-        // A deactivated Prosumer must not be able to register a fresh one against the same NIC. 
+        // A deactivated Prosumer must not be able to register a fresh one against the same NIC.
         // ( Their only route back is a reactivation request. )
         public async Task<bool> NicExistsAsync(string nic)
         {
@@ -71,7 +86,7 @@ namespace API.Services
         }
 
         // Flips IsActive to false. Called when a Prosumer deactivates their own account.
-        // Any reactivation request or rejection left from a previous cycle is cleared. 
+        // Any reactivation request or rejection left from a previous cycle is cleared.
         // Else, a re-deactivated account would re-appear in the Backoffice queue.
         public async Task DeactivateAsync(string nic, string? reason)
         {
@@ -102,7 +117,7 @@ namespace API.Services
         }
 
         // Records a deactivated Prosumer's request to be restored.
-        // This puts the account into the Backoffice queue. 
+        // This puts the account into the Backoffice queue.
         // Any earlier rejection is cleared so a fresh request isn't shown alongside a stale decline.
         public async Task RequestReactivationAsync(string nic)
         {
@@ -123,7 +138,7 @@ namespace API.Services
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 
-        // Declines an outstanding request. The account leaves the queue. 
+        // Declines an outstanding request. The account leaves the queue.
         // The reason is kept so the Prosumer can be told why at their next login attempt.
         public async Task RejectReactivationAsync(string nic, string? reason)
         {
@@ -135,7 +150,7 @@ namespace API.Services
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 
-        // Every deactivated Prosumer with an outstanding reactivation request, for the Backoffice queue. 
+        // Every deactivated Prosumer with an outstanding reactivation request, for the Backoffice queue.
         // Sorted oldest request first.
         public async Task<List<User>> GetReactivationRequestsAsync()
         {
@@ -187,7 +202,7 @@ namespace API.Services
         }
 
         // How many Backoffice accounts can currently sign in.
-        // Used to stop the last one being deactivated. 
+        // Used to stop the last one being deactivated.
         // ( Reaching zero would leave the system with no way to administer itself. )
         public async Task<long> CountActiveBackofficeAsync()
         {
