@@ -21,7 +21,7 @@ namespace API.Services
         private const int MaximumIdAttempts = 10;
 
         private static readonly string[] ListStatuses =
-            { "Pending", "Approved", "Declined", "Completed", "Cancelled" };
+            { "Pending", "Approved", "Declined", "Completed", "Cancelled", "Expired" };
 
         private readonly MongoDbContext _context;
         private readonly IMongoCollection<EnergyReservation> _reservations;
@@ -64,7 +64,7 @@ namespace API.Services
                 if (normalizedStatus == null)
                 {
                     throw new ArgumentException(
-                        "Status must be All, Pending, Approved, Declined, Completed, or Cancelled.");
+                        "Status must be All, Pending, Approved, Declined, Completed, Cancelled, or Expired.");
                 }
 
                 filters.Add(filterBuilder.Eq(r => r.Status, normalizedStatus));
