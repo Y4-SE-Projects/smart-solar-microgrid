@@ -10,14 +10,17 @@ import StationsManagementPage from './pages/StationsManagementPage';
 import ProsumerManagementPage from './pages/ProsumerManagementPage';
 import StaffManagementPage from './pages/StaffManagementPage';
 import SlotSchedulesPage from './pages/SlotSchedulesPage';
-import { Roles } from './constants/roles';
+import { Roles, homePathForRole } from './constants/roles';
 import ReservationOversightPage from './pages/ReservationOversightPage';
 
-// "/" has no single fixed destination anymore — Backoffice and GridOperator each land
-// on a different home page, so this picks the right one from the logged-in session.
+// "/" has no single fixed destination anymore. 
+// Backoffice and GridOperator land on different home pages, so this picks the right one.
 function RoleHomeRedirect() {
   const { role } = useAuth();
-  return <Navigate to={role === Roles.GridOperator ? '/schedules' : '/stations'} replace />;
+
+  // This route already sits behind the guard below, which turns away any role without a console home. 
+  // The fallback is only here so a null could never reach <Navigate> as a destination.
+  return <Navigate to={homePathForRole(role) ?? '/login'} replace />;
 }
 
 function App() {
@@ -43,7 +46,7 @@ function App() {
                 <Route path="/prosumers" element={<ProsumerManagementPage />} />
                 <Route path="/staff" element={<StaffManagementPage />} />
               </Route>
-              
+
               {/* GridOperator-only pages */}
               <Route element={<ProtectedRoute allowedRoles={[Roles.GridOperator]} />}>
                 <Route path="/reservations" element={<ReservationOversightPage />} />
