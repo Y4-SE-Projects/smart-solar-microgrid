@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react';
 import Modal from '../ui/Modal';
 import Dropdown from '../ui/Dropdown';
 import ReservationStatusBadge from './ReservationStatusBadge';
-import { fetchStations } from '../../services/stationsApi';
 import { fetchSlotsForStation } from '../../services/slotsApi';
 import { updateReservation } from '../../services/reservationApi';
 
@@ -52,16 +51,10 @@ function Metadata({ label, children }) {
 }
 
 export default function EditReservationModal({ reservation, onClose, onUpdated }) {
-    const [stations, setStations] = useState([]);
-    const [selectedStationId, setSelectedStationId] = useState('');
     const [slots, setSlots] = useState([]);
     const [selectedSlotId, setSelectedSlotId] = useState('');
 
-    const [isLoadingStations, setIsLoadingStations] = useState(true);
-    const [stationsError, setStationsError] = useState('');
-    const [stationReloadKey, setStationReloadKey] = useState(0);
-
-    const [isLoadingSlots, setIsLoadingSlots] = useState(false);
+    const [isLoadingSlots, setIsLoadingSlots] = useState(Boolean(reservation.stationId));
     const [slotsError, setSlotsError] = useState('');
     const [slotReloadKey, setSlotReloadKey] = useState(0);
 
@@ -69,49 +62,12 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
     const [generalError, setGeneralError] = useState('');
 
     useEffect(() => {
-        let cancelled = false;
-
-        fetchStations(true)
-            .then((response) => {
-                if (cancelled) return;
-
-                const activeStations = response.data.data;
-                setStations(activeStations);
-
-                const currentStationIsActive = activeStations.some(
-                    (station) => station.stationId === reservation.stationId
-                );
-                const nextStationId = currentStationIsActive
-                    ? reservation.stationId
-                    : '';
-                setSelectedStationId(nextStationId);
-                setSelectedSlotId('');
-                setSlots([]);
-                setSlotsError('');
-                setIsLoadingSlots(Boolean(nextStationId));
-            })
-            .catch((error) => {
-                if (!cancelled) {
-                    setStationsError(
-                        error.response?.data?.message || 'Could not load active stations.'
-                    );
-                }
-            })
-            .finally(() => {
-                if (!cancelled) setIsLoadingStations(false);
-            });
-
-        return () => {
-            cancelled = true;
-        };
-    }, [reservation.stationId, stationReloadKey]);
-
-    useEffect(() => {
-        if (!selectedStationId) return undefined;
+        if (!reservation.stationId) return undefined;
 
         let cancelled = false;
+        setIsLoadingSlots(true);
 
-        fetchSlotsForStation(selectedStationId)
+        fetchSlotsForStation(reservation.stationId)
             .then((response) => {
                 if (cancelled) return;
 
@@ -122,21 +78,17 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                     const selectablePrevious = stationSlots.some(
                         (slot) =>
                             slot.slotId === previous &&
-                            slot.stationId === selectedStationId &&
+                            slot.stationId === reservation.stationId &&
                             (slot.isAvailable === true ||
-                                (selectedStationId === reservation.stationId &&
-                                    slot.slotId === reservation.slotId))
+                                slot.slotId === reservation.slotId)
                     );
                     if (selectablePrevious) return previous;
 
-                    const currentSlot =
-                        selectedStationId === reservation.stationId
-                            ? stationSlots.find(
-                                (slot) =>
-                                    slot.stationId === selectedStationId &&
-                                    slot.slotId === reservation.slotId
-                            )
-                            : null;
+                    const currentSlot = stationSlots.find(
+                        (slot) =>
+                            slot.stationId === reservation.stationId &&
+                            slot.slotId === reservation.slotId
+                    );
 
                     return currentSlot?.slotId || '';
                 });
@@ -157,27 +109,17 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
             cancelled = true;
         };
     }, [
-        selectedStationId,
-        slotReloadKey,
         reservation.stationId,
+        slotReloadKey,
         reservation.slotId,
     ]);
 
-    const selectedStation = stations.find(
-        (station) => station.stationId === selectedStationId
-    );
-
     const selectableSlots = slots.filter(
         (slot) =>
-            slot.stationId === selectedStationId &&
+            slot.stationId === reservation.stationId &&
             (slot.isAvailable === true ||
-                (selectedStationId === reservation.stationId &&
-                    slot.slotId === reservation.slotId))
+                slot.slotId === reservation.slotId)
     );
-    const stationOptions = stations.map((station) => ({
-        value: station.stationId,
-        label: `${station.name} (${station.stationId})`,
-    }));
     const slotOptions = selectableSlots.map((slot) => ({
         value: slot.slotId,
         label: slotLabel(slot),
@@ -189,33 +131,13 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
     const selectedStart = selectedSlot ? asDate(selectedSlot.startTime) : null;
     const selectedEnd = selectedSlot ? asDate(selectedSlot.endTime) : null;
     const currentScheduled = asDate(reservation.scheduledTime);
-    const isCurrentSlot =
-        selectedStationId === reservation.stationId &&
-        selectedSlot?.slotId === reservation.slotId;
+    const isCurrentSlot = selectedSlot?.slotId === reservation.slotId;
 
     function slotLabel(slot) {
-        const current =
-            selectedStationId === reservation.stationId &&
-            slot.slotId === reservation.slotId;
+        const current = slot.slotId === reservation.slotId;
 
         return `${formatSlotWindow(slot)}${current ? ' • Current reservation slot' : ''
             }`;
-    }
-
-    function handleStationChange(stationId) {
-        if (stationId === selectedStationId) return;
-        setSelectedStationId(stationId);
-        setSelectedSlotId('');
-        setSlots([]);
-        setSlotsError('');
-        setGeneralError('');
-        setIsLoadingSlots(Boolean(stationId));
-    }
-
-    function retryStations() {
-        setIsLoadingStations(true);
-        setStationsError('');
-        setStationReloadKey((value) => value + 1);
     }
 
     function retrySlots() {
@@ -233,8 +155,8 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
         event.preventDefault();
         if (isSubmitting) return;
 
-        if (!selectedStationId || !selectedSlot) {
-            setGeneralError('Select a station and booking slot.');
+        if (!reservation.stationId || !selectedSlot) {
+            setGeneralError('Select a booking slot at this reservation’s station.');
             return;
         }
 
@@ -244,7 +166,7 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
         let result;
         try {
             result = await updateReservation(reservation.reservationId, {
-                stationId: selectedStationId,
+                stationId: reservation.stationId,
                 slotId: selectedSlot.slotId,
                 scheduledTime: selectedSlot.startTime,
             });
@@ -261,11 +183,9 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
 
     const cannotSubmit =
         isSubmitting ||
-        isLoadingStations ||
         isLoadingSlots ||
-        Boolean(stationsError) ||
         Boolean(slotsError) ||
-        !selectedStationId ||
+        !reservation.stationId ||
         !selectedSlot;
 
     return (
@@ -337,70 +257,30 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                 Updated Booking
                             </h3>
                             <p className="text-body-sm text-on-surface-variant">
-                                Choose a live station and booking window.
+                                Choose a new booking window at the same station.
                             </p>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="space-y-1">
-                            <label
-                                htmlFor="edit-reservation-station"
-                                className="text-label-md font-medium text-on-surface"
-                            >
-                                Active Station
-                            </label>
-                            <Dropdown
-                                id="edit-reservation-station"
-                                label="Active Station"
-                                value={selectedStationId}
-                                options={stationOptions}
-                                onChange={handleStationChange}
-                                placeholder="Select an active station"
-                                disabled={
-                                    isSubmitting ||
-                                    isLoadingStations ||
-                                    Boolean(stationsError) ||
-                                    stations.length === 0
-                                }
-                                searchable
-                                searchPlaceholder="Search stations"
-                                required
-                            />
-                            {isLoadingStations && (
-                                <p className="text-body-sm text-on-surface-variant">
-                                    Loading active stations...
-                                </p>
-                            )}
-                            {!isLoadingStations && stationsError && (
-                                <div
-                                    role="alert"
-                                    className="flex flex-wrap items-center gap-2 text-body-sm text-alert-danger"
+                        <div className="rounded-xl border border-secondary/20 bg-mint-surface/25 p-3.5">
+                            <p className="text-label-sm font-semibold uppercase tracking-wider text-secondary">
+                                Booking station · Fixed
+                            </p>
+                            <div className="mt-2 flex min-w-0 items-center gap-2.5">
+                                <span
+                                    aria-hidden="true"
+                                    className="material-symbols-outlined flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-mint-surface text-[19px] text-primary"
                                 >
-                                    <span>{stationsError}</span>
-                                    <button
-                                        type="button"
-                                        onClick={retryStations}
-                                        className="font-semibold underline"
-                                    >
-                                        Retry
-                                    </button>
-                                </div>
-                            )}
-                            {!isLoadingStations && !stationsError && stations.length === 0 && (
-                                <p className="text-body-sm text-on-surface-variant">
-                                    No active stations are available.
-                                </p>
-                            )}
-                            {!isLoadingStations &&
-                                !stationsError &&
-                                stations.length > 0 &&
-                                !selectedStationId && (
-                                    <p className="text-body-sm text-on-surface-variant">
-                                        The current station is not in the active list. Select an
-                                        active station to continue.
-                                    </p>
-                                )}
+                                    ev_station
+                                </span>
+                                <span className="min-w-0 break-all text-title-md font-bold text-primary">
+                                    {reservation.stationId || 'Station unavailable'}
+                                </span>
+                            </div>
+                            <p className="mt-2 text-body-sm text-on-surface-variant">
+                                This station stays with the reservation. Choose another slot here to change its time.
+                            </p>
                         </div>
 
                         <div className="space-y-1">
@@ -422,7 +302,7 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                 placeholder="Select a booking slot"
                                 disabled={
                                     isSubmitting ||
-                                    !selectedStationId ||
+                                    !reservation.stationId ||
                                     isLoadingSlots ||
                                     Boolean(slotsError) ||
                                     selectableSlots.length === 0
@@ -431,13 +311,11 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                 searchPlaceholder="Search booking windows"
                                 required
                             />
-                            {!selectedStationId &&
-                                !isLoadingStations &&
-                                !stationsError && (
-                                    <p className="text-body-sm text-on-surface-variant">
-                                        Select an active station to view its slots.
-                                    </p>
-                                )}
+                            {!reservation.stationId && (
+                                <p className="text-body-sm text-alert-danger">
+                                    The reservation station is unavailable. Refresh the reservation list before editing.
+                                </p>
+                            )}
                             {isLoadingSlots && (
                                 <p className="text-body-sm text-on-surface-variant">
                                     Loading station slots...
@@ -460,7 +338,7 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                             )}
                             {!isLoadingSlots &&
                                 !slotsError &&
-                                selectedStationId &&
+                                reservation.stationId &&
                                 slots.length === 0 && (
                                     <p className="text-body-sm text-on-surface-variant">
                                         No slots are defined for this station.
@@ -489,7 +367,7 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                     </div>
                 </section>
 
-                {selectedSlot && selectedStation && selectedStart && selectedEnd && (
+                {selectedSlot && selectedStart && selectedEnd && (
                     <section className="rounded-2xl border border-secondary/20 bg-mint-surface/30 p-4">
                         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                             <div className="flex items-center gap-2">
@@ -510,12 +388,7 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                             )}
                         </div>
                         <dl className="grid gap-3 sm:grid-cols-3">
-                            <Metadata label="Station">
-                                {selectedStation.name}
-                                <span className="block text-body-sm font-normal text-on-surface-variant">
-                                    {selectedStation.stationId}
-                                </span>
-                            </Metadata>
+                            <Metadata label="Station">{reservation.stationId}</Metadata>
                             <Metadata label="Scheduled">{formatDate(selectedStart)}</Metadata>
                             <Metadata label="Window">
                                 {formatClock(selectedStart)} to {formatClock(selectedEnd)}
@@ -534,10 +407,10 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                         </span>
                         <div>
                             <p className="text-body-sm font-semibold text-on-surface">
-                                12-Hour Modification Policy
+                                Reservation Update Policy
                             </p>
                             <p className="mt-0.5 text-body-sm text-on-surface-variant">
-                                Make changes at least 12 hours before the current and selected times.
+                                Changes need at least 12 hours’ notice before both times and must stay within 7 days of the original booking’s creation. HelioGrid validates this when you save.
                             </p>
                         </div>
                     </div>
