@@ -31,6 +31,48 @@ const EMPTY_FORM = {
   confirmPassword: '',
 };
 
+const MINIMUM_PASSWORD_LENGTH = 8;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Every rule the form checks, as one pure function of the current values.
+// It runs on each render, so a message always describes what is in the field right now.
+// The API applies the same rules with the same wording and stays authoritative.
+function validateStaffForm(values, isEdit) {
+  const errors = {};
+
+  // The username and the password only exist as inputs when creating an account.
+  if (!isEdit) {
+    if (!values.username.trim()) {
+      errors.username = 'Username is required.';
+    } else if (/\s/.test(values.username.trim())) {
+      errors.username = 'Username cannot contain spaces.';
+    }
+
+    if (!values.password) {
+      errors.password = 'Password is required.';
+    } else if (values.password.length < MINIMUM_PASSWORD_LENGTH) {
+      errors.password = `Use at least ${MINIMUM_PASSWORD_LENGTH} characters.`;
+    }
+
+    // Guards against a typo locking the new account holder (Grid Operator) out, since the password is set on their behalf.
+    if (values.confirmPassword !== values.password) {
+      errors.confirmPassword = 'Passwords do not match.';
+    }
+  }
+
+  if (!values.fullName.trim()) errors.fullName = 'Full name is required.';
+
+  if (!values.email.trim()) {
+    errors.email = 'Email is required.';
+  } else if (!EMAIL_PATTERN.test(values.email.trim())) {
+    errors.email = 'Enter a valid email address.';
+  }
+
+  if (!values.phone.trim()) errors.phone = 'Phone number is required.';
+
+  return errors;
+}
+
 // Single labelled input. Kept local since it carries this form's specific layout and error styling.
 function Field({
   label,
@@ -38,6 +80,7 @@ function Field({
   type = 'text',
   value,
   onChange,
+  onBlur,
   error,
   placeholder,
   autoComplete,
@@ -54,6 +97,9 @@ function Field({
         type={type}
         value={value}
         onChange={(event) => onChange(name, event.target.value)}
+        onBlur={() => onBlur(name)}
+        aria-invalid={Boolean(error)}
+        aria-describedby={error ? `staff-${name}-error` : undefined}
         placeholder={placeholder}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
@@ -61,7 +107,11 @@ function Field({
           error ? 'border-alert-danger' : 'border-border-slate'
         }`}
       />
-      {error && <span className="text-body-sm text-alert-danger">{error}</span>}
+      {error && (
+        <span id={`staff-${name}-error`} className="text-body-sm text-alert-danger">
+          {error}
+        </span>
+      )}
     </div>
   );
 }
@@ -88,8 +138,14 @@ export default function StaffForm({
         }
       : EMPTY_FORM
   );
-  const [fieldErrors, setFieldErrors] = useState({});
+  // A field's message appears once the user has left it (or pressed submit), not on the first keystroke.
+  // From then on it follows the value live, and disappears as soon as the field becomes valid.
+  const [touched, setTouched] = useState({});
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const errors = validateStaffForm(form, isEdit);
+  const errorFor = (name) => (submitAttempted || touched[name] ? errors[name] : undefined);
 
  // Escape closes the dialog, except mid-submission when the request is already on its way to the server.
   useEffect(() => {
@@ -109,57 +165,18 @@ export default function StaffForm({
     };
   }, []);
 
-  // Clears a field's error as soon as it is edited, so a correction doesn't sit next to a stale complaint.
   function handleChange(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
-    setFieldErrors((current) => {
-      if (!current[name]) return current;
-      const next = { ...current };
-      delete next[name];
-      return next;
-    });
   }
 
-  function validate() {
-    const errors = {};
-
-    // The username and the password only exist as inputs when creating an account.
-    if (!isEdit) {
-      if (!form.username.trim()) {
-        errors.username = 'Username is required.';
-      } else if (/\s/.test(form.username.trim())) {
-        errors.username = 'Username cannot contain spaces.';
-      }
-
-      if (!form.password) {
-        errors.password = 'Password is required.';
-      } else if (form.password.length < 8) {
-        errors.password = 'Use at least 8 characters.';
-      }
-
-      // Guards against a typo locking the new account holder (Grid Operator) out, since the password is set on their behalf.
-      if (form.confirmPassword !== form.password) {
-        errors.confirmPassword = 'Passwords do not match.';
-      }
-    }
-
-    if (!form.fullName.trim()) errors.fullName = 'Full name is required.';
-
-    if (!form.email.trim()) {
-      errors.email = 'Email is required.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-      errors.email = 'Enter a valid email address.';
-    }
-
-    if (!form.phone.trim()) errors.phone = 'Phone number is required.';
-
-    return errors;
+  function handleBlur(name) {
+    setTouched((current) => (current[name] ? current : { ...current, [name]: true }));
   }
 
   function handleSubmit(event) {
     event.preventDefault();
-    const errors = validate();
-    setFieldErrors(errors);
+    // Shows every remaining message at once, including fields the user never visited.
+    setSubmitAttempted(true);
     if (Object.keys(errors).length > 0) return;
 
     if (isEdit) {
@@ -269,7 +286,8 @@ export default function StaffForm({
                   name="username"
                   value={form.username}
                   onChange={handleChange}
-                  error={fieldErrors.username}
+                  onBlur={handleBlur}
+                  error={errorFor('username')}
                   placeholder="e.g. j.silva"
                   autoComplete="off"
                   autoFocus
@@ -280,7 +298,8 @@ export default function StaffForm({
                 name="fullName"
                 value={form.fullName}
                 onChange={handleChange}
-                error={fieldErrors.fullName}
+                onBlur={handleBlur}
+                error={errorFor('fullName')}
                 placeholder="e.g. Jayani Silva"
                 autoComplete="off"
                 autoFocus={isEdit}
@@ -291,7 +310,8 @@ export default function StaffForm({
                 type="email"
                 value={form.email}
                 onChange={handleChange}
-                error={fieldErrors.email}
+                onBlur={handleBlur}
+                error={errorFor('email')}
                 placeholder="e.g. j.silva@heliogrid.lk"
                 autoComplete="off"
               />
@@ -301,7 +321,8 @@ export default function StaffForm({
                 type="tel"
                 value={form.phone}
                 onChange={handleChange}
-                error={fieldErrors.phone}
+                onBlur={handleBlur}
+                error={errorFor('phone')}
                 placeholder="e.g. +94 77 123 4567"
                 autoComplete="off"
               />
@@ -325,10 +346,13 @@ export default function StaffForm({
                       type={showPassword ? 'text' : 'password'}
                       value={form.password}
                       onChange={(event) => handleChange('password', event.target.value)}
-                      placeholder="At least 8 characters"
+                      onBlur={() => handleBlur('password')}
+                      aria-invalid={Boolean(errorFor('password'))}
+                      aria-describedby={errorFor('password') ? 'staff-password-error' : undefined}
+                      placeholder={`At least ${MINIMUM_PASSWORD_LENGTH} characters`}
                       autoComplete="new-password"
                       className={`w-full h-9 pl-3 pr-10 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all ${
-                        fieldErrors.password ? 'border-alert-danger' : 'border-border-slate'
+                        errorFor('password') ? 'border-alert-danger' : 'border-border-slate'
                       }`}
                     />
                     <button
@@ -342,8 +366,10 @@ export default function StaffForm({
                       </span>
                     </button>
                   </div>
-                  {fieldErrors.password && (
-                    <span className="text-body-sm text-alert-danger">{fieldErrors.password}</span>
+                  {errorFor('password') && (
+                    <span id="staff-password-error" className="text-body-sm text-alert-danger">
+                      {errorFor('password')}
+                    </span>
                   )}
                 </div>
 
@@ -353,7 +379,8 @@ export default function StaffForm({
                   type="password"
                   value={form.confirmPassword}
                   onChange={handleChange}
-                  error={fieldErrors.confirmPassword}
+                  onBlur={handleBlur}
+                  error={errorFor('confirmPassword')}
                   placeholder="Re-enter the password"
                   autoComplete="new-password"
                 />

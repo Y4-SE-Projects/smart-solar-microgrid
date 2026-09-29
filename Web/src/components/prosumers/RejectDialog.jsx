@@ -17,6 +17,10 @@ import { useState, useEffect } from 'react';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { formatDate, pluralize } from '../../utils/formatters';
 
+// Matches the API's limit on a declined request's reason.
+// The field stops accepting input at the limit, rather than letting the user type past it and then refusing the submission.
+const MAXIMUM_REASON_LENGTH = 500;
+
 export default function RejectDialog({ prosumer, isSubmitting, error, onConfirm, onCancel }) {
   const [reason, setReason] = useState('');
 
@@ -67,9 +71,19 @@ export default function RejectDialog({ prosumer, isSubmitting, error, onConfirm,
           rows={3}
           value={reason}
           onChange={(event) => setReason(event.target.value)}
+          maxLength={MAXIMUM_REASON_LENGTH}
+          aria-describedby="reject-reason-count"
           placeholder="e.g. Duplicate account on the same NIC"
           className="px-3 py-2 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border border-border-slate focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all resize-none"
         />
+        <span
+          id="reject-reason-count"
+          className={`self-end text-body-sm tabular-nums ${
+            reason.length >= MAXIMUM_REASON_LENGTH ? 'text-alert-danger' : 'text-outline'
+          }`}
+        >
+          {reason.length} / {MAXIMUM_REASON_LENGTH}
+        </span>
       </div>
 
       <p className="text-body-sm text-on-surface-variant leading-relaxed">
