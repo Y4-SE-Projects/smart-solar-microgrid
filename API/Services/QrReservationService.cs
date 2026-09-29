@@ -192,6 +192,12 @@ namespace API.Services
             catch (QrOperationException ex) when (!string.IsNullOrEmpty(ex.AuditResult) && reservation.Qr != null)
             {
                 await AppendScanSafelyAsync(reservation.ReservationId, operatorId, ex.AuditResult, ex.Message);
+
+                if (ex.AuditResult == "Expired")
+                {
+                    await ExpireReservationAsync(reservation, DateTime.UtcNow);
+                }
+
                 throw;
             }
         }
@@ -244,6 +250,30 @@ namespace API.Services
 
             throw new QrOperationException(
                 "QR_CONFLICT", StatusCodes.Status409Conflict, "The QR could not be revoked. Please try again.");
+        }
+
+        // Best-effort: transitions an Approved reservation to Expired once its QR window has closed.
+        // Never masks the QR_EXPIRED error the operator already saw if this update itself fails or races.
+        private async Task ExpireReservationAsync(EnergyReservation reservation, DateTime now)
+        {
+            try
+            {
+                var filter = Builders<EnergyReservation>.Filter.And(
+                    Builders<EnergyReservation>.Filter.Eq(r => r.ReservationId, reservation.ReservationId),
+                    Builders<EnergyReservation>.Filter.Eq(r => r.Status, "Approved"),
+                    Builders<EnergyReservation>.Filter.Eq(r => r.Qr!.Status, QrStatuses.Active));
+
+                var update = Builders<EnergyReservation>.Update
+                    .Set(r => r.Status, "Expired")
+                    .Set(r => r.Qr!.Status, QrStatuses.Revoked)
+                    .Set(r => r.UpdatedAt, now);
+
+                await _reservations.UpdateOneAsync(filter, update);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to mark reservation {ReservationId} as expired.", reservation.ReservationId);
+            }
         }
 
         public async Task<List<QrScanEntryResponse>> GetAuditAsync(string reservationId)
@@ -320,6 +350,13 @@ namespace API.Services
                 throw new QrOperationException(
                     "QR_ALREADY_USED", StatusCodes.Status409Conflict,
                     "This QR code has already been used.", "AlreadyUsed");
+            }
+
+            if (string.Equals(reservation.Status, "Expired", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new QrOperationException(
+                    "QR_EXPIRED", StatusCodes.Status409Conflict,
+                    "This reservation has expired.", "Expired");
             }
 
             if (!string.Equals(reservation.Status, "Approved", StringComparison.OrdinalIgnoreCase))
