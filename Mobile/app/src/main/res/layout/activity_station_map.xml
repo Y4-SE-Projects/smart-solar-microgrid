@@ -6,6 +6,7 @@
     android:id="@+id/mapRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface_container_lowest"
     android:orientation="vertical">
 
     <!-- Header: back, title, what the map is showing -->
@@ -58,7 +59,8 @@
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:background="@color/surface">
 
         <!-- Google Maps JavaScript API page (assets/station_map.html) -->
         <WebView
@@ -157,4 +159,9 @@
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
+
+    <com.example.smart_solar_mobile.views.ProsumerBottomNavigation
+        android:id="@+id/prosumerBottomNavigation"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 </LinearLayout>
