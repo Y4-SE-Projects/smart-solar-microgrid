@@ -31,7 +31,7 @@ export default function LocationPickerMap({ latitude, longitude, onChange, class
   if (!apiKey) {
     return (
       <div className={`h-full min-h-[260px] rounded-xl border border-dashed border-border-slate bg-canvas-bg p-4 text-body-sm text-on-surface-variant ${className}`}>
-        Map unavailable — set VITE_GOOGLE_MAP_API in Web/.env.
+        Map unavailable. Enter the coordinates manually.
       </div>
     );
   }

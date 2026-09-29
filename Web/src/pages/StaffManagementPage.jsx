@@ -140,20 +140,6 @@ export default function StaffManagementPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center justify-between gap-4">
-        <nav className="flex items-center gap-2 text-body-sm text-on-surface-variant">
-          <span className="text-outline">Operations</span>
-          <span>/</span>
-          <span className="text-outline">Identity &amp; Access</span>
-          <span>/</span>
-          <span className="text-on-surface font-medium">Staff Accounts</span>
-        </nav>
-        <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low text-primary text-body-sm font-semibold">
-          <span className="material-symbols-outlined text-[15px] text-secondary">shield_person</span>
-          <span>Backoffice-only administration</span>
-        </span>
-      </div>
 
       {/* Title and primary action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -203,9 +189,6 @@ export default function StaffManagementPage() {
             </p>
           </div>
         </div>
-        <span className="self-start sm:self-center shrink-0 px-3 py-1 rounded-full bg-surface-container-lowest border border-border-slate text-secondary text-label-sm font-semibold uppercase">
-          Enforced by API
-        </span>
       </div>
 
       {/* Metrics */}
@@ -215,29 +198,37 @@ export default function StaffManagementPage() {
           value={isLoading ? '—' : totalCount}
           note="Accounts on record"
           icon="badge"
+          iconBgClass="bg-mint-surface text-primary"
         />
         <MetricCard
           label="Backoffice"
           value={isLoading ? '—' : backofficeCount}
           note="Full administrative access"
           icon="admin_panel_settings"
+          iconBgClass="bg-secondary-container text-primary-container"
         />
         <MetricCard
           label="Grid Operators"
           value={isLoading ? '—' : operatorCount}
           note="Web and mobile access"
           icon="engineering"
+          iconBgClass="bg-yellow-container text-on-yellow"
         />
       </div>
 
-      <StaffDirectory
-        staff={staff}
-        isLoading={isLoading}
-        currentUsername={currentUsername}
-        onEdit={(member) => openAction('edit', member)}
-        onResetPassword={(member) => openAction('password', member)}
-        onToggleStatus={(member, mode) => openAction(mode, member)}
-      />
+      <section className="flex flex-col gap-3" aria-labelledby="staff-directory-heading">
+        <h2 id="staff-directory-heading" className="text-headline-sm font-semibold text-on-surface">
+          Staff Directory
+        </h2>
+        <StaffDirectory
+          staff={staff}
+          isLoading={isLoading}
+          currentUsername={currentUsername}
+          onEdit={(member) => openAction('edit', member)}
+          onResetPassword={(member) => openAction('password', member)}
+          onToggleStatus={(member, mode) => openAction(mode, member)}
+        />
+      </section>
 
       {isFormOpen && (
         <StaffForm

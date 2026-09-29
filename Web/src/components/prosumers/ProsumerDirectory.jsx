@@ -11,7 +11,7 @@
  * Author: IT23218512
  */
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import SearchInput from '../common/SearchInput';
 import FilterPills from '../common/FilterPills';
 import Pagination from '../common/Pagination';
@@ -21,7 +21,7 @@ import { formatDate } from '../../utils/formatters';
 
 const ROWS_PER_PAGE = 10;
 
-export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }) {
+export default function ProsumerDirectory({ prosumers, isLoading, loadError, onReactivate }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -52,11 +52,6 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
     });
   }, [rows, searchTerm, statusFilter]);
 
-  // A narrower filter can leave fewer results than the current page covers, which would otherwise render an empty table on a valid page number.
-  useEffect(() => {
-    setPage(1);
-  }, [searchTerm, statusFilter]);
-
   const pageCount = Math.max(1, Math.ceil(filteredProsumers.length / ROWS_PER_PAGE));
   const currentPage = Math.min(page, pageCount);
   const pageRows = filteredProsumers.slice(
@@ -65,30 +60,25 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
   );
 
   return (
-    <div className="rounded-2xl bg-surface-container-lowest border border-border-slate shadow-sm flex flex-col overflow-hidden">
-      <div className="p-6 border-b border-border-slate flex flex-col gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-headline-sm font-bold text-primary">All Registered Prosumers</h2>
-            <p className="text-body-sm text-on-surface-variant">
-              Every prosumer account held by the service, whatever its state.
-            </p>
-          </div>
-          <div className="flex items-center gap-1 text-body-sm text-outline font-medium">
-            <span className="material-symbols-outlined text-[16px] text-secondary">database</span>
-            <span>Indexed by National Identity Card (NIC)</span>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3 pt-1">
+    <div className="flex flex-col overflow-hidden rounded-2xl border border-border-slate bg-surface-container-lowest shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-border-slate p-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="w-full xl:max-w-sm">
           <SearchInput
             value={searchTerm}
-            onChange={setSearchTerm}
-            placeholder="Search by NIC, full name, or email..."
+            onChange={(value) => {
+              setSearchTerm(value);
+              setPage(1);
+            }}
+            placeholder="Search by NIC, name, or email"
           />
+        </div>
+        <div className="max-w-full self-start xl:self-auto">
           <FilterPills
             value={statusFilter}
-            onChange={setStatusFilter}
+            onChange={(value) => {
+              setStatusFilter(value);
+              setPage(1);
+            }}
             options={[
               { key: 'all', label: 'All', count: totalCount },
               { key: AccountStatus.Active, label: 'Active', count: activeCount },
@@ -99,32 +89,37 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
         </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+      <div className="w-full overflow-x-auto">
+        <table className="w-full text-left text-xs">
           <thead>
-            <tr className="bg-surface-container-low/30 text-outline text-label-sm font-semibold uppercase border-b border-border-slate">
-              <th className="py-3 px-6 whitespace-nowrap">NIC (Primary Key)</th>
-              <th className="py-3 px-5 whitespace-nowrap">Full Name</th>
-              <th className="py-3 px-5 whitespace-nowrap">Email Address</th>
-              <th className="py-3 px-5 whitespace-nowrap">Phone Number</th>
-              <th className="py-3 px-5 whitespace-nowrap">Registered</th>
-              <th className="py-3 px-5 whitespace-nowrap">Account Status</th>
-              <th className="py-3 px-6 text-right whitespace-nowrap">Action</th>
+            <tr className="border-b border-border-slate bg-canvas-bg font-semibold uppercase tracking-wider text-outline">
+              <th className="whitespace-nowrap px-5 py-4">NIC</th>
+              <th className="whitespace-nowrap px-5 py-4">Name</th>
+              <th className="whitespace-nowrap px-5 py-4">Contact</th>
+              <th className="whitespace-nowrap px-5 py-4">Registered</th>
+              <th className="whitespace-nowrap px-5 py-4">Status</th>
+              <th className="whitespace-nowrap px-5 py-4 text-right">Action</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border-slate text-body-md text-on-surface">
+          <tbody className="divide-y divide-border-slate">
             {isLoading ? (
               <tr>
-                <td colSpan={7} className="py-8 px-6 text-center text-on-surface-variant">
+                <td colSpan={6} className="px-5 py-10 text-center text-on-surface-variant">
                   Loading accounts…
+                </td>
+              </tr>
+            ) : loadError ? (
+              <tr>
+                <td colSpan={6} className="px-5 py-10 text-center text-on-surface-variant">
+                  Could not load prosumer accounts. Use Retry above.
                 </td>
               </tr>
             ) : pageRows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-8 px-6 text-center text-on-surface-variant">
+                <td colSpan={6} className="px-5 py-10 text-center text-on-surface-variant">
                   {totalCount === 0
-                    ? 'No prosumer accounts have been registered yet.'
-                    : 'No accounts match this search.'}
+                    ? 'No prosumer accounts yet.'
+                    : 'No prosumer accounts match your search or filter.'}
                 </td>
               </tr>
             ) : (
@@ -134,42 +129,34 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
                 return (
                   <tr
                     key={prosumer.nic}
-                    className={`hover:bg-surface-container-low/40 transition-colors ${
-                      isActive ? '' : 'bg-surface-container-low/20'
-                    }`}
+                    className="transition-colors hover:bg-surface-container-low"
                   >
-                    <td
-                      className={`py-3.5 px-6 whitespace-nowrap text-body-sm font-semibold tabular-nums ${
-                        isActive ? 'text-primary' : 'text-alert-danger'
-                      }`}
-                    >
-                      {prosumer.nic}
+                    <td className="whitespace-nowrap px-5 py-4 font-semibold tabular-nums text-on-surface">
+                      <span className="rounded-full bg-surface-container-high px-3 py-1 text-[11px]">{prosumer.nic}</span>
                     </td>
-                    <td className="py-3.5 px-5 whitespace-nowrap font-semibold text-on-surface">
+                    <td className="whitespace-nowrap px-5 py-4 text-sm font-semibold text-on-surface">
                       {prosumer.fullName}
                     </td>
-                    <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant">
-                      {prosumer.email}
+                    <td className="whitespace-nowrap px-5 py-4">
+                      <span className="block text-on-surface-variant">{prosumer.email}</span>
+                      <span className="block text-outline tabular-nums">{prosumer.phone}</span>
                     </td>
-                    <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant tabular-nums">
-                      {prosumer.phone}
-                    </td>
-                    <td className="py-3.5 px-5 whitespace-nowrap text-body-sm text-on-surface-variant tabular-nums">
+                    <td className="whitespace-nowrap px-5 py-4 text-on-surface-variant tabular-nums">
                       {formatDate(prosumer.createdAt)}
                     </td>
-                    <td className="py-3.5 px-5 whitespace-nowrap">
+                    <td className="whitespace-nowrap px-5 py-4">
                       <StatusChip status={prosumer.resolvedStatus} />
                     </td>
-                    <td className="py-3.5 px-6 text-right whitespace-nowrap">
+                    <td className="whitespace-nowrap px-5 py-4 text-right">
                       {/* Reactivation is the only write action Backoffice holds over a prosumer account, so active rows have none. 
                           Declining a request is deliberately not offered here That belongs to the queue, where requests are worked. */}
                       {isActive ? (
-                        <span className="text-body-sm text-outline">—</span>
+                        <span className="text-outline">—</span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => onReactivate(prosumer)}
-                          className="px-3 py-1.5 rounded-full bg-mint-surface text-primary text-body-sm font-semibold hover:bg-secondary-container transition-colors"
+                          className="rounded-full bg-mint-surface px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-secondary-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
                         >
                           Reactivate
                         </button>
@@ -183,7 +170,7 @@ export default function ProsumerDirectory({ prosumers, isLoading, onReactivate }
         </table>
       </div>
 
-      {!isLoading && (
+      {!isLoading && !loadError && (
         <Pagination
           page={currentPage}
           pageCount={pageCount}
