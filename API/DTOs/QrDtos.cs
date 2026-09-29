@@ -30,6 +30,12 @@ namespace API.DTOs
 
         // True when this was a retry of a verification the same operator already completed.
         public bool AlreadyProcessed { get; set; }
+
+        // Shown on the operator's scan result screen; never includes pricing or energy-volume
+        public string ProsumerNic { get; set; } = string.Empty;
+        public string? ProsumerName { get; set; }
+        public string StationId { get; set; } = string.Empty;
+        public DateTime ScheduledTime { get; set; }
     }
 
     // State only. Never contains the payload, nonce or signature.
