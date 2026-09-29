@@ -227,6 +227,36 @@
                         android:textColor="@color/on_surface"
                         android:textSize="13sp" />
                 </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/detailEditBookingButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/edit_pending_action"
+                    android:textColor="@color/primary"
+                    android:visibility="gone"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_tune"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/secondary"
+                    app:strokeColor="@color/border_slate" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/detailCancelBookingButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/cancel_booking_action"
+                    android:textColor="@color/alert_danger"
+                    android:visibility="gone"
+                    app:cornerRadius="8dp"
+                    app:icon="@drawable/ic_cancel_booking"
+                    app:iconGravity="textStart"
+                    app:iconTint="@color/alert_danger"
+                    app:strokeColor="@color/chip_danger_border" />
             </LinearLayout>
 
             <!-- Terminal QR pass -->

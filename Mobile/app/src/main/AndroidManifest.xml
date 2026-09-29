@@ -54,6 +54,15 @@
             android:name=".activities.ReservationSummaryActivity"
             android:exported="false" />
         <activity
+            android:name=".activities.PendingReservationsActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.EditReservationActivity"
+            android:exported="false" />
+        <activity
+            android:name=".activities.CancelReservationActivity"
+            android:exported="false" />
+        <activity
             android:name=".activities.ReservationHistoryActivity"
             android:exported="false" />
         <activity

@@ -46,26 +46,33 @@ public class ReservationDetailActivity extends AppCompatActivity {
 
     private static final String EXTRA_RESERVATION_ID = "reservation_id";
     private static final String EXTRA_STATION_ID = "station_id";
+    private static final String EXTRA_SLOT_ID = "slot_id";
     private static final String EXTRA_SCHEDULED_TIME = "scheduled_time";
     private static final String EXTRA_STATUS = "status";
     private static final String EXTRA_PROSUMER_NIC = "prosumer_nic";
+    private static final String EXTRA_CREATED_AT = "created_at";
 
     private static final int QR_IMAGE_SIZE_PX = 720;
 
-    // Launches the detail screen for one reservation, carrying only what's already on screen —
-    // no extra network round trip is needed to show the summary.
+    // Launches the detail screen with confirmed fields from the selected history record;
+    // no extra network round trip is needed to show the summary or open Member 03 editing.
     public static void start(Context context, ReservationData reservation) {
         Intent intent = new Intent(context, ReservationDetailActivity.class);
         intent.putExtra(EXTRA_RESERVATION_ID, reservation.reservationId);
         intent.putExtra(EXTRA_STATION_ID, reservation.stationId);
+        intent.putExtra(EXTRA_SLOT_ID, reservation.slotId);
         intent.putExtra(EXTRA_SCHEDULED_TIME, reservation.scheduledTime);
         intent.putExtra(EXTRA_STATUS, reservation.status);
         intent.putExtra(EXTRA_PROSUMER_NIC, reservation.prosumerNic);
+        intent.putExtra(EXTRA_CREATED_AT, reservation.createdAt);
         context.startActivity(intent);
     }
 
     private String reservationId;
     private String status;
+    private ReservationData editReservation;
+    private boolean canOpenEdit;
+    private boolean canOpenCancel;
     private Call<ApiResponse<QrResponse>> qrCall;
 
     private TextView detailReferenceText;
@@ -75,6 +82,8 @@ public class ReservationDetailActivity extends AppCompatActivity {
     private TextView stationValueText;
     private TextView dateTimeValueText;
     private TextView nicValueText;
+    private MaterialButton editBookingButton;
+    private MaterialButton cancelBookingButton;
 
     private View qrCard;
     private View qrLockedState;
@@ -100,12 +109,30 @@ public class ReservationDetailActivity extends AppCompatActivity {
         String stationId = intent.getStringExtra(EXTRA_STATION_ID);
         String scheduledTime = intent.getStringExtra(EXTRA_SCHEDULED_TIME);
         String prosumerNic = intent.getStringExtra(EXTRA_PROSUMER_NIC);
+        // Retains the real history record fields needed by the existing Member 03 edit launcher.
+        editReservation = new ReservationData();
+        editReservation.reservationId = reservationId;
+        editReservation.stationId = stationId;
+        editReservation.slotId = intent.getStringExtra(EXTRA_SLOT_ID);
+        editReservation.scheduledTime = scheduledTime;
+        editReservation.status = status;
+        editReservation.createdAt = intent.getStringExtra(EXTRA_CREATED_AT);
 
         findViewById(R.id.backButton).setOnClickListener(v -> finish());
         findViewById(R.id.copyIdButton).setOnClickListener(v -> copyReservationId());
         findViewById(R.id.viewBookingsButton).setOnClickListener(v -> finish());
         findViewById(R.id.backHomeButton).setOnClickListener(v ->
                 Navigator.openHome(this, Roles.PROSUMER));
+        editBookingButton.setOnClickListener(v -> {
+            if (canOpenEdit) {
+                startActivity(EditReservationActivity.intentFor(this, editReservation));
+            }
+        });
+        cancelBookingButton.setOnClickListener(v -> {
+            if (canOpenCancel) {
+                startActivity(CancelReservationActivity.intentFor(this, editReservation));
+            }
+        });
         retryQrButton.setOnClickListener(v -> loadQr());
         regenerateQrButton.setOnClickListener(v -> confirmRegenerate());
 
@@ -119,7 +146,21 @@ public class ReservationDetailActivity extends AppCompatActivity {
             }
             if (session == null || !Roles.PROSUMER.equals(session.role)) {
                 Navigator.openLogin(this, false);
+                return;
             }
+            canOpenEdit = "Pending".equalsIgnoreCase(editReservation.status)
+                    && hasText(editReservation.reservationId)
+                    && hasText(editReservation.stationId)
+                    && hasText(editReservation.slotId)
+                    && hasText(editReservation.scheduledTime);
+            editBookingButton.setVisibility(canOpenEdit ? View.VISIBLE : View.GONE);
+            canOpenCancel = ("Pending".equalsIgnoreCase(editReservation.status)
+                    || "Approved".equalsIgnoreCase(editReservation.status))
+                    && hasText(editReservation.reservationId)
+                    && hasText(editReservation.stationId)
+                    && hasText(editReservation.slotId)
+                    && hasText(editReservation.scheduledTime);
+            cancelBookingButton.setVisibility(canOpenCancel ? View.VISIBLE : View.GONE);
         });
     }
 
@@ -137,6 +178,8 @@ public class ReservationDetailActivity extends AppCompatActivity {
         stationValueText = findViewById(R.id.stationValueText);
         dateTimeValueText = findViewById(R.id.dateTimeValueText);
         nicValueText = findViewById(R.id.nicValueText);
+        editBookingButton = findViewById(R.id.detailEditBookingButton);
+        cancelBookingButton = findViewById(R.id.detailCancelBookingButton);
 
         qrCard = findViewById(R.id.qrCard);
         qrLockedState = findViewById(R.id.qrLockedState);
@@ -339,5 +382,10 @@ public class ReservationDetailActivity extends AppCompatActivity {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         clipboard.setPrimaryClip(ClipData.newPlainText("Reservation ID", reservationId));
         Toast.makeText(this, R.string.detail_copied, Toast.LENGTH_SHORT).show();
+    }
+
+    private static boolean hasText(String value) {
+        // Keeps the edit entry hidden when a required field was absent from the history record.
+        return value != null && !value.trim().isEmpty();
     }
 }
