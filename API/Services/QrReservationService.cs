@@ -22,6 +22,7 @@ namespace API.Services
         private readonly QrService _qr;
         private readonly QrSettings _settings;
         private readonly ILogger<QrReservationService> _logger;
+        private readonly UserService _users;
 
         private enum Evaluation
         {
@@ -33,12 +34,14 @@ namespace API.Services
             MongoDbContext context,
             QrService qr,
             IOptions<QrSettings> options,
-            ILogger<QrReservationService> logger)
+            ILogger<QrReservationService> logger,
+            UserService users)
         {
             _reservations = context.GetCollection<EnergyReservation>(MongoCollectionNames.EnergyReservation);
             _qr = qr;
             _settings = options.Value;
             _logger = logger;
+            _users = users;
         }
 
         // ---------- Prosumer ----------
@@ -133,11 +136,13 @@ namespace API.Services
                 throw ReservationNotFound();
             }
 
+            var prosumerName = (await _users.FindByNicAsync(reservation.ProsumerNic))?.FullName;
+
             try
             {
                 if (Evaluate(reservation, payload, operatorId, DateTime.UtcNow) == Evaluation.Retry)
                 {
-                    return BuildVerifyResponse(reservation, alreadyProcessed: true);
+                    return BuildVerifyResponse(reservation, prosumerName, alreadyProcessed: true);
                 }
 
                 var now = DateTime.UtcNow;
@@ -167,7 +172,7 @@ namespace API.Services
 
                 if (completed != null)
                 {
-                    return BuildVerifyResponse(completed, alreadyProcessed: false, verifiedAt: now);
+                    return BuildVerifyResponse(completed, prosumerName, alreadyProcessed: false, verifiedAt: now);
                 }
 
                 // Lost a race or the state changed: reload and report the precise reason.
@@ -177,7 +182,7 @@ namespace API.Services
 
                 if (Evaluate(reservation, payload, operatorId, DateTime.UtcNow) == Evaluation.Retry)
                 {
-                    return BuildVerifyResponse(reservation, alreadyProcessed: true);
+                    return BuildVerifyResponse(reservation, prosumerName, alreadyProcessed: true);
                 }
 
                 throw new QrOperationException(
@@ -487,6 +492,7 @@ namespace API.Services
 
         private static VerifyQrResponse BuildVerifyResponse(
             EnergyReservation reservation,
+            string? prosumerName,
             bool alreadyProcessed,
             DateTime? verifiedAt = null)
         {
@@ -496,7 +502,11 @@ namespace API.Services
                 Status = reservation.Status,
                 VerifiedAt = verifiedAt ?? reservation.Qr?.UsedAt ?? reservation.UpdatedAt,
                 Result = "Success",
-                AlreadyProcessed = alreadyProcessed
+                AlreadyProcessed = alreadyProcessed,
+                ProsumerNic = reservation.ProsumerNic,
+                ProsumerName = prosumerName,
+                StationId = reservation.StationId,
+                ScheduledTime = reservation.ScheduledTime
             };
         }
 
