@@ -9,6 +9,7 @@ using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 
 namespace API.Controllers
 {
@@ -23,6 +24,13 @@ namespace API.Controllers
         // The rule lives here rather than only in the web form, so it holds for every
         // client and for anything hitting the API directly.
         private const int MinimumPasswordLength = 8;
+
+        // Longest free-text reason accepted on deactivation or on a declined reactivation.
+        // Both are shown back on the Backoffice screens, so an unbounded value would flood them.
+        private const int MaximumReasonLength = 500;
+
+        // Same email rule the web staff form applies, so the two never disagree about what is valid.
+        private static readonly Regex EmailPattern = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
 
         // Constructor: DI supplies the shared UserService and JwtTokenService.
         public UsersController(UserService userService, JwtTokenService tokenService)
@@ -65,42 +73,64 @@ namespace API.Controllers
                 }
             }
 
+            // The identifier is cleaned up once here, and the cleaned value is what gets checked and stored.
+            var nic = NicFormat.Normalize(request.Nic);
+            var username = request.Username?.Trim() ?? string.Empty;
+
             if (request.Role == Roles.Prosumer)
             {
-                if (string.IsNullOrWhiteSpace(request.Nic))
+                if (nic.Length == 0)
                 {
                     return BadRequest(new { success = false, message = "NIC is required for Prosumer registration." });
                 }
 
-                // NicExistsAsync ignores IsActive on purpose. 
-                // A Prosumer who deactivated their account can't start a new one on the same NIC. 
-                // Reactivation is the only way back in.
-                if (await _userService.NicExistsAsync(request.Nic))
+                if (!NicFormat.IsValid(nic))
                 {
-                    return BadRequest(new { success = false, message = "A user with this NIC already exists." });
+                    return BadRequest(new { success = false, message = "NIC must be 9 digits followed by V or X, or 12 digits." });
                 }
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(request.Username))
+                if (username.Length == 0)
                 {
-                    return BadRequest(new { success = false, message = "Username is required for this role." });
+                    return BadRequest(new { success = false, message = "Username is required." });
                 }
-                if (await _userService.UsernameExistsAsync(request.Username))
+
+                if (username.Any(char.IsWhiteSpace))
                 {
-                    return BadRequest(new { success = false, message = "This username is already taken." });
+                    return BadRequest(new { success = false, message = "Username cannot contain spaces." });
                 }
+            }
+
+            var contactError = ValidateContactDetails(request.FullName, request.Email, request.Phone);
+            if (contactError != null)
+            {
+                return BadRequest(new { success = false, message = contactError });
+            }
+
+            if (request.Role == Roles.Prosumer)
+            {
+                // NicExistsAsync ignores IsActive on purpose. 
+                // A Prosumer who deactivated their account can't start a new one on the same NIC. Reactivation is the only way back in.
+                if (await _userService.NicExistsAsync(nic))
+                {
+                    return BadRequest(new { success = false, message = "A user with this NIC already exists." });
+                }
+            }
+            else if (await _userService.UsernameExistsAsync(username))
+            {
+                return BadRequest(new { success = false, message = "This username is already taken." });
             }
 
             var user = new User
             {
-                Nic = request.Role == Roles.Prosumer ? request.Nic : null,
-                Username = request.Role != Roles.Prosumer ? request.Username : null,
+                Nic = request.Role == Roles.Prosumer ? nic : null,
+                Username = request.Role != Roles.Prosumer ? username : null,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 Role = request.Role,
-                FullName = request.FullName,
-                Email = request.Email,
-                Phone = request.Phone,
+                FullName = request.FullName.Trim(),
+                Email = request.Email.Trim(),
+                Phone = request.Phone.Trim(),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
@@ -114,8 +144,13 @@ namespace API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
-            var user = await _userService.FindByNicAsync(request.Identifier)
-                       ?? await _userService.FindByUsernameAsync(request.Identifier);
+            var identifier = request.Identifier?.Trim() ?? string.Empty;
+
+            // The exact value is tried first so accounts registered before NICs were normalised still sign in as typed. 
+            // The normalised form then matches an NIC stored as "...V" when the Prosumer types "...v".
+            var user = await _userService.FindByNicAsync(identifier)
+                       ?? (NicFormat.IsValid(identifier) ? await _userService.FindByNicAsync(NicFormat.Normalize(identifier)) : null)
+                       ?? await _userService.FindByUsernameAsync(identifier);
 
             // Separate guard clauses so the compiler knows "user" is non-null from this point on.
             if (user == null)
@@ -215,9 +250,58 @@ namespace API.Controllers
                 return NotFound(new { success = false, message = "User not found." });
             }
 
-            await _userService.UpdateProfileAsync(nic, request.FullName, request.Email, request.Phone);
+            var contactError = ValidateContactDetails(request.FullName, request.Email, request.Phone);
+            if (contactError != null)
+            {
+                return BadRequest(new { success = false, message = contactError });
+            }
+
+            await _userService.UpdateProfileAsync(nic, request.FullName.Trim(), request.Email.Trim(), request.Phone.Trim());
 
             return Ok(new { success = true, message = "Profile updated." });
+        }
+
+        // A Prosumer changes their own password. ( Prosumer only, own NIC only )
+        // The current password must be supplied.
+        [Authorize(Roles = Roles.Prosumer)]
+        [HttpPut("{nic}/password")]
+        public async Task<IActionResult> ChangePassword(string nic, [FromBody] ChangePasswordRequest request)
+        {
+            var callerNic = User.FindFirstValue("nic");
+            if (callerNic != nic)
+            {
+                return Forbid();
+            }
+
+            var user = await _userService.FindByNicAsync(nic);
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "User not found." });
+            }
+
+            if (string.IsNullOrEmpty(request.CurrentPassword))
+            {
+                return BadRequest(new { success = false, message = "Current password is required." });
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            {
+                return BadRequest(new { success = false, message = "Current password is incorrect." });
+            }
+
+            if (string.IsNullOrEmpty(request.NewPassword) || request.NewPassword.Length < MinimumPasswordLength)
+            {
+                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+            }
+
+            if (request.NewPassword == request.CurrentPassword)
+            {
+                return BadRequest(new { success = false, message = "New password must be different from the current password." });
+            }
+
+            await _userService.SetProsumerPasswordAsync(nic, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
+
+            return Ok(new { success = true, message = "Password changed." });
         }
 
         // A Prosumer requests deactivation of their own account, optionally stating why (shown to Backoffice on the review screen).
@@ -243,7 +327,12 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "Account is already deactivated." });
             }
 
-            await _userService.DeactivateAsync(nic, request?.Reason);
+            if (request?.Reason?.Trim().Length > MaximumReasonLength)
+            {
+                return BadRequest(new { success = false, message = $"Reason must be at most {MaximumReasonLength} characters." });
+            }
+
+            await _userService.DeactivateAsync(nic, NormalizeReason(request?.Reason));
 
             return Ok(new { success = true, message = "Account deactivated. A Backoffice user must reactivate it." });
         }
@@ -336,7 +425,12 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "There is no pending reactivation request to reject." });
             }
 
-            await _userService.RejectReactivationAsync(nic, request?.Reason);
+            if (request?.Reason?.Trim().Length > MaximumReasonLength)
+            {
+                return BadRequest(new { success = false, message = $"Reason must be at most {MaximumReasonLength} characters." });
+            }
+
+            await _userService.RejectReactivationAsync(nic, NormalizeReason(request?.Reason));
 
             return Ok(new { success = true, message = "Reactivation request rejected." });
         }
@@ -389,7 +483,13 @@ namespace API.Controllers
                 return NotFound(new { success = false, message = "Staff account not found." });
             }
 
-            await _userService.UpdateStaffProfileAsync(username, request.FullName, request.Email, request.Phone);
+            var contactError = ValidateContactDetails(request.FullName, request.Email, request.Phone);
+            if (contactError != null)
+            {
+                return BadRequest(new { success = false, message = contactError });
+            }
+
+            await _userService.UpdateStaffProfileAsync(username, request.FullName.Trim(), request.Email.Trim(), request.Phone.Trim());
 
             return Ok(new { success = true, message = "Staff account updated." });
         }
@@ -430,12 +530,7 @@ namespace API.Controllers
         }
 
         // Resets a staff member's password. ( Backoffice only )
-        // The existing password isn't required — an administrator resetting a forgotten
-        // password has no way of knowing it. This is why the endpoint is Backoffice-gated
-        // and why it only reaches staff accounts.
-        //
-        // Note the reset doesn't end any session the account already has: tokens are
-        // stateless, so one issued before the change stays valid until it expires.
+        // The existing password isn't required as an administrator resetting a forgotten password has no way of knowing it.
         [Authorize(Roles = Roles.Backoffice)]
         [HttpPut("staff/{username}/password")]
         public async Task<IActionResult> ResetStaffPassword(string username, [FromBody] ResetStaffPasswordRequest request)
@@ -496,6 +591,39 @@ namespace API.Controllers
             return BCrypt.Net.BCrypt.Verify(password, user.PasswordHash) ? user : null;
         }
 
+        // Checks the contact fields every account carries, in the order the forms show them.
+        private static string? ValidateContactDetails(string? fullName, string? email, string? phone)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                return "Full name is required.";
+            }
+
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return "Email is required.";
+            }
+
+            if (!EmailPattern.IsMatch(email.Trim()))
+            {
+                return "Enter a valid email address.";
+            }
+
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                return "Phone number is required.";
+            }
+
+            return null;
+        }
+
+        // Trims an optional reason and stores a blank one as no reason at all, so the Backoffice screens don't show an empty "Reason:" line.
+        private static string? NormalizeReason(string? reason)
+        {
+            var trimmed = reason?.Trim();
+            return string.IsNullOrEmpty(trimmed) ? null : trimmed;
+        }
+
         // Shared mapping from the stored User document to the safe response shape.
         // DaysElapsed figure computed from DeactivatedAt.
         // Used for Prosumer accounts (NIC-keyed).
@@ -535,7 +663,7 @@ namespace API.Controllers
                 : AccountStatus.Deactivated;
         }
 
-        // Safe mapping for Backoffice/GridOperator accounts.
+        // Safe mapping for Backoffice/GridOperator accounts
         // (Username-keyed, no NIC/deactivation-reason fields since those are Prosumer-specific).
         private static StaffProfileResponse MapToStaffResponse(User user)
         {

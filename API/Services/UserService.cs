@@ -3,8 +3,10 @@
  * Author: IT23218512
  */
 
+using System.Text.RegularExpressions;
 using API.Data;
 using API.Models;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace API.Services
@@ -58,13 +60,20 @@ namespace API.Services
         // ( Their only route back is a reactivation request. )
         public async Task<bool> NicExistsAsync(string nic)
         {
-            return await _users.Find(u => u.Nic == nic).AnyAsync();
+            return await _users.Find(Builders<User>.Filter.Regex(u => u.Nic!, ExactIgnoringCase(nic))).AnyAsync();
         }
 
         // True if a user with this username already exists (duplicate-registration check).
+        // Case is ignored so "OP.Kamal" can't be created alongside "op.kamal".
         public async Task<bool> UsernameExistsAsync(string username)
         {
-            return await _users.Find(u => u.Username == username).AnyAsync();
+            return await _users.Find(Builders<User>.Filter.Regex(u => u.Username!, ExactIgnoringCase(username))).AnyAsync();
+        }
+
+        // Whole-value, case-insensitive match. The value is escaped, so it is always matched literally.
+        private static BsonRegularExpression ExactIgnoringCase(string value)
+        {
+            return new BsonRegularExpression($"^{Regex.Escape(value)}$", "i");
         }
 
         // Inserts a new user document. ( Assumes the caller already validated fields and hashed the password )
@@ -81,6 +90,15 @@ namespace API.Services
                 .Set(u => u.FullName, fullName)
                 .Set(u => u.Email, email)
                 .Set(u => u.Phone, phone);
+
+            await _users.UpdateOneAsync(u => u.Nic == nic, update);
+        }
+
+        // Replaces a Prosumer's stored password hash, keyed by NIC.
+        // Takes the finished hash rather than the plain text, same as SetStaffPasswordAsync.
+        public async Task SetProsumerPasswordAsync(string nic, string passwordHash)
+        {
+            var update = Builders<User>.Update.Set(u => u.PasswordHash, passwordHash);
 
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }

@@ -239,6 +239,7 @@ npm run dev
 | POST | `/api/users/login` | Authenticate and return a JWT with role and profile. Reports account state for a deactivated prosumer instead of a flat refusal | Public |
 | GET | `/api/users/{nic}` | Get a prosumer's own profile | Prosumer (own record) |
 | PUT | `/api/users/{nic}` | Update a prosumer's own profile | Prosumer (own record) |
+| PUT | `/api/users/{nic}/password` | Prosumer changes their own password (current password required) | Prosumer (own record) |
 | PUT | `/api/users/{nic}/deactivate` | Prosumer deactivates their own account | Prosumer (own record) |
 | POST | `/api/users/reactivation-request` | Deactivated prosumer requests reinstatement (NIC + password) | Public |
 | POST | `/api/users/reactivation-request/cancel` | Withdraw a pending reactivation request | Public |
