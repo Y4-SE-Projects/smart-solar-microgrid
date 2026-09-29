@@ -101,6 +101,8 @@ public class OperatorHomeActivity extends AppCompatActivity {
         findViewById(R.id.manageSlotsButton).setOnClickListener(v -> openManageSlots());
         findViewById(R.id.openScannerButton).setOnClickListener(v ->
                 startActivity(ScanQrActivity.intentFor(this, selectedStation)));
+        findViewById(R.id.recentScansButton).setOnClickListener(v ->
+                startActivity(new Intent(this, RecentScansActivity.class)));
 
         if (savedInstanceState != null) {
             restoredStationId = savedInstanceState.getString(STATE_SELECTED_STATION_ID);
