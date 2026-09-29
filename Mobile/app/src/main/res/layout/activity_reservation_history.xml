@@ -112,6 +112,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/reservation_status_cancelled" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/filterExpiredChip"
+                style="@style/Widget.Material3.Chip.Filter"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/reservation_status_expired" />
         </com.google.android.material.chip.ChipGroup>
     </HorizontalScrollView>
 
