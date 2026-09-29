@@ -179,6 +179,56 @@
                     android:textColor="@color/on_surface_variant"
                     android:textSize="12sp"
                     android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/stationLoadingView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:minHeight="48dp"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <com.google.android.material.progressindicator.CircularProgressIndicator
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:indeterminate="true"
+                        app:indicatorColor="@color/secondary"
+                        app:indicatorSize="24dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="@string/reservation_loading_stations"
+                        android:textColor="@color/on_surface_variant"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/stationStateText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:accessibilityLiveRegion="polite"
+                    android:background="@drawable/bg_icon_tile"
+                    android:padding="12dp"
+                    android:textColor="@color/on_surface_variant"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/chooseStationButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:layout_marginTop="14dp"
+                    android:enabled="false"
+                    android:text="@string/reservation_choose_station"
+                    android:textColor="@color/primary"
+                    app:cornerRadius="8dp"
+                    app:strokeColor="@color/border_slate" />
             </LinearLayout>
 
             <LinearLayout
@@ -221,14 +271,23 @@
                     app:iconTint="@color/primary" />
             </LinearLayout>
 
-            <!-- The next 7 days; one item_day_chip per day is added in code -->
-            <LinearLayout
-                android:id="@+id/dayRow"
+            <!-- One chip for each local date represented by a returned available slot. -->
+            <HorizontalScrollView
+                android:id="@+id/dayScroller"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:baselineAligned="false"
-                android:orientation="horizontal" />
+                android:overScrollMode="never"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/dayRow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:baselineAligned="false"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
 
             <LinearLayout
                 android:id="@+id/slotsLoadingView"
@@ -406,68 +465,6 @@
                     android:textColor="@color/on_error_container"
                     android:textSize="13sp" />
             </LinearLayout>
-
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/createdCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:visibility="gone"
-                app:cardBackgroundColor="@color/mint_surface"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/mint_border"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="18dp">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="@string/reservation_created_title"
-                        android:textColor="@color/primary"
-                        android:textSize="18sp" />
-
-                    <TextView
-                        android:id="@+id/createdMessageText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:accessibilityLiveRegion="polite"
-                        android:textColor="@color/on_surface"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/createdIdText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/primary"
-                        android:textSize="15sp" />
-
-                    <TextView
-                        android:id="@+id/createdStatusText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="13sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/doneButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="16dp"
-                        android:text="@string/reservation_done" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
             <View
                 android:layout_width="match_parent"
