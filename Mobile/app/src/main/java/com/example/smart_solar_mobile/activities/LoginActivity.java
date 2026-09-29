@@ -1,15 +1,19 @@
 // File: LoginActivity.java
 // Purpose: Login screen for Prosumers (NIC) and Grid Operators (username) using POST /api/users/login.
-// Author: IT23215856
+// Author: IT23215856, IT23218512 (registration link)
 
 package com.example.smart_solar_mobile.activities;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.TextView;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -25,6 +29,7 @@ import com.example.smart_solar_mobile.network.NetworkManager;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
@@ -49,6 +54,11 @@ public class LoginActivity extends AppCompatActivity {
     private TextInputEditText identifierInput;
     private TextInputEditText passwordInput;
     private MaterialCheckBox rememberMeCheck;
+    private View registerPrompt;
+
+    // Opens registration and, when an account was created, comes back with its NIC filled in
+    private final ActivityResultLauncher<Intent> registerLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(), this::onRegisterResult);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,7 +79,10 @@ public class LoginActivity extends AppCompatActivity {
         identifierInput = findViewById(R.id.identifierInput);
         passwordInput = findViewById(R.id.passwordInput);
         rememberMeCheck = findViewById(R.id.rememberMeCheck);
+        registerPrompt = findViewById(R.id.registerPrompt);
 
+        findViewById(R.id.registerLink).setOnClickListener(v ->
+                registerLauncher.launch(new Intent(this, RegisterActivity.class)));
         roleProsumerButton.setOnClickListener(v -> selectRole(true));
         roleOperatorButton.setOnClickListener(v -> selectRole(false));
         signInButton.setOnClickListener(v -> attemptLogin());
@@ -108,6 +121,22 @@ public class LoginActivity extends AppCompatActivity {
         identifierLayout.setStartIconDrawable(prosumer ? R.drawable.ic_badge : R.drawable.ic_person);
         identifierLayout.setError(null);
         operatorNotice.setVisibility(prosumer ? View.GONE : View.VISIBLE);
+        registerPrompt.setVisibility(prosumer ? View.VISIBLE : View.GONE);
+    }
+
+    private void onRegisterResult(ActivityResult result) {
+        // After a successful registration, fills in the new NIC so the Prosumer only has to type the password
+        Intent data = result.getData();
+        if (result.getResultCode() != RESULT_OK || data == null) {
+            return;
+        }
+        String nic = data.getStringExtra(RegisterActivity.EXTRA_REGISTERED_NIC);
+        selectRole(true);
+        hideError();
+        identifierInput.setText(nic);
+        passwordInput.setText(null);
+        passwordInput.requestFocus();
+        Snackbar.make(findViewById(R.id.loginRoot), R.string.login_registered, Snackbar.LENGTH_LONG).show();
     }
 
     private void attemptLogin() {
