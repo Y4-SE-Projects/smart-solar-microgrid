@@ -13,16 +13,17 @@
 
 export default function FilterPills({ options, value, onChange }) {
   return (
-    <div className="inline-flex p-1 rounded-full bg-surface-container-low border border-border-slate text-body-sm">
+    <div className="flex max-w-full items-center overflow-x-auto rounded-full border border-border-slate bg-canvas-bg p-1 text-xs text-on-surface-variant">
       {options.map((option) => (
         <button
           key={option.key}
           type="button"
           onClick={() => onChange(option.key)}
-          className={`px-4 py-1 rounded-full transition-colors tabular-nums ${
+          aria-pressed={value === option.key}
+          className={`shrink-0 rounded-full px-4 py-1.5 font-medium tabular-nums transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${
             value === option.key
-              ? 'bg-surface-container-lowest text-primary font-semibold shadow-sm'
-              : 'text-on-surface-variant hover:text-on-surface font-medium'
+              ? 'bg-surface-container-lowest font-bold text-primary shadow-xs'
+              : 'hover:text-on-surface'
           }`}
         >
           {option.label}

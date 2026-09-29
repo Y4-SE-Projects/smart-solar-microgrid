@@ -1,35 +1,40 @@
 /* File: AppLayout.jsx
  * Purpose: Shared page chrome for every authenticated screen.
- * ( Sidebar + TopBar + the page content itself. (via React Router's <Outlet/>) )
- * Owns the sidebar's collapsed/expanded state, since TopBar and the content
- * offset both need to shift in sync with it.
+ * Sidebar and page content via React Router's Outlet.
+ * Owns the sidebar's collapsed state and the matching content offset.
  */
 
-import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
-import TopBar from './TopBar';
 
-// Maps a route path to the breadcrumb label TopBar shows.
-const BREADCRUMB_LABELS = {
-  '/stations': 'Solar Stations & Nodes',
-  '/prosumers': 'Prosumer Users',
-  '/staff': 'Staff Accounts',
-  '/schedules': 'Energy Slot Schedules',
-  '/reservations': 'Reservation Oversight',
-};
+const COMPACT_NAV_QUERY = '(max-width: 767px)';
 
 export default function AppLayout() {
-  const location = useLocation();
-  const breadcrumb = BREADCRUMB_LABELS[location.pathname] ?? 'Dashboard';
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () => window.matchMedia(COMPACT_NAV_QUERY).matches
+  );
+
+  useEffect(() => {
+    const media = window.matchMedia(COMPACT_NAV_QUERY);
+    const handleResize = (event) => setIsSidebarCollapsed(event.matches);
+    media.addEventListener('change', handleResize);
+    return () => media.removeEventListener('change', handleResize);
+  }, []);
+
+  function handleNavigate() {
+    if (window.matchMedia(COMPACT_NAV_QUERY).matches) setIsSidebarCollapsed(true);
+  }
 
   return (
     <div className="min-h-screen bg-canvas-bg">
-      <Sidebar isCollapsed={isSidebarCollapsed} onToggleCollapsed={() => setIsSidebarCollapsed((prev) => !prev)} />
-      <TopBar breadcrumb={breadcrumb} isSidebarCollapsed={isSidebarCollapsed} />
-      <div className={`pt-16 transition-all duration-200 ${isSidebarCollapsed ? 'pl-20' : 'pl-64'}`}>
-        <main className={`w-full px-8 py-8 ${isSidebarCollapsed ? '' : 'max-w-7xl mx-auto'}`}>
+      <Sidebar
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapsed={() => setIsSidebarCollapsed((prev) => !prev)}
+        onNavigate={handleNavigate}
+      />
+      <div className={`pl-20 transition-all duration-200 ${isSidebarCollapsed ? '' : 'md:pl-64'}`}>
+        <main className="mx-auto w-full max-w-7xl px-5 py-8 lg:px-8">
           <Outlet />
         </main>
       </div>
