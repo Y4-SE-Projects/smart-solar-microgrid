@@ -1,10 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="home_reservation_title">Reserve an energy slot</string>
-    <string name="home_reservation_body">Find a nearby station on the map, or choose any active station directly.</string>
-    <string name="home_reservation_action">Find stations on map</string>
-    <string name="home_reservation_direct_action">Choose station directly</string>
-
     <string name="reservation_title">Create Reservation</string>
     <string name="reservation_subtitle">Choose a station and an available energy slot</string>
     <string name="reservation_booking_for">BOOKING FOR</string>
@@ -47,11 +42,6 @@
     <string name="reservation_created_title">Reservation created</string>
     <string name="reservation_created_message">Your reservation was confirmed by HelioGrid.</string>
     <string name="reservation_done">Done</string>
-
-    <!-- Prosumer home: view reservations card -->
-    <string name="home_history_title">Your reservations</string>
-    <string name="home_history_body">View all your bookings and their current status.</string>
-    <string name="home_history_action">View Reservations</string>
 
     <!-- Reservation history screen -->
     <string name="history_title">My Reservations</string>

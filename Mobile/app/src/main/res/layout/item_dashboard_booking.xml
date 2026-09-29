@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One upcoming booking on the Prosumer dashboard, based on the dashboard design's "Upcoming active booking" card -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="12dp"
+    android:background="@drawable/bg_card"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <!-- When it is (Today / Tomorrow / date) and its status -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/bookingDayText"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textAppearance="@style/TextAppearance.SmartSolar.Overline"
+            android:textColor="@color/secondary"
+            tools:text="Today" />
+
+        <TextView
+            android:id="@+id/bookingStatusChip"
+            style="@style/Widget.SmartSolar.StatusChip"
+            android:layout_marginStart="8dp"
+            tools:text="Approved" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/bookingStationText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="1"
+        android:textColor="@color/on_surface"
+        android:textSize="17sp"
+        tools:text="Colombo North Hub" />
+
+    <TextView
+        android:id="@+id/bookingMetaText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:fontFeatureSettings="tnum"
+        android:textColor="@color/on_surface_variant"
+        android:textSize="13sp"
+        tools:text="STN-001 · 14:00" />
+
+    <!-- Slot and reservation references -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_icon_tile"
+        android:baselineAligned="false"
+        android:orientation="horizontal"
+        android:padding="10dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/summary_slot_label"
+                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+
+            <TextView
+                android:id="@+id/bookingSlotText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:textColor="@color/on_surface"
+                android:textSize="14sp"
+                tools:text="SLOT-4882" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/dashboard_reservation_label"
+                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+
+            <TextView
+                android:id="@+id/bookingReferenceText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif-medium"
+                android:maxLines="1"
+                android:textColor="@color/on_surface"
+                android:textSize="14sp"
+                tools:text="RES-00000042" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- The API enforces the 12-hour rule; this only repeats the policy the detail screen shows -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        tools:ignore="UseCompoundDrawables">
+
+        <ImageView
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_schedule"
+            app:tint="@color/on_surface_variant" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:text="@string/detail_notice_modification_body"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <!-- Opens the existing reservation detail screen, which shows the QR pass once Approved -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bookingActionButton"
+        style="@style/Widget.Material3.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:minHeight="44dp"
+        android:textColor="@color/primary"
+        app:cornerRadius="8dp"
+        app:iconGravity="textStart"
+        app:iconTint="@color/secondary"
+        app:strokeColor="@color/border_slate"
+        tools:text="@string/dashboard_view_qr" />
+</LinearLayout>
