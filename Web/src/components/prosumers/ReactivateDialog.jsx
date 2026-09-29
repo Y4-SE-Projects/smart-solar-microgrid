@@ -1,12 +1,12 @@
 /* File: ReactivateDialog.jsx
- * Purpose: Confirmation step before reactivating a prosumer account. 
+ * Purpose: Confirmation step before reactivating a prosumer account.
  *
  *          Props:
  *              prosumer     - the account to reactivate
  *              isSubmitting - true while the request is in flight
  *              error        - message from a failed attempt
  *              onConfirm / onCancel
- * 
+ *
  * Author: IT23218512
  */
 
@@ -17,6 +17,8 @@ export default function ReactivateDialog({ prosumer, isSubmitting, error, onConf
   if (!prosumer) return null;
 
   const hasElapsed = prosumer.daysElapsed !== null && prosumer.daysElapsed !== undefined;
+  const isWaiting =
+    prosumer.daysSinceRequest !== null && prosumer.daysSinceRequest !== undefined;
 
   return (
     <ConfirmDialog
@@ -47,6 +49,15 @@ export default function ReactivateDialog({ prosumer, isSubmitting, error, onConf
           <strong className="text-on-surface">Declared reason:</strong>{' '}
           {prosumer.deactivationReason || 'None given'}
         </div>
+        {/* Only present when the prosumer actually asked to come back. 
+            A Backoffice user can also restore an account that never requested, and this line is absent then. */}
+        {prosumer.reactivationRequestedAt && (
+          <div className="tabular-nums">
+            <strong className="text-on-surface">Reactivation requested:</strong>{' '}
+            {formatDate(prosumer.reactivationRequestedAt)}
+            {isWaiting && ` (${pluralize(prosumer.daysSinceRequest, 'day')} waiting)`}
+          </div>
+        )}
       </div>
 
       <p className="text-body-sm text-on-surface-variant leading-relaxed">

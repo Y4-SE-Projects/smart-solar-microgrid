@@ -1,19 +1,26 @@
 /* File: ProsumerManagementPage.jsx
  * Purpose: Backoffice screen for reviewing solar prosumer accounts and processing reactivation requests.
  *          This file handles orchestration only.
- *          ( loading the account data, holding the account selected for reactivation, 
- *          sending that request and reporting the result. ) 
+ *          ( loading the account data, holding the account selected for an action,
+ *          sending that request and reporting the result. )
  * Author: IT23218512
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { getProsumers, getPendingDeactivation, reactivateProsumer } from '../services/usersApi';
+import {
+  getProsumers,
+  getReactivationRequests,
+  reactivateProsumer,
+  rejectReactivation,
+} from '../services/usersApi';
 import { isThisMonth } from '../utils/formatters';
+import { AccountStatus, resolveAccountStatus } from '../constants/accountStatus';
 import MetricCard from '../components/common/MetricCard';
 import AlertBanner from '../components/common/AlertBanner';
 import ReactivationQueue from '../components/prosumers/ReactivationQueue';
 import ProsumerDirectory from '../components/prosumers/ProsumerDirectory';
 import ReactivateDialog from '../components/prosumers/ReactivateDialog';
+import RejectDialog from '../components/prosumers/RejectDialog';
 
 export default function ProsumerManagementPage() {
   const [prosumers, setProsumers] = useState([]);
@@ -21,19 +28,21 @@ export default function ProsumerManagementPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
 
-  const [selectedProsumer, setSelectedProsumer] = useState(null);
-  const [isReactivating, setIsReactivating] = useState(false);
+  // The account being acted on, plus which action was chosen. 
+  // Holding both together means only one dialog can ever be open, and cancelling clears the pair.
+  const [action, setAction] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [actionError, setActionError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Loads both lists together, on mount and again after a successful reactivation. 
+  // Loads both lists together, on mount and again after a successful action.
   const loadAccounts = useCallback(async () => {
     setIsLoading(true);
     setLoadError('');
     try {
       const [allProsumers, pendingAccounts] = await Promise.all([
         getProsumers(),
-        getPendingDeactivation(),
+        getReactivationRequests(),
       ]);
       setProsumers(allProsumers);
       setPending(pendingAccounts);
@@ -53,39 +62,62 @@ export default function ProsumerManagementPage() {
 
   // Counted from the accounts already fetched rather than a separate stats endpoint, so the figures always agree with the rows on screen.
   const totalCount = prosumers.length;
-  const activeCount = prosumers.filter((prosumer) => prosumer.isActive).length;
+  const activeCount = prosumers.filter(
+    (prosumer) => resolveAccountStatus(prosumer) === AccountStatus.Active
+  ).length;
   const activeRatio = totalCount > 0 ? ((activeCount / totalCount) * 100).toFixed(1) : '0.0';
   const newThisMonth = prosumers.filter((prosumer) => isThisMonth(prosumer.createdAt)).length;
 
-  // Sends the reactivation, then reloads both lists; so the account leaves the queue; and its directory row flips to Active.
-  async function handleConfirmReactivate() {
-    if (!selectedProsumer) return;
-    setIsReactivating(true);
+  // Both actions follow the same shape. 
+  // Send it, report the outcome, reload both lists; so the queue, the directory row and the metrics move together.
+  async function runAction(request, describeSuccess) {
+    setIsSubmitting(true);
     setActionError('');
     try {
-      const result = await reactivateProsumer(selectedProsumer.nic);
-      setSuccessMessage(
-        result?.message || `${selectedProsumer.fullName}'s account has been reactivated.`
-      );
-      setSelectedProsumer(null);
+      const result = await request();
+      setSuccessMessage(result?.message || describeSuccess());
+      setAction(null);
       await loadAccounts();
     } catch (error) {
       // The dialog stays open on failure so the action can be retried without finding the account again.
       setActionError(
-        error.response?.data?.message || 'Could not reactivate this account. Please try again.'
+        error.response?.data?.message || 'Could not complete this action. Please try again.'
       );
     } finally {
-      setIsReactivating(false);
+      setIsSubmitting(false);
     }
+  }
+
+  function handleConfirmReactivate() {
+    if (!action) return;
+    const { prosumer } = action;
+    runAction(
+      () => reactivateProsumer(prosumer.nic),
+      () => `${prosumer.fullName}'s account has been reactivated.`
+    );
+  }
+
+  function handleConfirmReject(reason) {
+    if (!action) return;
+    const { prosumer } = action;
+    runAction(
+      () => rejectReactivation(prosumer.nic, reason),
+      () => `${prosumer.fullName}'s reactivation request has been declined.`
+    );
   }
 
   function handleSelectProsumer(prosumer) {
     setActionError('');
-    setSelectedProsumer(prosumer);
+    setAction({ prosumer, mode: 'reactivate' });
   }
 
-  function handleCancelReactivate() {
-    setSelectedProsumer(null);
+  function handleRejectProsumer(prosumer) {
+    setActionError('');
+    setAction({ prosumer, mode: 'reject' });
+  }
+
+  function handleCancelAction() {
+    setAction(null);
     setActionError('');
   }
 
@@ -175,6 +207,7 @@ export default function ProsumerManagementPage() {
         pending={pending}
         isLoading={isLoading}
         onReactivate={handleSelectProsumer}
+        onReject={handleRejectProsumer}
       />
 
       <ProsumerDirectory
@@ -184,11 +217,19 @@ export default function ProsumerManagementPage() {
       />
 
       <ReactivateDialog
-        prosumer={selectedProsumer}
-        isSubmitting={isReactivating}
+        prosumer={action?.mode === 'reactivate' ? action.prosumer : null}
+        isSubmitting={isSubmitting}
         error={actionError}
         onConfirm={handleConfirmReactivate}
-        onCancel={handleCancelReactivate}
+        onCancel={handleCancelAction}
+      />
+
+      <RejectDialog
+        prosumer={action?.mode === 'reject' ? action.prosumer : null}
+        isSubmitting={isSubmitting}
+        error={actionError}
+        onConfirm={handleConfirmReject}
+        onCancel={handleCancelAction}
       />
     </div>
   );
