@@ -195,8 +195,11 @@ export default function ReservationOversightPage() {
                 </div>
             )}
 
+            <h2 id="reservation-list-heading" className="mb-3 text-headline-sm font-semibold text-on-surface">
+                Reservation list
+            </h2>
             <section
-                aria-label="Reservation records"
+                aria-labelledby="reservation-list-heading"
                 className="rounded-2xl border border-border-slate bg-surface-container-lowest shadow-sm"
             >
                 <ReservationToolbar

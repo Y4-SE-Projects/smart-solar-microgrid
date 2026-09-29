@@ -140,14 +140,9 @@ export default function CancelReservationModal({
                                 12-Hour Cancellation Policy
                             </h3>
                         </div>
-                        <span className="rounded-full bg-mint-surface px-2.5 py-1 text-label-sm font-semibold text-primary">
-                            API Enforced
-                        </span>
                     </div>
                     <p className="mt-3 text-body-sm leading-relaxed text-on-surface-variant">
-                        Cancellation requires at least 12 hours&apos; notice before the
-                        scheduled reservation. The API validates the reservation state
-                        and notice period.
+                        Cancel at least 12 hours before the scheduled reservation time.
                     </p>
                 </section>
 

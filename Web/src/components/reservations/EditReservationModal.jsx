@@ -537,15 +537,10 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                 12-Hour Modification Policy
                             </p>
                             <p className="mt-0.5 text-body-sm text-on-surface-variant">
-                                Updates require at least 12 hours&apos; notice before the
-                                scheduled reservation. The API checks both the current and
-                                selected times.
+                                Make changes at least 12 hours before the current and selected times.
                             </p>
                         </div>
                     </div>
-                    <span className="shrink-0 rounded-full bg-mint-surface px-2.5 py-1 text-label-sm font-semibold text-primary">
-                        API Enforced
-                    </span>
                 </div>
 
                 {generalError && (
