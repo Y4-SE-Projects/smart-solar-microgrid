@@ -99,6 +99,8 @@ public class OperatorHomeActivity extends AppCompatActivity {
         findViewById(R.id.slotsRetryButton).setOnClickListener(v -> loadTodaySlots());
         refreshSlotsButton.setOnClickListener(v -> loadTodaySlots());
         findViewById(R.id.manageSlotsButton).setOnClickListener(v -> openManageSlots());
+        findViewById(R.id.openScannerButton).setOnClickListener(v ->
+                startActivity(ScanQrActivity.intentFor(this, selectedStation)));
 
         if (savedInstanceState != null) {
             restoredStationId = savedInstanceState.getString(STATE_SELECTED_STATION_ID);

@@ -419,14 +419,15 @@ export default function SlotSchedulesPage() {
           </div>
         </section>
 
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-border-slate bg-surface-container-lowest shadow-sm">
+        <div className="flex min-w-0 flex-col gap-3">
+          <section className="min-w-0 overflow-hidden rounded-2xl border border-border-slate bg-surface-container-lowest shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-border-slate px-5 py-3">
             <div className="flex min-w-0 items-baseline gap-3">
-              <h2 className="truncate text-headline-sm font-semibold text-on-surface">
+              <h3 className="truncate text-headline-sm font-semibold text-on-surface">
                 {isSearching
                   ? `Matches in ${calendarMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`
                   : formatLongDate(selectedDate)}
-              </h2>
+              </h3>
               <p className="shrink-0 text-body-sm tabular-nums text-on-surface-variant" aria-live="polite">
                 {isLoadingSlots ? 'Loading…' : slotsError ? '' : plural(slots.length, 'slot')}
               </p>
@@ -630,7 +631,8 @@ export default function SlotSchedulesPage() {
               </tbody>
             </table>
           </div>
-        </section>
+          </section>
+        </div>
       </div>
 
       {formModal?.mode === 'create' && (

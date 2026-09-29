@@ -128,6 +128,30 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SigningKey))
         };
+
+        // A valid signature only proves the token was genuine when it was issued. It says nothing about the account's current state. 
+        // Tokens are stateless and carry no status claim. 
+        // So without this check a deactivated account keeps full access for the rest of JwtSettings:ExpiryMinutes.
+        // Re-reading the account on each authenticated request costs one lookup and makes deactivation take effect on the next request instead of whenever the token expires.
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var identifier = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                // Resolved from the request scope, so this shares the scoped UserService and its MongoDB handle with the rest of the request rather than building another.
+                var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
+                var account = await userService.FindActiveByIdentifierAsync(identifier);
+
+                // One null covers three cases.
+                // ( the account was deactivated, it was removed, or the token has no usable identifier. ) 
+                // All three mean the same thing here; stop honouring this token.
+                if (account == null)
+                {
+                    context.Fail("The account this token belongs to is no longer active.");
+                }
+            }
+        };
     });
 builder.Services.AddAuthorization();
 
@@ -147,7 +171,7 @@ catch (Exception ex)
 }
 
 // Seed the first Backoffice account if none exists yet.
-// Register now refuses to create Backoffice/GridOperator accounts unless the caller is already an authenticated Backoffice user. 
+// Register now refuses to create Backoffice/GridOperator accounts unless the caller is already an authenticated Backoffice user.
 // So without this seed there would be no way to create the very first one.
 // ( Runs once per startup and is a no-op on every run after the first Backoffice account exists. Therefore, it's safe to leave in place permanently rather than removing it after first use. )
 using (var scope = app.Services.CreateScope())
@@ -167,8 +191,8 @@ using (var scope = app.Services.CreateScope())
             }
             else
             {
-                // Register checks the username is free before inserting, and this path has to do the same. 
-                // Otherwise a username already held by a GridOperator would end up on two documents. 
+                // Register checks the username is free before inserting, and this path has to do the same.
+                // Otherwise a username already held by a GridOperator would end up on two documents.
                 // Login would authenticate against whichever one MongoDB happened to return first.
                 var existing = await userService.FindByUsernameAsync(seedSettings.Username);
 
@@ -191,8 +215,8 @@ using (var scope = app.Services.CreateScope())
                 }
                 else if (existing.Role == Roles.Backoffice)
                 {
-                    // The seed account is still in the database but was deactivated, which is one way a 
-                    // system ends up with nobody able to administer it. Restoring it is the recovery path. 
+                    // The seed account is still in the database but was deactivated, which is one way a
+                    // system ends up with nobody able to administer it. Restoring it is the recovery path.
                     await userService.SetStaffActiveAsync(seedSettings.Username, true);
                     Console.WriteLine($"No active Backoffice account found — restored the existing seed account \"{seedSettings.Username}\".");
                 }

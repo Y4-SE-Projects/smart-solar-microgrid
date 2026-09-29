@@ -7,16 +7,17 @@
 
 export default function SearchInput({ value, onChange, placeholder = 'Search...' }) {
   return (
-    <div className="relative flex-1 min-w-55 max-w-md">
-      <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-[18px] text-outline pointer-events-none">
+    <div className="relative w-full min-w-0 max-w-sm">
+      <span className="material-symbols-outlined pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[17px] text-outline" aria-hidden="true">
         search
       </span>
       <input
         type="search"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        aria-label={placeholder}
         placeholder={placeholder}
-        className="w-full h-9 pl-10 pr-4 rounded-full bg-surface-container-low border border-border-slate text-body-sm text-on-surface placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:border-secondary transition-all"
+        className="h-10 w-full rounded-full border border-border-slate bg-canvas-bg pl-9 pr-4 text-xs text-on-surface outline-none transition-colors placeholder:text-on-surface-variant focus:border-secondary focus:bg-surface-container-lowest focus:ring-2 focus:ring-secondary/20"
       />
     </div>
   );

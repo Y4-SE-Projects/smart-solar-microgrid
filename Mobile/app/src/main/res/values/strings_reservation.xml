@@ -116,4 +116,35 @@
 
     <string name="detail_view_bookings">View My Bookings</string>
     <string name="detail_back_home">Back to Home</string>
+
+    <!-- Grid Operator home: verify energy transfer card -->
+    <string name="home_verify_title">Verify Energy Transfer</string>
+    <string name="home_verify_body">Scan prosumer pass to verify scheduled slot and finalize power transfer.</string>
+    <string name="home_verify_action">Open Scanner</string>
+
+    <!-- QR scan screen -->
+    <string name="scan_title">QR Verification</string>
+    <string name="scan_subtitle">Station: %1$s</string>
+    <string name="scan_subtitle_no_station">Scan a prosumer QR pass</string>
+    <string name="scan_ready">Ready to Scan</string>
+    <string name="scan_verifying">Verifying…</string>
+    <string name="scan_verified_chip">Active Booking</string>
+    <string name="scan_rejected_chip">Rejected</string>
+    <string name="scan_frame_hint">Position prosumer QR code within the frame</string>
+    <string name="scan_permission_title">Camera Access Needed</string>
+    <string name="scan_permission_body">HelioGrid needs camera access to scan a prosumer\'s QR pass.</string>
+    <string name="scan_permission_grant">Grant Camera Permission</string>
+    <string name="scan_permission_denied">Camera permission was denied. Open Settings to allow it and try again.</string>
+    <string name="scan_open_settings">Open Settings</string>
+
+    <string name="scan_result_verified_title">Reservation Verified</string>
+    <string name="scan_result_retry_title">This QR was already verified by you</string>
+    <string name="scan_result_rejected_title">Verification Failed</string>
+    <string name="scan_result_reservation_code">Reservation Code</string>
+    <string name="scan_result_prosumer">Prosumer</string>
+    <string name="scan_result_station">Station</string>
+    <string name="scan_result_scheduled_time">Scheduled Time</string>
+    <string name="scan_result_status">Status</string>
+    <string name="scan_next">Scan Next</string>
+    <string name="scan_close">Close</string>
 </resources>

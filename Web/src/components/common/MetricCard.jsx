@@ -6,48 +6,33 @@
  *              value    - the figure itself
  *              caption  - optional short note beside the figure (e.g. a percentage)
  *              note     - supporting line beneath the figure
- *              icon     - icon name shown top-right (ignored when `emphasis` is set)
+ *              icon     - icon name shown top-right
+ *              iconBgClass - icon background and foreground colors
  *
  * Author: IT23218512
  */
 
-export default function MetricCard({ label, value, caption, note, icon, emphasis = false }) {
+export default function MetricCard({ label, value, caption, note, icon, iconBgClass = 'bg-mint-surface text-primary' }) {
   return (
     <div
-      className={`p-6 rounded-2xl bg-surface-container-lowest border shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow ${
-        emphasis ? 'border-error/30' : 'border-border-slate'
-      }`}
+      className="flex flex-col justify-between rounded-2xl border border-border-slate bg-surface-container-lowest p-6 shadow-sm"
     >
-      <div className="flex items-center justify-between mb-3">
-        <span
-          className={`text-label-sm uppercase font-semibold ${
-            emphasis ? 'text-alert-danger' : 'text-on-surface-variant'
-          }`}
-        >
-          {label}
-        </span>
-        {emphasis ? (
-          <span className="px-2.5 py-0.5 rounded-full bg-error-container text-alert-danger text-label-sm font-bold">
-            Action Required
-          </span>
-        ) : (
-          <div className="w-8 h-8 rounded-full bg-surface-container-low text-primary flex items-center justify-center">
-            <span className="material-symbols-outlined text-[18px]">{icon}</span>
-          </div>
-        )}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold uppercase tracking-wider text-outline">{label}</span>
+        <div className={`flex size-9 shrink-0 items-center justify-center rounded-full ${iconBgClass}`}>
+          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">{icon}</span>
+        </div>
       </div>
       <div>
         <div className="flex items-baseline gap-2">
           <span
-            className={`text-metric-num font-bold tabular-nums ${
-              emphasis ? 'text-alert-danger' : 'text-on-surface'
-            }`}
+            className="text-metric-num font-bold tabular-nums text-on-surface"
           >
             {value}
           </span>
           {caption && <span className="text-body-sm font-semibold text-secondary">{caption}</span>}
         </div>
-        {note && <span className="text-body-sm text-on-surface-variant block mt-1">{note}</span>}
+        {note && <span className="mt-2 block text-body-sm text-on-surface-variant">{note}</span>}
       </div>
     </div>
   );

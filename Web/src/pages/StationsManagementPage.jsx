@@ -154,8 +154,24 @@ export default function StationsManagementPage() {
         </button>
       </div>
 
+      {/* Rules this screen operates under */}
+      <div className="mb-6 flex flex-col gap-4 rounded-2xl border border-border-slate bg-surface-container-low/70 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3.5 sm:items-center">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface-container-highest text-primary">
+            <span className="material-symbols-outlined text-[20px] text-secondary" aria-hidden="true">gavel</span>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-title-md font-semibold text-primary">Reservation Protection Policy</span>
+            <p className="mt-0.5 text-body-sm text-on-surface-variant">
+              Stations with active reservations cannot be deactivated. A station can be deleted only
+              when it has no reservations or remaining slots.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* KPI Cards */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
+      <section className="grid grid-cols-1 gap-5 mb-6 sm:grid-cols-2 xl:grid-cols-3">
         <KpiCard icon="solar_power" label="Total Solar Stations" value={kpis.total} unit="Stations" iconBgClass="bg-mint-surface text-primary">
           <span className="text-secondary font-semibold flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-secondary" />
@@ -192,9 +208,6 @@ export default function StationsManagementPage() {
           <span className="text-outline">battery slots provisioned</span>
         </KpiCard>
 
-        <KpiCard icon="verified_user" label="Reservation Protection Policy" iconBgClass="bg-surface-container-high text-operational-blue">
-          <span className="text-outline font-medium">Stations with active reservations cannot be deactivated or deleted until all ongoing charging sessions and scheduled bookings are resolved.</span>
-        </KpiCard>
       </section>
 
       {actionError && (
@@ -218,6 +231,8 @@ export default function StationsManagementPage() {
           </button>
         </div>
       )}
+
+      <h2 className="mb-3 text-headline-sm font-semibold text-on-surface">Station Directory</h2>
 
       {/* Stations Management Table Container Card */}
       <div className="bg-surface-container-lowest border border-border-slate flex flex-col overflow-hidden shadow-sm rounded-2xl">
@@ -360,8 +375,8 @@ export default function StationsManagementPage() {
       {deleteTarget && (
         <Modal title={`Delete ${deleteTarget.stationId}?`} onClose={() => setDeleteTarget(null)} maxWidthClassName="max-w-md">
           <p className="text-body-md text-on-surface-variant mb-space-lg">
-            This permanently removes <strong className="text-on-surface">{deleteTarget.name}</strong>. Blocked by the
-            API if any reservation was ever made against it, or if it still has slots.
+            This permanently removes <strong className="text-on-surface">{deleteTarget.name}</strong>. Stations with
+            reservations or remaining slots cannot be deleted.
           </p>
           <div className="flex items-center justify-end gap-2">
             <button

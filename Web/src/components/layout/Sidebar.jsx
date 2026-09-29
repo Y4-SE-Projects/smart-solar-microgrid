@@ -1,7 +1,7 @@
 /* File: Sidebar.jsx
  * Purpose: Persistent left navigation rail, shared by every authenticated Backoffice/GridOperator screen.
  *          Collapsible to an icon-only rail — AppLayout owns the isCollapsed state so it can
- *          keep TopBar's and the page content's offsets in sync with the sidebar's width.
+ *          keep the page content aligned with the sidebar's width.
  */
 
 import { NavLink } from 'react-router-dom';
@@ -26,7 +26,7 @@ function getInitials(fullName) {
   return initials.join('') || '?';
 }
 
-export default function Sidebar({ isCollapsed, onToggleCollapsed }) {
+export default function Sidebar({ isCollapsed, onToggleCollapsed, onNavigate }) {
   const { role, fullName, identifier, logout } = useAuth();
 
   const visibleItems = NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(role));
@@ -40,6 +40,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapsed }) {
         type="button"
         onClick={onToggleCollapsed}
         aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-expanded={!isCollapsed}
         className="absolute -right-3 top-6 w-6 h-6 rounded-full bg-surface-container-lowest border border-border-slate flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-outline-variant shadow-sm transition-colors"
       >
         <span className="material-symbols-outlined text-[16px]">{isCollapsed ? 'chevron_right' : 'chevron_left'}</span>
@@ -53,7 +54,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapsed }) {
             <div className="flex flex-col min-w-0">
               <span className="text-headline-sm text-primary leading-tight font-bold tracking-tight truncate">HelioGrid</span>
               <span className="text-[11px] text-on-surface-variant uppercase tracking-wider font-semibold">
-                {role === Roles.GridOperator ? 'Grid Operator' : 'Backoffice Core'}
+                {role === Roles.GridOperator ? 'Grid Operator' : 'Backofficer'}
               </span>
             </div>
           )}
@@ -84,6 +85,7 @@ export default function Sidebar({ isCollapsed, onToggleCollapsed }) {
               <NavLink
                 key={item.to}
                 to={item.to}
+                onClick={onNavigate}
                 title={isCollapsed ? item.label : undefined}
                 className={({ isActive }) =>
                   `flex items-center rounded-full text-sm font-medium transition-colors ${

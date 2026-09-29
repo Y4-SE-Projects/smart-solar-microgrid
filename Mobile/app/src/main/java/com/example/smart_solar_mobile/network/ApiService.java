@@ -10,6 +10,8 @@ import com.example.smart_solar_mobile.models.ReservationData;
 import com.example.smart_solar_mobile.models.SetSlotAvailabilityRequest;
 import com.example.smart_solar_mobile.models.SolarStation;
 import com.example.smart_solar_mobile.models.UpdateReservationRequest;
+import com.example.smart_solar_mobile.models.VerifyQrRequest;
+import com.example.smart_solar_mobile.models.VerifyQrResponse;
 
 import java.util.List;
 
@@ -84,4 +86,8 @@ public interface ApiService {
     // A station's slots that haven't started yet and fall inside the API's booking window, soonest first
     @GET("stations/{stationId}/slots?upcomingOnly=true")
     Call<ApiResponse<List<EnergyBookingSlot>>> getUpcomingSlots(@Path("stationId") String stationId);
+
+    // Grid Operator only. Verifies the scanned QR against live data and finalizes the transfer atomically.
+    @POST("reservations/verify-qr")
+    Call<ApiResponse<VerifyQrResponse>> verifyQr(@Body VerifyQrRequest request);
 }

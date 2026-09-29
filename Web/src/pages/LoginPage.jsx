@@ -1,23 +1,35 @@
 /* File: LoginPage.jsx
  * Purpose: Backoffice/GridOperator login screen.
- * Wired to the live POST /api/users/login endpoint.
+ *          Wired to the live POST /api/users/login endpoint.
  */
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Roles } from '../constants/roles';
+import { Roles, homePathForRole } from '../constants/roles';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const location = useLocation();
+  const { login, logout } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+
+  // ProtectedRoute sends a session here when its stored role has no console screens. 
+  // Clearing it happens here rather than in the guard, which has to stay free of side effects.
+  useEffect(() => {
+    if (location.state?.reason === 'ROLE_NOT_SUPPORTED') {
+      logout();
+      setErrorMessage(
+        'That account cannot access the web console. Sign in with a Backoffice or Grid Operator account.'
+      );
+    }
+  }, [location.state, logout]);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -31,24 +43,22 @@ export default function LoginPage() {
       });
       const data = response.data.data;
 
-      if (data.role === Roles.Backoffice) {
-        login(data);
-        navigate('/stations', { replace: true });
+      // One lookup decides where this role belongs, so adding a console role later means changing homePathForRole and nothing here.
+      const home = homePathForRole(data.role);
+
+      // Valid credentials, but the wrong surface for this role. 
+      // (The API already refuses a Prosumer signing in with X-Client-Type: Web, so this is the second line of defence.
+      if (!home) {
+        setErrorMessage(
+          data.role === Roles.Prosumer
+            ? 'Prosumer accounts sign in through the HelioGrid mobile app, not the web console.'
+            : 'This account role is not supported on the web console.'
+        );
         return;
       }
 
-      if (data.role === Roles.GridOperator) {
-        login(data);
-        navigate('/schedules', { replace: true });
-        return;
-      }
-
-      // Valid credentials, but the wrong surface for this role.
-      if (data.role === Roles.Prosumer) {
-        setErrorMessage('Prosumer accounts sign in through the HelioGrid mobile app, not the web console.');
-      } else {
-        setErrorMessage('This account role is not supported on the web console.');
-      }
+      login(data);
+      navigate(home, { replace: true });
     } catch (error) {
       const apiMessage = error.response?.data?.message;
       setErrorMessage(apiMessage || 'Something went wrong while signing in. Please try again.');
