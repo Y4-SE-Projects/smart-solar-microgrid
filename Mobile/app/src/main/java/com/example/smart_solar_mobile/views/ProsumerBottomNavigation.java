@@ -19,10 +19,10 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.smart_solar_mobile.R;
+import com.example.smart_solar_mobile.activities.ProfileActivity;
 import com.example.smart_solar_mobile.activities.ProsumerHomeActivity;
 import com.example.smart_solar_mobile.activities.ReservationHistoryActivity;
 import com.example.smart_solar_mobile.activities.StationMapActivity;
-import com.google.android.material.snackbar.Snackbar;
 
 import java.util.EnumMap;
 
@@ -103,10 +103,7 @@ public class ProsumerBottomNavigation extends LinearLayout {
                     selected ? "sans-serif-medium" : "sans-serif", Typeface.NORMAL));
 
             String name = label.getText().toString();
-            if (destination == Destination.PROFILE) {
-                item.setContentDescription(getContext().getString(
-                        R.string.prosumer_nav_profile_description));
-            } else if (selected) {
+            if (selected) {
                 item.setContentDescription(getContext().getString(
                         R.string.prosumer_nav_selected_description, name));
             } else {
@@ -118,11 +115,6 @@ public class ProsumerBottomNavigation extends LinearLayout {
     private void navigate(Destination destination) {
         // Reuses each top-level Activity and keeps Home as the root of Prosumer navigation.
         if (host == null || destination == currentDestination) return;
-        if (destination == Destination.PROFILE) {
-            Snackbar.make(this, R.string.prosumer_nav_profile_unavailable,
-                    Snackbar.LENGTH_SHORT).show();
-            return;
-        }
 
         Class<?> target;
         switch (destination) {
@@ -134,6 +126,9 @@ public class ProsumerBottomNavigation extends LinearLayout {
                 break;
             case BOOKINGS:
                 target = ReservationHistoryActivity.class;
+                break;
+            case PROFILE:
+                target = ProfileActivity.class;
                 break;
             default:
                 return;

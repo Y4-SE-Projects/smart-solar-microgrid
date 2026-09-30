@@ -1,6 +1,6 @@
 // File: SessionManager.java
 // Purpose: Starts, reads and ends the signed-in session, keeping SQLite and memory in step.
-// Author: IT23215856
+// Author: IT23215856, IT23218512 (updateFullName)
 
 package com.example.smart_solar_mobile.db;
 
@@ -74,6 +74,23 @@ public class SessionManager {
         // Signs out by removing the session from memory and SQLite
         executor.execute(() -> {
             clearNow();
+            mainHandler.post(onDone);
+        });
+    }
+
+    public void updateFullName(String fullName, Runnable onDone) {
+        // Keeps the saved name in step after a profile edit, so the dashboard greets the Prosumer by the new name
+        executor.execute(() -> {
+            synchronized (this) {
+                SessionEntity session = readSession();
+                if (session != null) {
+                    session.fullName = fullName;
+                    // Only rewrites SQLite when "remember me" stored the session there
+                    if (sessionDao.getSession() != null) {
+                        sessionDao.saveSession(session);
+                    }
+                }
+            }
             mainHandler.post(onDone);
         });
     }

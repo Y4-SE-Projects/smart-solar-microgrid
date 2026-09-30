@@ -17,6 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.smart_solar_mobile.R;
+import com.example.smart_solar_mobile.db.SessionEntity;
 import com.example.smart_solar_mobile.db.SessionManager;
 import com.example.smart_solar_mobile.models.DashboardCounts;
 import com.example.smart_solar_mobile.models.ReservationData;
@@ -124,12 +125,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                 Navigator.openLogin(this, false);
                 return;
             }
-            String name = session.fullName == null || session.fullName.trim().isEmpty()
-                    ? session.identifier : session.fullName.trim();
-            ((TextView) findViewById(R.id.bannerNameText)).setText(name);
-            ((TextView) findViewById(R.id.avatarText)).setText(NameUtils.initialsOf(name));
-            ((TextView) findViewById(R.id.nameText)).setText(name);
-            ((TextView) findViewById(R.id.nicText)).setText(getString(R.string.home_nic, session.identifier));
+            renderIdentity(session);
 
             prosumerNic = session.identifier;
             loadProfile();
@@ -141,13 +137,29 @@ public class ProsumerHomeActivity extends AppCompatActivity {
 
     @Override
     protected void onResume() {
-        // Refreshes the greeting, counts and bookings on return, so they are right after booking or cancelling
+        // Refreshes the greeting, name, counts and bookings on return, so they are right after booking,
+        // cancelling or editing the profile
         super.onResume();
         greetingText.setText(greetingForNow());
         if (prosumerNic != null) {
+            SessionManager.getInstance().loadSession(session -> {
+                if (session != null && !isFinishing() && !isDestroyed()) {
+                    renderIdentity(session);
+                }
+            });
             loadCounts();
             loadBookings();
         }
+    }
+
+    private void renderIdentity(SessionEntity session) {
+        // Shows the signed-in Prosumer's name, initials and NIC from the saved session
+        String name = session.fullName == null || session.fullName.trim().isEmpty()
+                ? session.identifier : session.fullName.trim();
+        ((TextView) findViewById(R.id.bannerNameText)).setText(name);
+        ((TextView) findViewById(R.id.avatarText)).setText(NameUtils.initialsOf(name));
+        ((TextView) findViewById(R.id.nameText)).setText(name);
+        ((TextView) findViewById(R.id.nicText)).setText(getString(R.string.home_nic, session.identifier));
     }
 
     @Override

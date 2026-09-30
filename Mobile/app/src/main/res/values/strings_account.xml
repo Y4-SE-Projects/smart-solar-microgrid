@@ -56,6 +56,44 @@
     <string name="register_have_account">Already have an account?</string>
     <string name="register_sign_in_link">Sign in</string>
 
+    <!-- Profile ("My Account"). Field labels, hints and "required" errors reuse the register_* and login_* strings -->
+    <string name="profile_title">My Account</string>
+    <string name="profile_subtitle">Your details and account settings</string>
+    <string name="profile_loading">Loading your profile…</string>
+    <string name="profile_load_error">Your profile could not be loaded</string>
+    <string name="profile_nic_locked">Your NIC is your account ID and can\'t be changed.</string>
+    <string name="profile_details_title">Personal details</string>
+    <string name="profile_save">Save Changes</string>
+    <string name="profile_saving">Saving…</string>
+    <string name="profile_saved">Profile updated.</string>
+    <string name="profile_security_title">Password</string>
+    <string name="profile_security_body">Change the password you use to sign in. You\'ll stay signed in on this phone.</string>
+    <string name="profile_change_password">Change Password</string>
+    <string name="profile_danger_title">Deactivate account</string>
+    <string name="profile_danger_body">You won\'t be able to sign in or book energy slots. Only a Backoffice officer can reactivate your account.</string>
+    <string name="profile_deactivate">Deactivate Account</string>
+
+    <!-- Change password dialog -->
+    <string name="password_label_current">Current password</string>
+    <string name="password_hint_current">Enter your current password</string>
+    <string name="password_label_new">New password</string>
+    <string name="password_hint_new">Enter a new password</string>
+    <string name="password_label_confirm">Confirm new password</string>
+    <string name="password_hint_confirm">Re-enter the new password</string>
+    <string name="password_error_current_required">Enter your current password.</string>
+    <string name="password_error_new_required">Enter a new password.</string>
+    <string name="password_changing">Changing…</string>
+    <string name="password_changed">Password changed.</string>
+
+    <!-- Deactivate account dialog -->
+    <string name="deactivate_title">Deactivate your account?</string>
+    <string name="deactivate_body">You\'ll be signed out straight away and won\'t be able to sign in again until a Backoffice officer reactivates your account.</string>
+    <string name="deactivate_label_reason">Reason (optional)</string>
+    <string name="deactivate_hint_reason">Tell us why you\'re leaving</string>
+    <string name="deactivate_confirm">Deactivate</string>
+    <string name="deactivate_working">Deactivating…</string>
+    <string name="deactivate_done">Account deactivated. A Backoffice officer must reactivate it before you can sign in.</string>
+
     <!-- Login screen link to registration, and the message after registering -->
     <string name="login_no_account">Don\'t have an account?</string>
     <string name="login_register_link">Register as Prosumer</string>
