@@ -251,7 +251,7 @@ namespace API.Services
                 if (hasActiveReservation)
                 {
                     throw new InvalidOperationException(
-                        $"Slot '{slotId}' cannot be marked available while a reservation references it.");
+                        $"Slot '{slotId}' cannot be marked available as this slot is already reserved.");
                 }
             }
 

@@ -352,10 +352,10 @@ export default function SlotSchedulesPage() {
       {actionError && (
         <div
           role="alert"
-          className="mb-6 flex items-start justify-between gap-3 rounded-2xl bg-error-container px-5 py-3 text-body-sm text-on-error-container"
+          className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-error-container px-5 py-2 text-body-sm text-on-error-container"
         >
-          <span className="flex items-start gap-2">
-            <span className="material-symbols-outlined mt-0.5 text-[18px]" aria-hidden="true">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true">
               error
             </span>
             <span>
