@@ -37,6 +37,9 @@ public interface ApiService {
     @POST("users/login")
     Call<ApiResponse<AuthResponseData>> login(@Body LoginRequest request);
 
+    @POST("users/login/prosumer")
+    Call<ApiResponse<AuthResponseData>> loginProsumer(@Body LoginRequest request);
+
     // Public for Prosumers. The reply carries only a message, so there is no data type
     @POST("users/register")
     Call<ApiResponse<Void>> register(@Body RegisterRequest request);
