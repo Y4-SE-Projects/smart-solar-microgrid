@@ -106,6 +106,9 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                 SessionManager.getInstance().endSession(() -> Navigator.openLogin(this, false)));
         findViewById(R.id.countsRetryButton).setOnClickListener(v -> loadCounts());
         findViewById(R.id.bookingsRetryButton).setOnClickListener(v -> loadBookings());
+        findViewById(R.id.pendingDashboardCard).setOnClickListener(v ->
+                startActivity(new Intent(this, ReservationHistoryActivity.class)
+                        .putExtra(ReservationHistoryActivity.EXTRA_INITIAL_STATUS_FILTER, STATUS_PENDING)));
         // Direct booking works without location permission or a nearby-map result
         findViewById(R.id.directReservationButton).setOnClickListener(v ->
                 startActivity(new Intent(this, CreateReservationActivity.class)));
