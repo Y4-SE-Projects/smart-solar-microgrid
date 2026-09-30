@@ -4,7 +4,6 @@
 import { useEffect, useState } from 'react';
 import Modal from '../ui/Modal';
 import Dropdown from '../ui/Dropdown';
-import ReservationStatusBadge from './ReservationStatusBadge';
 import { fetchSlotsForStation } from '../../services/slotsApi';
 import { updateReservation } from '../../services/reservationApi';
 
@@ -37,19 +36,6 @@ function formatSlotWindow(slot) {
     return `${formatDate(start)} ${formatClock(start)} to ${formatClock(end)}`;
 }
 
-function Metadata({ label, children }) {
-    return (
-        <div className="min-w-0">
-            <dt className="text-label-sm font-semibold uppercase tracking-wider text-outline">
-                {label}
-            </dt>
-            <dd className="mt-1 break-words text-body-md font-semibold text-on-surface">
-                {children}
-            </dd>
-        </div>
-    );
-}
-
 export default function EditReservationModal({ reservation, onClose, onUpdated }) {
     const [slots, setSlots] = useState([]);
     const [selectedSlotId, setSelectedSlotId] = useState('');
@@ -65,7 +51,6 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
         if (!reservation.stationId) return undefined;
 
         let cancelled = false;
-        setIsLoadingSlots(true);
 
         fetchSlotsForStation(reservation.stationId)
             .then((response) => {
@@ -79,18 +64,10 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                         (slot) =>
                             slot.slotId === previous &&
                             slot.stationId === reservation.stationId &&
-                            (slot.isAvailable === true ||
-                                slot.slotId === reservation.slotId)
+                            slot.isAvailable === true &&
+                            slot.slotId !== reservation.slotId
                     );
-                    if (selectablePrevious) return previous;
-
-                    const currentSlot = stationSlots.find(
-                        (slot) =>
-                            slot.stationId === reservation.stationId &&
-                            slot.slotId === reservation.slotId
-                    );
-
-                    return currentSlot?.slotId || '';
+                    return selectablePrevious ? previous : '';
                 });
             })
             .catch((error) => {
@@ -117,28 +94,19 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
     const selectableSlots = slots.filter(
         (slot) =>
             slot.stationId === reservation.stationId &&
-            (slot.isAvailable === true ||
-                slot.slotId === reservation.slotId)
+            slot.isAvailable === true &&
+            slot.slotId !== reservation.slotId
     );
     const slotOptions = selectableSlots.map((slot) => ({
         value: slot.slotId,
-        label: slotLabel(slot),
+        label: formatSlotWindow(slot),
+        hint: slot.slotId,
     }));
 
     const selectedSlot =
         selectableSlots.find((slot) => slot.slotId === selectedSlotId) || null;
 
-    const selectedStart = selectedSlot ? asDate(selectedSlot.startTime) : null;
-    const selectedEnd = selectedSlot ? asDate(selectedSlot.endTime) : null;
     const currentScheduled = asDate(reservation.scheduledTime);
-    const isCurrentSlot = selectedSlot?.slotId === reservation.slotId;
-
-    function slotLabel(slot) {
-        const current = slot.slotId === reservation.slotId;
-
-        return `${formatSlotWindow(slot)}${current ? ' • Current reservation slot' : ''
-            }`;
-    }
 
     function retrySlots() {
         setIsLoadingSlots(true);
@@ -190,241 +158,95 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
 
     return (
         <Modal
-            title="Edit Reservation"
+            title="Edit reservation"
+            description={`Reservation ${reservation.reservationId}`}
             onClose={handleClose}
-            maxWidthClassName="max-w-2xl"
-            scrollable
+            maxWidthClassName="max-w-lg"
         >
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-slate pb-4">
-                    <div className="flex min-w-0 items-center gap-3">
-                        <span
-                            aria-hidden="true"
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint-surface text-primary"
-                        >
-                            <span className="material-symbols-outlined text-[21px]">
-                                confirmation_number
-                            </span>
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate aria-busy={isSubmitting}>
+                <div className="space-y-1 border-b border-border-slate pb-4 text-body-sm">
+                    <p className="text-on-surface-variant">
+                        Prosumer <strong className="font-semibold text-on-surface">{reservation.prosumerNic}</strong>
+                        {' · '}Station <strong className="font-semibold text-on-surface">{reservation.stationId || 'Unavailable'}</strong>
+                    </p>
+                    <p className="text-on-surface-variant">
+                        Current: <span className="font-medium text-on-surface">
+                            {currentScheduled ? (
+                                <>{formatDate(currentScheduled)} at {formatClock(currentScheduled)}</>
+                            ) : (
+                                'Time unavailable'
+                            )}
                         </span>
-                        <div className="min-w-0">
-                            <p className="text-label-sm font-semibold uppercase tracking-wider text-outline">
-                                Reservation ID
-                            </p>
-                            <p className="truncate text-body-md font-bold text-primary">
-                                {reservation.reservationId}
-                            </p>
-                        </div>
-                    </div>
-                    <ReservationStatusBadge status={reservation.status} />
+                        {' · '}Slot {reservation.slotId}
+                    </p>
                 </div>
 
-                <section className="rounded-2xl border border-border-slate bg-canvas-bg/60 p-4">
-                    <div className="mb-3 flex items-center gap-2">
-                        <span
-                            aria-hidden="true"
-                            className="material-symbols-outlined text-[19px] text-secondary"
-                        >
-                            history
-                        </span>
-                        <h3 className="text-title-md font-semibold text-primary">
-                            Current Booking
-                        </h3>
-                    </div>
-                    <dl className="grid gap-3 sm:grid-cols-2">
-                        <Metadata label="Prosumer NIC">{reservation.prosumerNic}</Metadata>
-                        <Metadata label="Station">{reservation.stationId}</Metadata>
-                        <Metadata label="Slot">{reservation.slotId}</Metadata>
-                        <Metadata label="Scheduled">
-                            {currentScheduled
-                                ? `${formatDate(currentScheduled)} · ${formatClock(
-                                    currentScheduled
-                                )}`
-                                : '—'}
-                        </Metadata>
-                    </dl>
-                </section>
-
-                <section className="rounded-2xl border border-border-slate bg-surface-container-lowest p-4 shadow-sm">
-                    <div className="mb-4 flex items-start gap-2">
-                        <span
-                            aria-hidden="true"
-                            className="material-symbols-outlined text-[19px] text-secondary"
-                        >
-                            edit_calendar
-                        </span>
-                        <div>
-                            <h3 className="text-title-md font-semibold text-primary">
-                                Updated Booking
-                            </h3>
-                            <p className="text-body-sm text-on-surface-variant">
-                                Choose a new booking window at the same station.
-                            </p>
+                <div className="space-y-2">
+                    <label
+                        htmlFor="edit-reservation-slot"
+                        className="block text-title-md font-semibold text-on-surface"
+                    >
+                        New booking slot
+                    </label>
+                    <p className="text-body-sm text-on-surface-variant">
+                        Choose a different date and time at the same station.
+                    </p>
+                    <Dropdown
+                        id="edit-reservation-slot"
+                        label="New booking slot"
+                        value={selectedSlotId}
+                        options={slotOptions}
+                        onChange={(slotId) => {
+                            setSelectedSlotId(slotId);
+                            setGeneralError('');
+                        }}
+                        placeholder="Select a new slot"
+                        disabled={
+                            isSubmitting ||
+                            !reservation.stationId ||
+                            isLoadingSlots ||
+                            Boolean(slotsError) ||
+                            selectableSlots.length === 0
+                        }
+                        searchable
+                        searchPlaceholder="Search dates, times, or slot IDs"
+                        required
+                    />
+                    {!reservation.stationId && (
+                        <p className="text-body-sm text-alert-danger">
+                            The station is unavailable. Refresh the reservation list before editing.
+                        </p>
+                    )}
+                    {isLoadingSlots && (
+                        <p className="text-body-sm text-on-surface-variant">
+                            Loading available slots...
+                        </p>
+                    )}
+                    {!isLoadingSlots && slotsError && (
+                        <div role="alert" className="flex flex-wrap items-center gap-2 text-body-sm text-alert-danger">
+                            <span>{slotsError}</span>
+                            <button type="button" onClick={retrySlots} className="font-semibold underline">
+                                Retry
+                            </button>
                         </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <div className="rounded-xl border border-secondary/20 bg-mint-surface/25 p-3.5">
-                            <p className="text-label-sm font-semibold uppercase tracking-wider text-secondary">
-                                Booking station · Fixed
-                            </p>
-                            <div className="mt-2 flex min-w-0 items-center gap-2.5">
-                                <span
-                                    aria-hidden="true"
-                                    className="material-symbols-outlined flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-mint-surface text-[19px] text-primary"
-                                >
-                                    ev_station
-                                </span>
-                                <span className="min-w-0 break-all text-title-md font-bold text-primary">
-                                    {reservation.stationId || 'Station unavailable'}
-                                </span>
-                            </div>
-                            <p className="mt-2 text-body-sm text-on-surface-variant">
-                                This station stays with the reservation. Choose another slot here to change its time.
-                            </p>
-                        </div>
-
-                        <div className="space-y-1">
-                            <label
-                                htmlFor="edit-reservation-slot"
-                                className="text-label-md font-medium text-on-surface"
-                            >
-                                Booking Slot
-                            </label>
-                            <Dropdown
-                                id="edit-reservation-slot"
-                                label="Booking Slot"
-                                value={selectedSlotId}
-                                options={slotOptions}
-                                onChange={(slotId) => {
-                                    setSelectedSlotId(slotId);
-                                    setGeneralError('');
-                                }}
-                                placeholder="Select a booking slot"
-                                disabled={
-                                    isSubmitting ||
-                                    !reservation.stationId ||
-                                    isLoadingSlots ||
-                                    Boolean(slotsError) ||
-                                    selectableSlots.length === 0
-                                }
-                                searchable
-                                searchPlaceholder="Search booking windows"
-                                required
-                            />
-                            {!reservation.stationId && (
-                                <p className="text-body-sm text-alert-danger">
-                                    The reservation station is unavailable. Refresh the reservation list before editing.
-                                </p>
-                            )}
-                            {isLoadingSlots && (
-                                <p className="text-body-sm text-on-surface-variant">
-                                    Loading station slots...
-                                </p>
-                            )}
-                            {!isLoadingSlots && slotsError && (
-                                <div
-                                    role="alert"
-                                    className="flex flex-wrap items-center gap-2 text-body-sm text-alert-danger"
-                                >
-                                    <span>{slotsError}</span>
-                                    <button
-                                        type="button"
-                                        onClick={retrySlots}
-                                        className="font-semibold underline"
-                                    >
-                                        Retry
-                                    </button>
-                                </div>
-                            )}
-                            {!isLoadingSlots &&
-                                !slotsError &&
-                                reservation.stationId &&
-                                slots.length === 0 && (
-                                    <p className="text-body-sm text-on-surface-variant">
-                                        No slots are defined for this station.
-                                    </p>
-                                )}
-                            {!isLoadingSlots &&
-                                !slotsError &&
-                                slots.length > 0 &&
-                                selectableSlots.length === 0 && (
-                                    <p className="text-body-sm text-on-surface-variant">
-                                        No selectable booking slots are available at this station.
-                                    </p>
-                                )}
-                            {isCurrentSlot && (
-                                <p className="flex items-center gap-1.5 text-body-sm text-primary">
-                                    <span
-                                        aria-hidden="true"
-                                        className="material-symbols-outlined text-[15px]"
-                                    >
-                                        verified
-                                    </span>
-                                    This is the slot held by the current reservation.
-                                </p>
-                            )}
-                        </div>
-                    </div>
-                </section>
-
-                {selectedSlot && selectedStart && selectedEnd && (
-                    <section className="rounded-2xl border border-secondary/20 bg-mint-surface/30 p-4">
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                                <span
-                                    aria-hidden="true"
-                                    className="material-symbols-outlined text-[18px] text-secondary"
-                                >
-                                    event_available
-                                </span>
-                                <h3 className="text-title-md font-semibold text-primary">
-                                    Selected Booking Preview
-                                </h3>
-                            </div>
-                            {isCurrentSlot && (
-                                <span className="rounded-full bg-mint-surface px-2.5 py-0.5 text-label-sm font-semibold text-primary">
-                                    Current slot
-                                </span>
-                            )}
-                        </div>
-                        <dl className="grid gap-3 sm:grid-cols-3">
-                            <Metadata label="Station">{reservation.stationId}</Metadata>
-                            <Metadata label="Scheduled">{formatDate(selectedStart)}</Metadata>
-                            <Metadata label="Window">
-                                {formatClock(selectedStart)} to {formatClock(selectedEnd)}
-                            </Metadata>
-                        </dl>
-                    </section>
-                )}
-
-                <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-border-slate bg-canvas-bg/70 p-3">
-                    <div className="flex min-w-0 items-start gap-2">
-                        <span
-                            aria-hidden="true"
-                            className="material-symbols-outlined text-[19px] text-primary"
-                        >
-                            verified_user
-                        </span>
-                        <div>
-                            <p className="text-body-sm font-semibold text-on-surface">
-                                Reservation Update Policy
-                            </p>
-                            <p className="mt-0.5 text-body-sm text-on-surface-variant">
-                                Changes need at least 12 hours’ notice before both times and must stay within 7 days of the original booking’s creation. HelioGrid validates this when you save.
-                            </p>
-                        </div>
-                    </div>
+                    )}
+                    {!isLoadingSlots && !slotsError && reservation.stationId && selectableSlots.length === 0 && (
+                        <p className="text-body-sm text-on-surface-variant">
+                            No other available slots at this station.
+                        </p>
+                    )}
                 </div>
+
+                <p className="border-t border-border-slate pt-4 text-body-sm leading-relaxed text-on-surface-variant">
+                    Both booking times need at least 12 hours’ notice. The new slot must be within 7 days of the reservation’s creation.
+                </p>
 
                 {generalError && (
                     <div
                         role="alert"
                         className="flex items-start gap-2 rounded-xl bg-error-container px-space-md py-space-sm text-body-sm text-on-error-container"
                     >
-                        <span
-                            aria-hidden="true"
-                            className="material-symbols-outlined mt-0.5 text-[18px]"
-                        >
+                        <span aria-hidden="true" className="material-symbols-outlined mt-0.5 text-[18px]">
                             error
                         </span>
                         <span>{generalError}</span>
@@ -438,17 +260,14 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                         disabled={isSubmitting}
                         className="rounded-full px-5 py-2.5 text-sm font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low disabled:opacity-60"
                     >
-                        Keep Current
+                        Cancel
                     </button>
                     <button
                         type="submit"
                         disabled={cannotSubmit}
-                        className="inline-flex items-center justify-center gap-2 rounded-full bg-primary-container px-5 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-all hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-full bg-primary-container px-5 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
-                            save
-                        </span>
-                        {isSubmitting ? 'Updating...' : 'Update Reservation'}
+                        {isSubmitting ? 'Saving...' : 'Save changes'}
                     </button>
                 </div>
             </form>

@@ -24,6 +24,20 @@
     var searchCircle = null;
     var userMarker = null;
     var stationMarkers = [];
+    var showAllStations = false;
+    var mapPadding = { top: 0, bottom: 0, left: 24, right: 24 };
+
+    function fitAllStations() {
+        var bounds = new google.maps.LatLngBounds();
+        bounds.extend(userMarker.getPosition());
+        stationMarkers.forEach(function (marker) { bounds.extend(marker.getPosition()); });
+        if (stationMarkers.length === 0) {
+            map.setCenter(userMarker.getPosition());
+            map.setZoom(11);
+        } else {
+            map.fitBounds(bounds, mapPadding);
+        }
+    }
 
     // Google calls this when the API key is rejected
     window.gm_authFailure = function () {
@@ -48,21 +62,26 @@
     }
 
     window.HelioMap = {
-        // Draws the search radius and the user's position, and frames the whole circle
+        // Draws the user's position, then frames the radius or all station markers
         showSearch: function (lat, lng, radiusMeters, paddingTop, paddingBottom) {
             var center = { lat: lat, lng: lng };
+            showAllStations = radiusMeters === 0;
+            mapPadding = { top: paddingTop, bottom: paddingBottom, left: 24, right: 24 };
             if (searchCircle) { searchCircle.setMap(null); }
             if (userMarker) { userMarker.setMap(null); }
-            searchCircle = new google.maps.Circle({
-                map: map,
-                center: center,
-                radius: radiusMeters,
-                strokeColor: STATION_GREEN,
-                strokeWeight: 2,
-                fillColor: STATION_GREEN,
-                fillOpacity: 0.12,
-                clickable: false
-            });
+            searchCircle = null;
+            if (!showAllStations) {
+                searchCircle = new google.maps.Circle({
+                    map: map,
+                    center: center,
+                    radius: radiusMeters,
+                    strokeColor: STATION_GREEN,
+                    strokeWeight: 2,
+                    fillColor: STATION_GREEN,
+                    fillOpacity: 0.12,
+                    clickable: false
+                });
+            }
             userMarker = new google.maps.Marker({
                 map: map,
                 position: center,
@@ -77,7 +96,11 @@
                     strokeWeight: 2
                 }
             });
-            map.fitBounds(searchCircle.getBounds(), { top: paddingTop, bottom: paddingBottom, left: 24, right: 24 });
+            if (showAllStations) {
+                fitAllStations();
+            } else {
+                map.fitBounds(searchCircle.getBounds(), mapPadding);
+            }
         },
 
         // Replaces the station markers; each item is { stationId, title, lat, lng }
@@ -104,6 +127,7 @@
                 });
                 return marker;
             });
+            if (showAllStations) { fitAllStations(); }
         }
     };
 </script>

@@ -1,5 +1,5 @@
 // File: LoginRequest.java
-// Purpose: Request body for POST /api/users/login.
+// Purpose: Request body for the staff and Prosumer login endpoints.
 // Author: IT23215856
 
 package com.example.smart_solar_mobile.models;

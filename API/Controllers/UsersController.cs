@@ -140,25 +140,39 @@ namespace API.Controllers
             return Ok(new { success = true, message = "Registration successful." });
         }
 
-        // Logs a user in with NIC (Prosumer) or Username (Backoffice/GridOperator) plus password, and returns a signed JWT on success.
+        // Logs a Backoffice or GridOperator user in with a username and password.
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequest request)
+        public Task<IActionResult> Login([FromBody] LoginRequest request)
+        {
+            return LoginByRoleAsync(request, prosumerOnly: false);
+        }
+
+        // Logs a Prosumer in with a NIC and password.
+        [HttpPost("login/prosumer")]
+        public Task<IActionResult> LoginProsumer([FromBody] LoginRequest request)
+        {
+            return LoginByRoleAsync(request, prosumerOnly: true);
+        }
+
+        // Shares password, platform, account-status, and token handling between the two login routes.
+        private async Task<IActionResult> LoginByRoleAsync(LoginRequest request, bool prosumerOnly)
         {
             var identifier = request.Identifier?.Trim() ?? string.Empty;
 
-            // The exact value is tried first so accounts registered before NICs were normalised still sign in as typed. 
-            // The normalised form then matches an NIC stored as "...V" when the Prosumer types "...v".
-            var user = await _userService.FindByNicAsync(identifier)
-                       ?? (NicFormat.IsValid(identifier) ? await _userService.FindByNicAsync(NicFormat.Normalize(identifier)) : null)
-                       ?? await _userService.FindByUsernameAsync(identifier);
+            // Try the exact NIC before normalizing to support accounts created before NIC normalization.
+            User? user = prosumerOnly
+                ? await _userService.FindByNicAsync(identifier)
+                  ?? (NicFormat.IsValid(identifier) ? await _userService.FindByNicAsync(NicFormat.Normalize(identifier)) : null)
+                : await _userService.FindByUsernameAsync(identifier);
 
-            // Separate guard clauses so the compiler knows "user" is non-null from this point on.
-            if (user == null)
+            if (user == null ||
+                (prosumerOnly && user.Role != Roles.Prosumer) ||
+                (!prosumerOnly && user.Role != Roles.Backoffice && user.Role != Roles.GridOperator))
             {
                 return Unauthorized(new { success = false, message = "Invalid credentials." });
             }
 
-            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+            if (string.IsNullOrEmpty(request.Password) || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             {
                 return Unauthorized(new { success = false, message = "Invalid credentials." });
             }

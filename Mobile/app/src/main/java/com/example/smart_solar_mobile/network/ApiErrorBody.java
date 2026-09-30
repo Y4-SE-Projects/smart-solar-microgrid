@@ -5,7 +5,7 @@
 package com.example.smart_solar_mobile.network;
 
 public class ApiErrorBody {
-    // "code" value on the 401 a deactivated Prosumer gets from POST /api/users/login
+    // "code" value on the 401 a deactivated Prosumer gets from POST /api/users/login/prosumer
     public static final String CODE_ACCOUNT_DEACTIVATED = "ACCOUNT_DEACTIVATED";
 
     public boolean success;

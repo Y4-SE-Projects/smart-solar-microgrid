@@ -2,12 +2,8 @@
 // Purpose: Display an approximate time to execution; the API decides eligibility.
 
 export default function ReservationTimeIndicator({ scheduledTime, status, now }) {
-    if (status === 'Completed') {
-        return <span className="text-xs font-medium text-outline">Executed</span>;
-    }
-
-    if (status === 'Cancelled' || status === 'Declined') {
-        return <span className="text-xs font-medium text-outline">{status}</span>;
+    if (status === 'Completed' || status === 'Cancelled' || status === 'Declined') {
+        return <span className="text-xs text-outline">—</span>;
     }
 
     const scheduled = new Date(scheduledTime).getTime();
@@ -21,30 +17,26 @@ export default function ReservationTimeIndicator({ scheduledTime, status, now })
 
     const remaining = scheduled - now;
     if (remaining <= 0) {
-        return <span className="text-xs font-medium text-outline">Elapsed</span>;
+        return <span className="text-xs text-outline">—</span>;
     }
 
     const minutes = Math.ceil(remaining / 60000);
-    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(minutes / (24 * 60));
+    const hours = Math.floor((minutes % (24 * 60)) / 60);
     const minutePart = minutes % 60;
-    const timeText = hours > 0 ? `${hours}h ${minutePart}m` : `${minutes}m`;
+    const timeText = days > 0
+        ? `${days}d ${hours}h ${minutePart}min`
+        : hours > 0 ? `${hours}h ${minutePart}min` : `${minutes}min`;
     const withinTwelveHours = remaining < 12 * 60 * 60 * 1000;
 
     return (
         <span
-            title="Display estimate only; the API decides whether changes are allowed."
-            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums ${withinTwelveHours
-                    ? 'bg-error-container text-alert-danger'
-                    : 'bg-surface-container-high text-primary'
+            className={`whitespace-nowrap font-medium tabular-nums ${withinTwelveHours
+                    ? 'text-alert-danger'
+                    : 'text-on-surface-variant'
                 }`}
         >
-            <span aria-hidden="true" className="material-symbols-outlined text-[15px]">
-                {withinTwelveHours ? 'schedule' : 'schedule'}
-            </span>
             {timeText}
-            <span className="font-medium">
-                {withinTwelveHours ? 'Within 12h' : 'until start'}
-            </span>
         </span>
     );
 }

@@ -37,6 +37,9 @@ public interface ApiService {
     @POST("users/login")
     Call<ApiResponse<AuthResponseData>> login(@Body LoginRequest request);
 
+    @POST("users/login/prosumer")
+    Call<ApiResponse<AuthResponseData>> loginProsumer(@Body LoginRequest request);
+
     // Public for Prosumers. The reply carries only a message, so there is no data type
     @POST("users/register")
     Call<ApiResponse<Void>> register(@Body RegisterRequest request);
@@ -102,6 +105,10 @@ public interface ApiService {
     // Every station, active and deactivated, sorted by stationId
     @GET("stations")
     Call<ApiResponse<List<SolarStation>>> getStations();
+
+    // All active stations, without a radius filter
+    @GET("stations?activeOnly=true")
+    Call<ApiResponse<List<SolarStation>>> getActiveStations();
 
     // month is "yyyy-MM"; the API pads it by a day on each side, so filter to local dates after loading
     @GET("stations/{stationId}/slots")
