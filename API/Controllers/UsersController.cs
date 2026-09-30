@@ -574,7 +574,7 @@ namespace API.Controllers
         }
 
         // Verifies a NIC and password for the two public reactivation endpoints.
-        // Returns null when the NIC is unknown, the password is wrong, or the account isn't a Prosumer. 
+        // Returns null when the NIC is unknown, the password is wrong, or the account isn't a Prosumer.
         private async Task<User?> AuthenticateProsumerAsync(string nic, string password)
         {
             if (string.IsNullOrWhiteSpace(nic) || string.IsNullOrEmpty(password))
@@ -582,7 +582,11 @@ namespace API.Controllers
                 return null;
             }
 
-            var user = await _userService.FindByNicAsync(nic);
+            // Same lookup as Login, so any NIC that signs in (e.g. typed with a lowercase "v") also works here.
+            // The exact value first for accounts stored before NICs were normalised, then the normalised form.
+            var identifier = nic.Trim();
+            var user = await _userService.FindByNicAsync(identifier)
+                       ?? (NicFormat.IsValid(identifier) ? await _userService.FindByNicAsync(NicFormat.Normalize(identifier)) : null);
             if (user == null || user.Role != Roles.Prosumer)
             {
                 return null;
