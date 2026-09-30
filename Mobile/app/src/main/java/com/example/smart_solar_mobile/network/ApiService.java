@@ -69,6 +69,10 @@ public interface ApiService {
     @GET("stations")
     Call<ApiResponse<List<SolarStation>>> getStations();
 
+    // All active stations, without a radius filter
+    @GET("stations?activeOnly=true")
+    Call<ApiResponse<List<SolarStation>>> getActiveStations();
+
     // month is "yyyy-MM"; the API pads it by a day on each side, so filter to local dates after loading
     @GET("stations/{stationId}/slots")
     Call<ApiResponse<List<EnergyBookingSlot>>> getStationSlots(@Path("stationId") String stationId,

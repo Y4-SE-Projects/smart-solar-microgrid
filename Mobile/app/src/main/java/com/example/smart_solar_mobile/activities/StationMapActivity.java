@@ -1,5 +1,5 @@
 // File: StationMapActivity.java
-// Purpose: Prosumer station finder: finds the user's location, shows active stations within the chosen radius on a Google map, and opens a station's slots.
+// Purpose: Prosumer station finder: shows active stations within a chosen radius or all active stations on a Google map, and opens a station's slots.
 // Author: IT23215856
 
 package com.example.smart_solar_mobile.activities;
@@ -64,7 +64,8 @@ import retrofit2.Response;
 
 public class StationMapActivity extends AppCompatActivity {
     private static final String TAG = "StationMap";
-    private static final int[] RADIUS_OPTIONS_KM = {1, 5, 10, 25, 50};
+    private static final int ALL_STATIONS = 0;
+    private static final int[] RADIUS_OPTIONS_KM = {5, 10, 25, 50, ALL_STATIONS};
     private static final int DEFAULT_RADIUS_KM = 10;
     private static final String STATE_RADIUS_KM = "radius_km";
     private static final String[] LOCATION_PERMISSIONS = {
@@ -113,6 +114,10 @@ public class StationMapActivity extends AppCompatActivity {
 
         if (savedInstanceState != null) {
             radiusKm = savedInstanceState.getInt(STATE_RADIUS_KM, DEFAULT_RADIUS_KM);
+            if (radiusKm != 5 && radiusKm != 10 && radiusKm != 25 && radiusKm != 50
+                    && radiusKm != ALL_STATIONS) {
+                radiusKm = DEFAULT_RADIUS_KM;
+            }
         }
 
         findViewById(R.id.backButton).setOnClickListener(v -> finish());
@@ -259,7 +264,7 @@ public class StationMapActivity extends AppCompatActivity {
     }
 
     private void drawSearchArea() {
-        // Draws the radius around the user and frames it, keeping clear of the chips and the status card
+        // Frames the selected radius or all stations, keeping clear of the chips and status card
         if (!mapReady || userLocation == null) {
             return;
         }
@@ -308,7 +313,7 @@ public class StationMapActivity extends AppCompatActivity {
         for (int km : RADIUS_OPTIONS_KM) {
             Chip chip = (Chip) inflater.inflate(R.layout.item_radius_chip, radiusChips, false);
             chip.setId(View.generateViewId());
-            chip.setText(getString(R.string.radius_km, km));
+            chip.setText(km == ALL_STATIONS ? getString(R.string.radius_all) : getString(R.string.radius_km, km));
             chip.setTag(km);
             radiusChips.addView(chip);
             chip.setChecked(km == radiusKm);
@@ -321,7 +326,7 @@ public class StationMapActivity extends AppCompatActivity {
             int km = (Integer) chip.getTag();
             if (km != radiusKm) {
                 radiusKm = km;
-                searchNearby();
+                searchStations();
             }
         });
     }
@@ -376,7 +381,7 @@ public class StationMapActivity extends AppCompatActivity {
     private void onLocation(Location location) {
         // Centres the search on the user's position
         userLocation = location;
-        searchNearby();
+        searchStations();
     }
 
     private void onPermissionResult() {
@@ -406,8 +411,8 @@ public class StationMapActivity extends AppCompatActivity {
 
     // ---- Stations ----
 
-    private void searchNearby() {
-        // Asks the API for active stations within the chosen radius of the user
+    private void searchStations() {
+        // Asks for all active stations or those within the selected radius
         if (userLocation == null) {
             return;
         }
@@ -418,8 +423,10 @@ public class StationMapActivity extends AppCompatActivity {
             nearbyCall.cancel();
         }
         int requestedRadiusKm = radiusKm;
-        Call<ApiResponse<List<SolarStation>>> call = NetworkManager.getInstance().getApiService()
-                .getNearbyStations(userLocation.getLatitude(), userLocation.getLongitude(), requestedRadiusKm);
+        Call<ApiResponse<List<SolarStation>>> call = requestedRadiusKm == ALL_STATIONS
+                ? NetworkManager.getInstance().getApiService().getActiveStations()
+                : NetworkManager.getInstance().getApiService().getNearbyStations(
+                        userLocation.getLatitude(), userLocation.getLongitude(), requestedRadiusKm);
         nearbyCall = call;
         call.enqueue(new Callback<ApiResponse<List<SolarStation>>>() {
             @Override
@@ -434,7 +441,7 @@ public class StationMapActivity extends AppCompatActivity {
                     showStations(body.data, requestedRadiusKm);
                 } else {
                     showStatus(ApiErrorParser.getMessage(StationMapActivity.this, response), false,
-                            R.string.retry, v -> searchNearby());
+                            R.string.retry, v -> searchStations());
                 }
             }
 
@@ -444,7 +451,7 @@ public class StationMapActivity extends AppCompatActivity {
                 if (isFinishing() || isDestroyed() || call.isCanceled() || call != nearbyCall) {
                     return;
                 }
-                showStatus(getString(R.string.error_network), false, R.string.retry, v -> searchNearby());
+                showStatus(getString(R.string.error_network), false, R.string.retry, v -> searchStations());
             }
         });
     }
@@ -455,9 +462,16 @@ public class StationMapActivity extends AppCompatActivity {
         stations.addAll(found);
         drawStations();
 
-        String message = found.isEmpty()
-                ? getString(R.string.no_stations_within, searchedRadiusKm)
-                : getResources().getQuantityString(R.plurals.stations_within, found.size(), found.size(), searchedRadiusKm);
+        String message;
+        if (searchedRadiusKm == ALL_STATIONS) {
+            message = found.isEmpty()
+                    ? getString(R.string.no_stations_available)
+                    : getResources().getQuantityString(R.plurals.stations_all, found.size(), found.size());
+        } else {
+            message = found.isEmpty()
+                    ? getString(R.string.no_stations_within, searchedRadiusKm)
+                    : getResources().getQuantityString(R.plurals.stations_within, found.size(), found.size(), searchedRadiusKm);
+        }
         showStatus(message, false, 0, null);
     }
 
