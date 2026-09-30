@@ -31,7 +31,6 @@
 
     <!-- Home -->
     <string name="home_sign_out">Sign out</string>
-    <string name="home_greeting">Hello, %1$s</string>
     <string name="home_nic">NIC: %1$s</string>
     <string name="retry">Retry</string>
     <string name="refresh">Refresh</string>

@@ -1,16 +1,22 @@
 package com.example.smart_solar_mobile.network;
 
 import com.example.smart_solar_mobile.models.AuthResponseData;
+import com.example.smart_solar_mobile.models.ChangePasswordRequest;
 import com.example.smart_solar_mobile.models.CreateReservationRequest;
 import com.example.smart_solar_mobile.models.DashboardCounts;
+import com.example.smart_solar_mobile.models.DeactivateAccountRequest;
 import com.example.smart_solar_mobile.models.EnergyBookingSlot;
 import com.example.smart_solar_mobile.models.LoginRequest;
 import com.example.smart_solar_mobile.models.QrResponse;
+import com.example.smart_solar_mobile.models.ReactivationRequest;
+import com.example.smart_solar_mobile.models.RegisterRequest;
 import com.example.smart_solar_mobile.models.QrScanEntryResponse;
 import com.example.smart_solar_mobile.models.ReservationData;
 import com.example.smart_solar_mobile.models.SetSlotAvailabilityRequest;
 import com.example.smart_solar_mobile.models.SolarStation;
+import com.example.smart_solar_mobile.models.UpdateProfileRequest;
 import com.example.smart_solar_mobile.models.UpdateReservationRequest;
+import com.example.smart_solar_mobile.models.UserProfile;
 import com.example.smart_solar_mobile.models.VerifyQrRequest;
 import com.example.smart_solar_mobile.models.VerifyQrResponse;
 
@@ -30,6 +36,34 @@ public interface ApiService {
 
     @POST("users/login")
     Call<ApiResponse<AuthResponseData>> login(@Body LoginRequest request);
+
+    // Public for Prosumers. The reply carries only a message, so there is no data type
+    @POST("users/register")
+    Call<ApiResponse<Void>> register(@Body RegisterRequest request);
+
+    // Prosumer only, own NIC; any other NIC is a 403. Always pass the NIC from the session
+    @GET("users/{nic}")
+    Call<ApiResponse<UserProfile>> getProfile(@Path("nic") String nic);
+
+    // Prosumer only, own NIC. Saves full name, email and phone
+    @PUT("users/{nic}")
+    Call<ApiResponse<Void>> updateProfile(@Path("nic") String nic, @Body UpdateProfileRequest request);
+
+    // Prosumer only, own NIC. A wrong current password is a 400, not a 401, so it never signs the user out
+    @PUT("users/{nic}/password")
+    Call<ApiResponse<Void>> changePassword(@Path("nic") String nic, @Body ChangePasswordRequest request);
+
+    // Prosumer only, own NIC. Only a Backoffice user can reactivate the account afterwards
+    @PUT("users/{nic}/deactivate")
+    Call<ApiResponse<Void>> deactivateAccount(@Path("nic") String nic, @Body DeactivateAccountRequest request);
+
+    // Public: a deactivated account has no token, so NIC and password in the body authenticate the call
+    @POST("users/reactivation-request")
+    Call<ApiResponse<Void>> requestReactivation(@Body ReactivationRequest request);
+
+    // Public, same credentials as above. Withdraws a request still waiting for Backoffice
+    @POST("users/reactivation-request/cancel")
+    Call<ApiResponse<Void>> cancelReactivationRequest(@Body ReactivationRequest request);
 
     @POST("reservations")
     Call<ApiResponse<ReservationData>> createReservation(
