@@ -102,7 +102,7 @@
     <string name="deactivated_requesting">Sending…</string>
     <string name="deactivated_not_now">Not now</string>
     <string name="deactivated_requested">Reactivation request sent. A Backoffice officer will review it.</string>
-    <string name="pending_title">Reactivation pending</string>
+    <string name="account_reactivation_pending_title">Reactivation pending</string>
     <string name="pending_body">Your reactivation request is waiting for a Backoffice officer to review it. You can sign in once it\'s approved.</string>
     <string name="pending_cancel_request">Cancel Request</string>
     <string name="pending_cancelling">Cancelling…</string>
