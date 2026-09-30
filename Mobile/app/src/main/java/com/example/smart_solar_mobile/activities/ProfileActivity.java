@@ -29,6 +29,7 @@ import com.example.smart_solar_mobile.models.UserProfile;
 import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
+import com.example.smart_solar_mobile.utils.DialogUtils;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
 import com.example.smart_solar_mobile.utils.NameUtils;
 import com.example.smart_solar_mobile.utils.TimeUtils;
@@ -369,7 +370,7 @@ public class ProfileActivity extends AppCompatActivity {
             currentLayout.setError(null);
             newLayout.setError(null);
             confirmLayout.setError(null);
-            hideDialogError(content);
+            DialogUtils.hideError(content);
 
             // Local checks only save a round trip; the 8-character minimum, "different from current" and
             // the current-password check all belong to the API
@@ -392,7 +393,7 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void changePassword(AlertDialog dialog, View content, String current, String next) {
         // Sends the change; a wrong current password comes back as a 400, so it never signs the user out
-        setDialogBusy(dialog, content, true, R.string.password_changing, R.string.profile_change_password);
+        DialogUtils.setBusy(dialog, content, true, R.string.password_changing, R.string.profile_change_password);
         passwordCall = NetworkManager.getInstance().getApiService()
                 .changePassword(prosumerNic, new ChangePasswordRequest(current, next));
         final Call<ApiResponse<Void>> call = passwordCall;
@@ -408,8 +409,8 @@ public class ProfileActivity extends AppCompatActivity {
                     dialog.dismiss();
                     Snackbar.make(findViewById(R.id.profileRoot), R.string.password_changed, Snackbar.LENGTH_SHORT).show();
                 } else {
-                    setDialogBusy(dialog, content, false, R.string.password_changing, R.string.profile_change_password);
-                    showDialogError(content, ApiErrorParser.getMessage(ProfileActivity.this, response));
+                    DialogUtils.setBusy(dialog, content, false, R.string.password_changing, R.string.profile_change_password);
+                    DialogUtils.showError(content, ApiErrorParser.getMessage(ProfileActivity.this, response));
                 }
             }
 
@@ -419,8 +420,8 @@ public class ProfileActivity extends AppCompatActivity {
                 if (isStale(call, passwordCall)) {
                     return;
                 }
-                setDialogBusy(dialog, content, false, R.string.password_changing, R.string.profile_change_password);
-                showDialogError(content, getString(R.string.error_network));
+                DialogUtils.setBusy(dialog, content, false, R.string.password_changing, R.string.profile_change_password);
+                DialogUtils.showError(content, getString(R.string.error_network));
             }
         });
     }
@@ -443,7 +444,7 @@ public class ProfileActivity extends AppCompatActivity {
             // Red confirm button, matching the destructive action on the screen
             confirm.setTextColor(ContextCompat.getColor(this, R.color.alert_danger));
             confirm.setOnClickListener(v -> {
-                hideDialogError(content);
+                DialogUtils.hideError(content);
                 String reason = textOf(reasonInput).trim();
                 deactivate(dialog, content, reason.isEmpty() ? null : reason);
             });
@@ -453,7 +454,7 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void deactivate(AlertDialog dialog, View content, String reason) {
         // Deactivates the account; on success the session is cleared and the app returns to login
-        setDialogBusy(dialog, content, true, R.string.deactivate_working, R.string.deactivate_confirm);
+        DialogUtils.setBusy(dialog, content, true, R.string.deactivate_working, R.string.deactivate_confirm);
         deactivateCall = NetworkManager.getInstance().getApiService()
                 .deactivateAccount(prosumerNic, new DeactivateAccountRequest(reason));
         final Call<ApiResponse<Void>> call = deactivateCall;
@@ -471,8 +472,8 @@ public class ProfileActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), R.string.deactivate_done, Toast.LENGTH_LONG).show();
                     SessionManager.getInstance().endSession(() -> Navigator.openLogin(ProfileActivity.this, false));
                 } else {
-                    setDialogBusy(dialog, content, false, R.string.deactivate_working, R.string.deactivate_confirm);
-                    showDialogError(content, ApiErrorParser.getMessage(ProfileActivity.this, response));
+                    DialogUtils.setBusy(dialog, content, false, R.string.deactivate_working, R.string.deactivate_confirm);
+                    DialogUtils.showError(content, ApiErrorParser.getMessage(ProfileActivity.this, response));
                 }
             }
 
@@ -482,44 +483,10 @@ public class ProfileActivity extends AppCompatActivity {
                 if (isStale(call, deactivateCall)) {
                     return;
                 }
-                setDialogBusy(dialog, content, false, R.string.deactivate_working, R.string.deactivate_confirm);
-                showDialogError(content, getString(R.string.error_network));
+                DialogUtils.setBusy(dialog, content, false, R.string.deactivate_working, R.string.deactivate_confirm);
+                DialogUtils.showError(content, getString(R.string.error_network));
             }
         });
-    }
-
-    // ---------------------------------------------------------------- Dialog helpers
-
-    private void setDialogBusy(AlertDialog dialog, View content, boolean busy, int busyText, int idleText) {
-        // Locks a dialog while its request is in flight so it can't be sent twice or closed half-way
-        dialog.setCancelable(!busy);
-        Button positive = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-        positive.setEnabled(!busy);
-        positive.setText(busy ? busyText : idleText);
-        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setEnabled(!busy);
-        setInputsEnabled(content, !busy);
-    }
-
-    private static void setInputsEnabled(View content, boolean enabled) {
-        // Enables or disables every text field inside a dialog body
-        int[] ids = {R.id.currentPasswordInput, R.id.newPasswordInput, R.id.confirmNewPasswordInput, R.id.reasonInput};
-        for (int id : ids) {
-            View input = content.findViewById(id);
-            if (input != null) {
-                input.setEnabled(enabled);
-            }
-        }
-    }
-
-    private static void showDialogError(View content, String message) {
-        // Shows a message in the dialog's own red banner
-        ((TextView) content.findViewById(R.id.dialogErrorText)).setText(message);
-        content.findViewById(R.id.dialogErrorBanner).setVisibility(View.VISIBLE);
-    }
-
-    private static void hideDialogError(View content) {
-        // Hides the dialog's red banner before a new attempt
-        content.findViewById(R.id.dialogErrorBanner).setVisibility(View.GONE);
     }
 
     // ---------------------------------------------------------------- General helpers
