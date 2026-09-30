@@ -194,6 +194,16 @@
                     android:text="@string/home_verify_action"
                     app:icon="@drawable/ic_qr_scanner"
                     app:iconGravity="textStart" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/recentScansButton"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/home_recent_scans_action"
+                    app:icon="@drawable/ic_schedule"
+                    app:iconGravity="textStart" />
             </LinearLayout>
 
             <!-- Shown when the station list can't be loaded -->

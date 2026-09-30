@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/historyRoot"
+    android:id="@+id/recentScansRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/surface_container_lowest"
     android:orientation="vertical">
 
     <LinearLayout
@@ -35,15 +34,15 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:fontFamily="sans-serif-medium"
-                android:text="@string/history_title"
+                android:text="@string/recent_scans_title"
                 android:textColor="@color/on_surface"
                 android:textSize="18sp" />
 
             <TextView
+                android:id="@+id/recentScansSubtitleText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="@string/history_subtitle"
                 android:textColor="@color/on_surface_variant"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -54,95 +53,24 @@
         android:layout_height="1dp"
         android:background="@color/border_slate" />
 
-    <HorizontalScrollView
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="12dp"
-        android:paddingBottom="12dp"
-        android:scrollbars="none">
-
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/statusFilterGroup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:layout_marginEnd="16dp"
-            app:singleLine="true"
-            app:singleSelection="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/filterAllChip"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/filter_all" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/filterPendingChip"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reservation_status_pending" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/filterApprovedChip"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reservation_status_approved" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/filterCompletedChip"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reservation_status_completed" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/filterDeclinedChip"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reservation_status_declined" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/filterCancelledChip"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reservation_status_cancelled" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/filterExpiredChip"
-                style="@style/Widget.Material3.Chip.Filter"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/reservation_status_expired" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/border_slate" />
-
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1"
-        android:background="@color/surface">
+        android:layout_weight="1">
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/historyList"
+            android:id="@+id/scansList"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:clipToPadding="false"
+            android:paddingStart="16dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="16dp"
             android:paddingBottom="16dp"
             android:visibility="gone" />
 
         <LinearLayout
-            android:id="@+id/historyLoadingView"
+            android:id="@+id/scansLoadingView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
@@ -162,13 +90,13 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
-                android:text="@string/history_loading"
+                android:text="@string/recent_scans_loading"
                 android:textColor="@color/on_surface_variant"
                 android:textSize="13sp" />
         </LinearLayout>
 
         <LinearLayout
-            android:id="@+id/historyStateCard"
+            android:id="@+id/scansStateCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
@@ -180,13 +108,13 @@
             android:visibility="gone">
 
             <TextView
-                android:id="@+id/historyStateTitle"
+                android:id="@+id/scansStateTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textAppearance="@style/TextAppearance.SmartSolar.Title" />
 
             <TextView
-                android:id="@+id/historyStateMessage"
+                android:id="@+id/scansStateMessage"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="5dp"
@@ -195,7 +123,7 @@
                 android:textSize="13sp" />
 
             <com.google.android.material.button.MaterialButton
-                android:id="@+id/retryHistoryButton"
+                android:id="@+id/retryScansButton"
                 style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="48dp"
@@ -204,9 +132,4 @@
                 android:visibility="gone" />
         </LinearLayout>
     </FrameLayout>
-
-    <com.example.smart_solar_mobile.views.ProsumerBottomNavigation
-        android:id="@+id/prosumerBottomNavigation"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
 </LinearLayout>

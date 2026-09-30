@@ -21,7 +21,7 @@ namespace API.Services
         private const int MaximumIdAttempts = 10;
 
         private static readonly string[] ListStatuses =
-            { "Pending", "Approved", "Declined", "Completed", "Cancelled" };
+            { "Pending", "Approved", "Declined", "Completed", "Cancelled", "Expired" };
 
         private readonly MongoDbContext _context;
         private readonly IMongoCollection<EnergyReservation> _reservations;
@@ -64,7 +64,7 @@ namespace API.Services
                 if (normalizedStatus == null)
                 {
                     throw new ArgumentException(
-                        "Status must be All, Pending, Approved, Declined, Completed, or Cancelled.");
+                        "Status must be All, Pending, Approved, Declined, Completed, Cancelled, or Expired.");
                 }
 
                 filters.Add(filterBuilder.Eq(r => r.Status, normalizedStatus));
@@ -386,16 +386,18 @@ namespace API.Services
                     DateTimeKind.Utc)
             };
 
-            if (scheduledTimeUtc <= utcNow)
+            if (!string.Equals(
+                    request.StationId.Trim(),
+                    reservation.StationId,
+                    StringComparison.Ordinal))
             {
                 throw new ArgumentException(
-                    "Scheduled time must be in the future.",
-                    nameof(request.ScheduledTime));
+                    "A reservation cannot be moved to another station. Choose a slot from its existing station.",
+                    nameof(request.StationId));
             }
 
-            ValidateMinimumNotice(scheduledTimeUtc, utcNow);
-
-            var requestedStationId = request.StationId.Trim();
+            // The stored station is authoritative for both roles and for slot validation.
+            var requestedStationId = reservation.StationId;
             var requestedSlotId = request.SlotId.Trim();
 
             var station = await GetStationStateAsync(
@@ -436,6 +438,36 @@ namespace API.Services
                 scheduledTimeUtc,
                 slot.StartTime,
                 slot.EndTime);
+
+            if (scheduledTimeUtc <= utcNow)
+            {
+                throw new ArgumentException(
+                    "Scheduled time must be in the future.",
+                    nameof(request.ScheduledTime));
+            }
+
+            ValidateMinimumNotice(scheduledTimeUtc, utcNow);
+
+            // A missing or future creation timestamp cannot establish the original booking window.
+            var createdAtUtc = reservation.CreatedAt.Kind switch
+            {
+                DateTimeKind.Utc => reservation.CreatedAt,
+                DateTimeKind.Local => reservation.CreatedAt.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(reservation.CreatedAt, DateTimeKind.Utc)
+            };
+
+            if (createdAtUtc == default || createdAtUtc > utcNow)
+            {
+                throw new InvalidOperationException(
+                    "The reservation creation time is missing or invalid. This reservation cannot be updated.");
+            }
+
+            if (scheduledTimeUtc > createdAtUtc.AddDays(MaximumCreationWindowDays))
+            {
+                throw new ArgumentException(
+                    "The updated reservation must be scheduled within 7 days of its original creation.",
+                    nameof(request.ScheduledTime));
+            }
 
             var slotChanged = !string.Equals(
                 reservation.SlotId,
@@ -486,7 +518,6 @@ namespace API.Services
 
             var reservationUpdate =
                 Builders<EnergyReservation>.Update
-                    .Set(r => r.StationId, requestedStationId)
                     .Set(r => r.SlotId, requestedSlotId)
                     .Set(r => r.ScheduledTime, scheduledTimeUtc)
                     .Set(r => r.UpdatedAt, updatedAt);
@@ -560,9 +591,6 @@ namespace API.Services
 
                     var rollbackUpdate =
                         Builders<EnergyReservation>.Update
-                            .Set(
-                                r => r.StationId,
-                                reservation.StationId)
                             .Set(
                                 r => r.SlotId,
                                 reservation.SlotId)

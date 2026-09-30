@@ -152,6 +152,7 @@ public class ReservationHistoryActivity extends AppCompatActivity {
         if (checkedChipId == R.id.filterCompletedChip) return "Completed";
         if (checkedChipId == R.id.filterDeclinedChip) return "Declined";
         if (checkedChipId == R.id.filterCancelledChip) return "Cancelled";
+        if (checkedChipId == R.id.filterExpiredChip) return "Expired";
         return null;
     }
 

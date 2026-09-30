@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cancel_booking_action">Cancel booking</string>
+    <string name="cancel_page_title">Cancel reservation</string>
+    <string name="cancel_page_subtitle">Review this booking before you decide</string>
+    <string name="cancel_hero_eyebrow">BOOKING DECISION</string>
+    <string name="cancel_hero_title">Cancel this reservation?</string>
+    <string name="cancel_hero_body">Review the booking below. Nothing changes until you confirm with HelioGrid.</string>
+    <string name="cancel_reference_label">RESERVATION REFERENCE</string>
+    <string name="cancel_booking_details">Booking to cancel</string>
+    <string name="cancel_scheduled_label">SCHEDULED FOR</string>
+    <string name="cancel_station_label">STATION ID</string>
+    <string name="cancel_slot_label">SLOT ID</string>
+    <string name="cancel_policy_title">Cancellation policy</string>
+    <string name="cancel_policy_body">Cancellations require at least 12 hours\' notice. HelioGrid checks the current booking and releases its slot only after cancellation succeeds.</string>
+    <string name="cancel_keep_action">Keep reservation</string>
+    <string name="cancel_go_back">Go back</string>
+    <string name="cancel_return_home">Back to Home</string>
+    <string name="cancel_confirm_action">Cancel reservation</string>
+    <string name="cancel_final_title">Cancel this reservation?</string>
+    <string name="cancel_final_message">This action cannot be undone. If cancellation succeeds, HelioGrid will release your reserved slot.</string>
+    <string name="cancel_submitting">Cancelling reservation…</string>
+    <string name="cancel_error_title">Cancellation not confirmed</string>
+    <string name="cancel_incomplete_response">The server did not confirm the cancellation. Refresh your bookings before trying again.</string>
+    <string name="cancel_unavailable_title">Reservation details unavailable</string>
+    <string name="cancel_unavailable_body">This booking cannot be cancelled from the available details. Return to your bookings and refresh.</string>
+    <string name="cancel_unconfirmed_title">Cancellation result uncertain</string>
+    <string name="cancel_unconfirmed_body">The screen was recreated while your request was in progress. Return to your bookings and refresh to check its current status before trying again.</string>
+    <string name="cancel_network_unconfirmed">Connection lost while cancelling. Return to your bookings and refresh to check the current status before trying again.</string>
+</resources>

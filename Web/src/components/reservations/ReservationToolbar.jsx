@@ -1,7 +1,7 @@
 // File: ReservationToolbar.jsx
 // Purpose: Operator reservation status, search, filter, and refresh controls.
 
-const STATUSES = ['All', 'Pending', 'Approved', 'Cancelled', 'Completed'];
+const STATUSES = ['All', 'Pending', 'Approved', 'Cancelled', 'Completed', 'Expired'];
 
 export default function ReservationToolbar({
     status,

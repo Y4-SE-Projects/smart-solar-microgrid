@@ -60,6 +60,7 @@
     <string name="reservation_status_declined">Declined</string>
     <string name="reservation_status_completed">Completed</string>
     <string name="reservation_status_cancelled">Cancelled</string>
+    <string name="reservation_status_expired">Expired</string>
 
     <!-- Reservation detail -->
     <string name="detail_title">Reservation Details</string>
@@ -78,6 +79,8 @@
     <string name="detail_status_completed_body">This reservation\'s energy transfer has been completed.</string>
     <string name="detail_status_cancelled_title">Reservation Cancelled</string>
     <string name="detail_status_cancelled_body">This reservation has been cancelled.</string>
+    <string name="detail_status_expired_title">Reservation Expired</string>
+    <string name="detail_status_expired_body">The QR pass window for this reservation passed before it was scanned. It can no longer be used to complete a transfer.</string>
 
     <string name="detail_summary_title">Reservation Summary</string>
     <string name="detail_summary_station">Station</string>
@@ -111,6 +114,20 @@
     <string name="home_verify_title">Verify Energy Transfer</string>
     <string name="home_verify_body">Scan prosumer pass to verify scheduled slot and finalize power transfer.</string>
     <string name="home_verify_action">Open Scanner</string>
+    <string name="home_recent_scans_action">Recent Scans</string>
+
+    <!-- Recent scans screen -->
+    <string name="recent_scans_title">Recent Scans</string>
+    <string name="recent_scans_subtitle">Your last %1$d scans</string>
+    <string name="recent_scans_loading">Loading your recent scans…</string>
+    <string name="recent_scans_error_title">Recent scans could not be loaded</string>
+    <string name="recent_scans_empty_title">No scans yet</string>
+    <string name="recent_scans_empty_body">QR codes you scan will appear here.</string>
+    <string name="recent_scan_success_label">Verified</string>
+    <plurals name="scan_attempt_count">
+        <item quantity="one">%1$d attempt</item>
+        <item quantity="other">%1$d attempts</item>
+    </plurals>
 
     <!-- QR scan screen -->
     <string name="scan_title">QR Verification</string>

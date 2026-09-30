@@ -10,6 +10,7 @@ import com.example.smart_solar_mobile.models.LoginRequest;
 import com.example.smart_solar_mobile.models.QrResponse;
 import com.example.smart_solar_mobile.models.ReactivationRequest;
 import com.example.smart_solar_mobile.models.RegisterRequest;
+import com.example.smart_solar_mobile.models.QrScanEntryResponse;
 import com.example.smart_solar_mobile.models.ReservationData;
 import com.example.smart_solar_mobile.models.SetSlotAvailabilityRequest;
 import com.example.smart_solar_mobile.models.SolarStation;
@@ -124,4 +125,8 @@ public interface ApiService {
     // Grid Operator only. Verifies the scanned QR against live data and finalizes the transfer atomically.
     @POST("reservations/verify-qr")
     Call<ApiResponse<VerifyQrResponse>> verifyQr(@Body VerifyQrRequest request);
+
+    // Grid Operator only. The current operator's own recent scans, newest first.
+    @GET("reservations/qr-scans/recent")
+    Call<ApiResponse<List<QrScanEntryResponse>>> getRecentScans();
 }
