@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="pending_title">Pending reservations</string>
+    <string name="pending_reservations_title">Pending reservations</string>
     <string name="pending_subtitle">Your booking requests</string>
     <string name="pending_refresh_description">Refresh pending reservations</string>
     <string name="pending_hero_eyebrow">YOUR BOOKING QUEUE</string>
