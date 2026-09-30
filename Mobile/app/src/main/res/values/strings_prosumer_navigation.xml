@@ -5,6 +5,4 @@
     <string name="prosumer_nav_bookings">Bookings</string>
     <string name="prosumer_nav_profile">Profile</string>
     <string name="prosumer_nav_selected_description">%1$s, selected</string>
-    <string name="prosumer_nav_profile_description">Profile, coming soon</string>
-    <string name="prosumer_nav_profile_unavailable">Profile is coming soon.</string>
 </resources>

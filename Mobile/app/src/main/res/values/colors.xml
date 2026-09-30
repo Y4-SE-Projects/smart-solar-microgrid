@@ -20,6 +20,8 @@
     <color name="border_slate">#E2E8F0</color>
     <color name="mint_surface">#C8EFC1</color>
     <color name="mint_border">#A7F3D0</color>
+    <!-- Secondary text on the dark-green dashboard banner -->
+    <color name="banner_text_muted">#CCFFFFFF</color>
     <color name="prosumer_nav_active_icon_surface">#1C006C4A</color>
     <color name="alert_danger">#720613</color>
     <color name="chip_danger_background">#FEE2E2</color>

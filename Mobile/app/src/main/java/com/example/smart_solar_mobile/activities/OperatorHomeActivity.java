@@ -30,6 +30,7 @@ import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
+import com.example.smart_solar_mobile.utils.NameUtils;
 import com.example.smart_solar_mobile.utils.TimeUtils;
 import com.google.android.material.button.MaterialButton;
 
@@ -181,7 +182,7 @@ public class OperatorHomeActivity extends AppCompatActivity {
         // Fills the operator card from the saved session
         String name = session.fullName == null || session.fullName.isEmpty() ? session.identifier : session.fullName;
         operatorNameText.setText(name);
-        operatorInitialsText.setText(initialsOf(name));
+        operatorInitialsText.setText(NameUtils.initialsOf(name));
     }
 
     private void loadStations() {
@@ -447,14 +448,4 @@ public class OperatorHomeActivity extends AppCompatActivity {
         slotsErrorBanner.setVisibility(View.VISIBLE);
     }
 
-    private static String initialsOf(String name) {
-        // Up to two initials from the operator's name, e.g. "Dinesh Samarasinghe" -> "DS"
-        StringBuilder initials = new StringBuilder();
-        for (String part : name.trim().split("\\s+")) {
-            if (!part.isEmpty() && initials.length() < 2) {
-                initials.append(Character.toUpperCase(part.charAt(0)));
-            }
-        }
-        return initials.toString();
-    }
 }
