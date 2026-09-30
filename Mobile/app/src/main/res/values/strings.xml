@@ -105,6 +105,7 @@
     <!-- Find a station (Prosumer map) -->
     <string name="find_station">Find a station</string>
     <string name="reserve_slot">Reserve a slot</string>
+    <string name="nearby_stations">Nearby stations</string>
     <string name="station_map_subtitle">Active stations</string>
     <string name="radius_km">%1$d km</string>
     <string name="radius_all">All</string>
