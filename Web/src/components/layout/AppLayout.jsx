@@ -34,7 +34,7 @@ export default function AppLayout() {
         onNavigate={handleNavigate}
       />
       <div className={`pl-20 transition-all duration-200 ${isSidebarCollapsed ? '' : 'md:pl-64'}`}>
-        <main className="mx-auto w-full max-w-7xl px-5 py-8 lg:px-8">
+        <main className="w-full min-w-0 px-5 py-8 lg:px-8">
           <Outlet />
         </main>
       </div>
