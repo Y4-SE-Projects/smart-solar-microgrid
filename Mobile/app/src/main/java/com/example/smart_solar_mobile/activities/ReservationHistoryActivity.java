@@ -31,9 +31,12 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class ReservationHistoryActivity extends AppCompatActivity {
+    // Optional entry selection; regular Bookings launches omit it and keep the XML's All chip.
+    public static final String EXTRA_INITIAL_STATUS_FILTER = "reservation_history.initial_status_filter";
 
     private String prosumerNic;
     private Call<ApiResponse<List<ReservationData>>> historyCall;
+    private boolean firstResume = true;
 
     private ReservationAdapter adapter;
     private ChipGroup statusFilterGroup;
@@ -66,6 +69,9 @@ public class ReservationHistoryActivity extends AppCompatActivity {
 
         findViewById(R.id.backButton).setOnClickListener(v -> finish());
         retryHistoryButton.setOnClickListener(v -> loadHistory());
+        if ("Pending".equalsIgnoreCase(getIntent().getStringExtra(EXTRA_INITIAL_STATUS_FILTER))) {
+            statusFilterGroup.check(R.id.filterPendingChip);
+        }
         statusFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> applyFilter());
 
         SessionManager.getInstance().loadSession(session -> {
@@ -80,6 +86,17 @@ public class ReservationHistoryActivity extends AppCompatActivity {
             prosumerNic = session.identifier;
             loadHistory();
         });
+    }
+
+    @Override
+    protected void onResume() {
+        // The session callback starts the first GET; later resumes refresh after Detail or an action.
+        super.onResume();
+        if (firstResume) {
+            firstResume = false;
+        } else if (prosumerNic != null) {
+            loadHistory();
+        }
     }
 
     @Override
@@ -132,10 +149,11 @@ public class ReservationHistoryActivity extends AppCompatActivity {
 
     private void applyFilter() {
         int checkedId = statusFilterGroup.getCheckedChipId();
-        adapter.setStatusFilter(statusFor(checkedId));
+        String selectedStatus = statusFor(checkedId);
+        adapter.setStatusFilter(selectedStatus);
 
         if (adapter.isEmpty()) {
-            boolean filtered = checkedId != R.id.filterAllChip && adapter.hasAnyReservations();
+            boolean filtered = selectedStatus != null;
             showState(
                     getString(filtered ? R.string.history_empty_filtered_title : R.string.history_empty_title),
                     getString(filtered ? R.string.history_empty_filtered_body : R.string.history_empty_body),
