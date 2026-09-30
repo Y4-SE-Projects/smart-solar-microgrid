@@ -1,23 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="pending_reservations_title">Pending reservations</string>
-    <string name="pending_subtitle">Your booking requests</string>
-    <string name="pending_refresh_description">Refresh pending reservations</string>
-    <string name="pending_hero_eyebrow">YOUR BOOKING QUEUE</string>
-    <string name="pending_hero_title">Your pending requests</string>
-    <string name="pending_hero_body">Reservations awaiting operator review appear here.</string>
-    <string name="pending_owner_nic">Booking for NIC %1$s</string>
-    <string name="pending_list_title">Pending requests</string>
-    <string name="pending_list_subtitle">Newest requests first</string>
-    <string name="pending_loading_title">Loading pending reservations</string>
-    <string name="pending_loading_body">Checking your latest booking requests…</string>
-    <string name="pending_empty_title">No pending reservations</string>
-    <string name="pending_empty_body">You have no booking requests awaiting approval. Create a reservation whenever you’re ready.</string>
-    <string name="pending_create_action">Create reservation</string>
-    <string name="pending_error_title">Pending bookings unavailable</string>
-    <string name="pending_error_fallback">The server did not return your pending reservations. Try again.</string>
-    <string name="pending_schedule_unavailable">Scheduled time unavailable</string>
-    <string name="pending_field_station">STATION ID</string>
-    <string name="pending_field_slot">SLOT ID</string>
-    <string name="pending_field_reference">RESERVATION REFERENCE</string>
 </resources>
