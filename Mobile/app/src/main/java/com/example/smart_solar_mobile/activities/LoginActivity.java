@@ -230,7 +230,7 @@ public class LoginActivity extends AppCompatActivity {
 
         int actionText = pending ? R.string.pending_cancel_request : R.string.deactivated_request;
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(pending ? R.string.pending_title : R.string.deactivated_title)
+                .setTitle(pending ? R.string.account_reactivation_pending_title : R.string.deactivated_title)
                 .setView(content)
                 .setPositiveButton(actionText, null)
                 .setNegativeButton(pending ? R.string.pending_close : R.string.deactivated_not_now, null)
