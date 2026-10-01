@@ -44,22 +44,24 @@ export function registerUser(payload) {
   return apiClient.post('/users/register', payload).then((response) => response.data);
 }
 
+// Usernames are encoded in the four staff URLs below, so a character such as "/" or "#" can never change which address is called.
+
 // Updates a staff member's contact details. ( Backoffice only )
 // Username and role aren't editable. 
 // ( the username is the login identifier, and a role change is a privilege change rather than a profile edit. )
 export function updateStaff(username, payload) {
-  return apiClient.put(`/users/staff/${username}`, payload).then((response) => response.data);
+  return apiClient.put(`/users/staff/${encodeURIComponent(username)}`, payload).then((response) => response.data);
 }
 
 // Switches off a staff account's access. ( Backoffice only )
 // The API refuses this for your own account and for the last active Backoffice account.
 export function deactivateStaff(username) {
-  return apiClient.put(`/users/staff/${username}/deactivate`).then((response) => response.data);
+  return apiClient.put(`/users/staff/${encodeURIComponent(username)}/deactivate`).then((response) => response.data);
 }
 
 // Restores a deactivated staff account. ( Backoffice only )
 export function reactivateStaff(username) {
-  return apiClient.put(`/users/staff/${username}/reactivate`).then((response) => response.data);
+  return apiClient.put(`/users/staff/${encodeURIComponent(username)}/reactivate`).then((response) => response.data);
 }
 
 // Sets a new password on a staff account. ( Backoffice only )
@@ -67,6 +69,6 @@ export function reactivateStaff(username) {
 // ( because this is an administrative reset for someone who has forgotten theirs, so the admin has no way of knowing it. )
 export function resetStaffPassword(username, newPassword) {
   return apiClient
-    .put(`/users/staff/${username}/password`, { newPassword })
+    .put(`/users/staff/${encodeURIComponent(username)}/password`, { newPassword })
     .then((response) => response.data);
 }

@@ -34,6 +34,12 @@ const EMPTY_FORM = {
 const MINIMUM_PASSWORD_LENGTH = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// Same rule as the API's AccountRules.ValidateUsername: 3–50 characters, a letter first, then letters, digits, ".", "_" or "-".
+// Usernames go into URL paths, so "/", "#", "?" and "%" must never appear.
+const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9._-]{2,49}$/;
+const USERNAME_RULE_MESSAGE =
+  'Username must be 3–50 characters, start with a letter, and use only letters, numbers, dots, hyphens or underscores.';
+
 // Every rule the form checks, as one pure function of the current values.
 // It runs on each render, so a message always describes what is in the field right now.
 // The API applies the same rules with the same wording and stays authoritative.
@@ -44,8 +50,8 @@ function validateStaffForm(values, isEdit) {
   if (!isEdit) {
     if (!values.username.trim()) {
       errors.username = 'Username is required.';
-    } else if (/\s/.test(values.username.trim())) {
-      errors.username = 'Username cannot contain spaces.';
+    } else if (!USERNAME_PATTERN.test(values.username.trim())) {
+      errors.username = USERNAME_RULE_MESSAGE;
     }
 
     if (!values.password) {
