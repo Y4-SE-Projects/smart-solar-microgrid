@@ -48,6 +48,33 @@ namespace API.Models
             return null;
         }
 
+        // Fewest and most digits a phone number may have: covers local numbers ( 0771234567 ) and international ones ( +94 77 123 4567 ).
+        public const int MinimumPhoneDigits = 9;
+        public const int MaximumPhoneDigits = 15;
+
+        // An optional "+", then digits, with spaces or hyphens allowed between them ( the Android phone keyboard offers hyphens ).
+        // [0-9] rather than \d, which in .NET also matches non-English digits.
+        private static readonly Regex PhonePattern = new(@"^\+?[0-9][0-9 -]*$", RegexOptions.NonBacktracking);
+
+        // Checks a required phone number: allowed characters first, then how many digits it has.
+        public static string? ValidatePhone(string? phone)
+        {
+            if (string.IsNullOrWhiteSpace(phone))
+            {
+                return "Phone number is required.";
+            }
+
+            var trimmed = phone.Trim();
+            var digitCount = trimmed.Count(c => c >= '0' && c <= '9');
+
+            if (!PhonePattern.IsMatch(trimmed) || digitCount < MinimumPhoneDigits || digitCount > MaximumPhoneDigits)
+            {
+                return $"Enter a valid phone number: {MinimumPhoneDigits} to {MaximumPhoneDigits} digits, optionally starting with +.";
+            }
+
+            return null;
+        }
+
         // Checks a required email address. The length is checked before the pattern runs.
         public static string? ValidateEmail(string? email)
         {

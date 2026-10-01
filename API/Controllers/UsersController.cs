@@ -630,9 +630,10 @@ namespace API.Controllers
                 return emailError;
             }
 
-            if (string.IsNullOrWhiteSpace(phone))
+            var phoneError = AccountRules.ValidatePhone(phone);
+            if (phoneError != null)
             {
-                return "Phone number is required.";
+                return phoneError;
             }
 
             return null;
