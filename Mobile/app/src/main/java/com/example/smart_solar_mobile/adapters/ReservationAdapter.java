@@ -21,6 +21,7 @@ import com.example.smart_solar_mobile.utils.TimeUtils;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.ReservationViewHolder> {
 
@@ -33,6 +34,7 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
     private final List<ReservationData> visibleReservations = new ArrayList<>();
     private final OnReservationClick listener;
     private String statusFilter; // null shows every status
+    private String searchQuery = "";
 
     public ReservationAdapter(OnReservationClick listener) {
         this.listener = listener;
@@ -53,14 +55,31 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
         applyFilter();
     }
 
+    public void setSearchQuery(String query) {
+        // The same filter applies to live and cached display rows.
+        searchQuery = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
+        applyFilter();
+    }
+
     private void applyFilter() {
         visibleReservations.clear();
         for (ReservationData reservation : allReservations) {
-            if (statusFilter == null || statusFilter.equalsIgnoreCase(reservation.status)) {
+            if ((statusFilter == null || statusFilter.equalsIgnoreCase(reservation.status))
+                    && (searchQuery.isEmpty() || matchesSearch(reservation))) {
                 visibleReservations.add(reservation);
             }
         }
         notifyDataSetChanged();
+    }
+
+    private boolean matchesSearch(ReservationData reservation) {
+        return contains(reservation.reservationId) || contains(reservation.stationId)
+                || contains(reservation.slotId) || contains(reservation.status)
+                || contains(reservation.scheduledTime);
+    }
+
+    private boolean contains(String value) {
+        return value != null && value.toLowerCase(Locale.ROOT).contains(searchQuery);
     }
 
     public boolean isEmpty() {

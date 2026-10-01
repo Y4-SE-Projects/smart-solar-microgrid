@@ -1,10 +1,9 @@
-/* File: LoginPage.jsx
- * Purpose: Backoffice/GridOperator login screen.
- *          Wired to the live POST /api/users/login endpoint.
- */
+// File: LoginPage.jsx
+// Purpose: Backoffice/GridOperator login screen. Wired to the live POST /api/users/login endpoint.
+
 
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Roles, homePathForRole } from '../constants/roles';
@@ -18,16 +17,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState(() =>
+    location.state?.reason === 'ROLE_NOT_SUPPORTED'
+      ? 'That account cannot access the web console. Sign in with a Backoffice or Grid Operator account.'
+      : ''
+  );
 
   // ProtectedRoute sends a session here when its stored role has no console screens. 
   // Clearing it happens here rather than in the guard, which has to stay free of side effects.
   useEffect(() => {
     if (location.state?.reason === 'ROLE_NOT_SUPPORTED') {
       logout();
-      setErrorMessage(
-        'That account cannot access the web console. Sign in with a Backoffice or Grid Operator account.'
-      );
     }
   }, [location.state, logout]);
 
@@ -84,40 +84,63 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas-bg text-on-surface flex flex-col justify-between selection:bg-mint-surface selection:text-primary">
-      {/* Header */}
-      <header className="w-full pt-margin-lg pb-space-lg px-gutter flex flex-col items-center justify-center">
-        <div className="flex items-center gap-space-sm mb-space-sm">
-          <img src="/logo.svg" alt="HelioGrid logo" className="h-9 w-9 object-contain"/>
-          <span className="text-headline-sm font-semibold text-primary tracking-tight">HelioGrid</span>
-        </div>
-      </header>
+    <div className="min-h-[100dvh] bg-canvas-bg p-3 text-on-surface selection:bg-mint-surface selection:text-primary sm:p-5 lg:p-6">
+      <div className="mx-auto grid min-h-[calc(100dvh-1.5rem)] max-w-[1600px] overflow-hidden rounded-[2rem] bg-white shadow-[0_18px_70px_-45px_rgba(0,48,37,0.35)] sm:min-h-[calc(100dvh-2.5rem)] lg:min-h-[calc(100dvh-3rem)] lg:grid-cols-[minmax(0,1.06fr)_minmax(440px,0.94fr)]">
+        <aside className="relative isolate flex min-h-[180px] flex-col justify-between overflow-hidden bg-primary p-5 text-white sm:min-h-[220px] sm:p-8 lg:min-h-0 lg:p-10">
+          <img
+            src="/wp4041839-solar-panel-wallpapers.jpg"
+            alt=""
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+          />
+          <div className="absolute inset-0 -z-10 bg-gradient-to-b from-[#032c24]/75 via-[#032c24]/30 to-[#032c24]/90" />
 
-      {/* Main */}
-      <main className="w-full flex-1 flex flex-col items-center justify-center px-gutter py-space-xl">
-        <div className="relative w-full max-w-lg mx-auto flex flex-col items-center">
-          {/* Ambient backdrop */}
-          <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none -z-10" />
-          <div className="absolute -bottom-10 right-0 w-72 h-72 bg-mint-surface/20 rounded-full blur-2xl pointer-events-none -z-10" />
+          <Link to="/" className="inline-flex w-fit items-center gap-2 rounded-full text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+            <img src="/logo.svg" alt="" className="h-8 w-8 rounded-full" />
+            <span className="font-['Plus_Jakarta_Sans',Arial,sans-serif] text-lg font-bold tracking-tight">HelioGrid</span>
+          </Link>
 
-          {/* Title */}
-          <div className="mb-space-lg flex flex-col items-center text-center">
-            <h1 className="text-headline-md font-semibold text-primary tracking-tight">Operations Console Login</h1>
-            <p className="text-body-md text-on-surface-variant mt-1">Enter your credentials to access the console</p>
+          <div className="max-w-xl pt-5 font-['Plus_Jakarta_Sans',Arial,sans-serif]">
+            <h2 className="text-2xl font-semibold leading-tight tracking-tight sm:text-3xl lg:text-[clamp(2.2rem,3.5vw,4rem)]">
+              The people behind a<br className="hidden xl:block" />{' '}
+              <span className="font-['Newsreader',Georgia,serif] font-normal italic leading-[1.15] text-emerald-200">greener grid.</span>
+            </h2>
+            <p className="mt-2 hidden max-w-md text-sm leading-relaxed text-white/85 sm:block">
+              Keep stations, energy slots, and reservations connected through one operations workspace.
+            </p>
           </div>
+        </aside>
 
-          {/* Auth card */}
-          <div className="w-full bg-surface-container-lowest rounded-2xl p-space-xl sm:p-margin-lg shadow-xl shadow-primary/5">
-            <form className="space-y-space-md" onSubmit={handleSubmit} noValidate>
+        <div className="flex min-w-0 flex-col bg-white px-5 py-5 sm:px-10 sm:py-7 lg:px-12 lg:py-6">
+          <header className="flex justify-end">
+            <Link
+              to="/"
+              className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border-slate bg-canvas-bg px-4 text-sm font-semibold text-primary transition-colors hover:border-primary/25 hover:bg-mint-surface focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
+            >
+              <span aria-hidden="true">←</span>
+              Back to home
+            </Link>
+          </header>
+
+          <main className="mx-auto flex w-full max-w-[440px] flex-1 flex-col justify-center py-6 sm:py-8 lg:py-4">
+            <div className="mb-5">
+              <div className="mb-3 inline-flex items-center rounded-full bg-mint-surface px-3 py-1.5 text-xs font-semibold text-primary">
+                Operations console
+              </div>
+              <h1 className="font-['Plus_Jakarta_Sans',Arial,sans-serif] text-3xl font-bold leading-tight tracking-tight text-primary sm:text-4xl">
+                Welcome back.
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-on-surface-variant">
+                Sign in to manage your HelioGrid workspace.
+              </p>
+            </div>
+
+            <form className="space-y-4" onSubmit={handleSubmit} noValidate>
               {/* Identifier */}
-              <div className="space-y-1">
-                <label className="text-label-md font-medium text-on-surface" htmlFor="identity-input">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-on-surface" htmlFor="identity-input">
                   Username
                 </label>
                 <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-space-md text-on-surface-variant pointer-events-none text-[18px]">
-                    badge
-                  </span>
                   <input
                     id="identity-input"
                     name="identity"
@@ -136,14 +159,11 @@ export default function LoginPage() {
               </div>
 
               {/* Password */}
-              <div className="space-y-1">
-                <label className="text-label-md font-medium text-on-surface" htmlFor="password-input">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-on-surface" htmlFor="password-input">
                   Password
                 </label>
                 <div className="relative flex items-center">
-                  <span className="material-symbols-outlined absolute left-space-md text-on-surface-variant pointer-events-none text-[18px]">
-                    lock
-                  </span>
                   <input
                     id="password-input"
                     name="password"
@@ -153,15 +173,16 @@ export default function LoginPage() {
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
                     placeholder="••••••••••••"
-                    className="w-full h-11 pl-10 pr-11 bg-canvas-bg text-on-surface text-body-md rounded-xl focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_#006c4a] transition-all"
+                    className="h-11 w-full rounded-xl border border-border-slate bg-canvas-bg pl-4 pr-12 text-sm text-on-surface placeholder:text-outline focus:border-secondary focus:bg-white focus:outline-2 focus:outline-offset-2 focus:outline-secondary/45"
                   />
                   <button
                     type="button"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
                     onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute right-3 p-1 text-on-surface-variant hover:text-primary transition-colors focus:outline-none flex items-center justify-center"
+                    className="absolute right-3 flex items-center justify-center rounded-md p-1 text-on-surface-variant transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
                   >
-                    <span className="material-symbols-outlined text-[20px]">
+                    <span className="material-symbols-outlined text-[20px]" aria-hidden="true">
                       {showPassword ? 'visibility_off' : 'visibility'}
                     </span>
                   </button>
@@ -172,9 +193,8 @@ export default function LoginPage() {
               {errorMessage && (
                 <div
                   role="alert"
-                  className="flex items-start gap-2 px-space-md py-space-sm bg-error-container text-on-error-container rounded-xl text-body-sm"
+                  className="flex items-start gap-2 rounded-xl bg-error-container px-4 py-3 text-sm text-on-error-container"
                 >
-                  <span className="material-symbols-outlined text-[18px] mt-0.5">error</span>
                   <span>{errorMessage}</span>
                 </div>
               )}
@@ -183,36 +203,32 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-2 py-3 px-space-lg bg-primary text-on-primary hover:bg-primary-container active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed font-semibold text-headline-sm rounded-full shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 group"
+                className="group mt-1 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSubmitting ? (
                   <>
-                    <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white motion-reduce:animate-none" aria-hidden="true" />
                     <span>Signing in...</span>
                   </>
                 ) : (
                   <>
                     <span>Sign In</span>
-                    <span className="material-symbols-outlined text-[20px] transition-transform group-hover:translate-x-1">
-                      arrow_forward
-                    </span>
+                    <span className="transition-transform group-hover:translate-x-1 motion-reduce:transform-none" aria-hidden="true">→</span>
                   </>
                 )}
               </button>
             </form>
-          </div>
-        </div>
-      </main>
 
-      {/* Footer */}
-      <footer className="w-full py-space-xl px-gutter flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto gap-space-md text-center sm:text-left">
-        <div className="w-full flex items-center justify-center text-on-surface-variant text-body-sm">
-          <span className="text-outline-variant">© HelioGrid Web Console</span>
+            <div className="mt-5 border-t border-border-slate pt-4 text-xs text-on-surface-variant">
+              Console access for <span className="font-semibold text-primary">Backoffice</span> and <span className="font-semibold text-primary">Grid Operators</span>
+            </div>
+          </main>
+
+          <footer className="text-center text-xs text-outline sm:text-left">
+            © HelioGrid Web Console
+          </footer>
         </div>
-      </footer>
+      </div>
     </div>
   );
 }

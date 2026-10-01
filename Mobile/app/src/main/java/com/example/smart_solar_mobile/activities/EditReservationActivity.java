@@ -54,12 +54,13 @@ public class EditReservationActivity extends AppCompatActivity {
     private static final String EXTRA_SLOT = "edit_reservation.slot";
     private static final String EXTRA_TIME = "edit_reservation.time";
     private static final String EXTRA_STATUS = "edit_reservation.status";
-    private static final String EXTRA_CREATED_AT = "edit_reservation.created_at";
     private static final String STATE_SLOT = "edit_reservation.selected_slot";
     private static final String STATE_DAY = "edit_reservation.selected_day";
     private static final String STATE_UNCONFIRMED = "edit_reservation.unconfirmed_put";
     // The API serializes DateTime with up to seven fractional digits (100 ns units).
     private static final long TICKS_PER_MILLISECOND = 10_000L;
+    private static final long MINIMUM_NOTICE_TICKS =
+            TimeUnit.HOURS.toMillis(12) * TICKS_PER_MILLISECOND;
     private static final long EDIT_WINDOW_TICKS =
             TimeUnit.DAYS.toMillis(7) * TICKS_PER_MILLISECOND;
     private static final Pattern API_TIMESTAMP = Pattern.compile(
@@ -72,8 +73,7 @@ public class EditReservationActivity extends AppCompatActivity {
                 .putExtra(EXTRA_STATION, reservation.stationId)
                 .putExtra(EXTRA_SLOT, reservation.slotId)
                 .putExtra(EXTRA_TIME, reservation.scheduledTime)
-                .putExtra(EXTRA_STATUS, reservation.status)
-                .putExtra(EXTRA_CREATED_AT, reservation.createdAt);
+                .putExtra(EXTRA_STATUS, reservation.status);
     }
 
     private final List<EnergyBookingSlot> eligibleSlots = new ArrayList<>();
@@ -81,7 +81,6 @@ public class EditReservationActivity extends AppCompatActivity {
     private final List<View> dayButtons = new ArrayList<>();
 
     private ReservationData original;
-    private long editWindowEndTicks;
     private EnergyBookingSlot selectedSlot;
     private String selectedDayKey;
     private String restoredSlotId;
@@ -152,20 +151,6 @@ public class EditReservationActivity extends AppCompatActivity {
                 || !hasText(original.slotId) || !hasText(original.scheduledTime)
                 || !hasText(original.status)) {
             showFatal(R.string.edit_unavailable_title, R.string.edit_unavailable_body);
-            return;
-        }
-        Long createdAtTicks = parseApiTicks(original.createdAt);
-        if (createdAtTicks == null
-                || createdAtTicks > System.currentTimeMillis() * TICKS_PER_MILLISECOND) {
-            showFatal(R.string.edit_window_unavailable_title,
-                    R.string.edit_window_unavailable_body);
-            return;
-        }
-        try {
-            editWindowEndTicks = Math.addExact(createdAtTicks, EDIT_WINDOW_TICKS);
-        } catch (ArithmeticException invalidTimestamp) {
-            showFatal(R.string.edit_window_unavailable_title,
-                    R.string.edit_window_unavailable_body);
             return;
         }
         renderOriginal();
@@ -266,7 +251,6 @@ public class EditReservationActivity extends AppCompatActivity {
         original.slotId = intent.getStringExtra(EXTRA_SLOT);
         original.scheduledTime = intent.getStringExtra(EXTRA_TIME);
         original.status = intent.getStringExtra(EXTRA_STATUS);
-        original.createdAt = intent.getStringExtra(EXTRA_CREATED_AT);
     }
 
     private void renderOriginal() {
@@ -297,7 +281,7 @@ public class EditReservationActivity extends AppCompatActivity {
     }
 
     private void loadSlots(String preferredSlotId) {
-        // Loads original-station slots and limits replacement choices to the creation-origin window.
+        // Loads original-station slots and limits replacement choices to the rolling window.
         if (!sessionReady || !hasText(original.stationId) || submitting) return;
         if (slotsCall != null) slotsCall.cancel();
         selectedSlot = null;
@@ -400,16 +384,16 @@ public class EditReservationActivity extends AppCompatActivity {
     }
 
     private boolean isSelectableSlot(EnergyBookingSlot slot) {
-        // Keeps the owned slot selectable when unavailable; all choices stay in the original window.
+        // Keeps the owned slot selectable when unavailable; replacements need 12 hours' notice.
         if (slot == null || !hasText(slot.slotId)
                 || !original.stationId.equals(slot.stationId)) return false;
         Long startTicks = parseApiTicks(slot.startTime);
         if (startTicks == null) return false;
-        // A legacy current booking beyond the window stays in the current-booking card,
-        // but must not create a date chip or appear as a replacement choice.
-        if (startTicks > editWindowEndTicks) return false;
+        long nowTicks = System.currentTimeMillis() * TICKS_PER_MILLISECOND;
+        // A current booking beyond the rolling window remains visible in its summary card.
+        if (startTicks > nowTicks + EDIT_WINDOW_TICKS) return false;
         return isCurrentSlot(slot) || (slot.isAvailable
-                && startTicks > System.currentTimeMillis() * TICKS_PER_MILLISECOND);
+                && startTicks >= nowTicks + MINIMUM_NOTICE_TICKS);
     }
 
     private boolean containsDay(Date day) {
@@ -661,7 +645,7 @@ public class EditReservationActivity extends AppCompatActivity {
     }
 
     private static Long parseApiTicks(String value) {
-        // Preserves the API's seven fractional digits for an exact seven-day boundary check.
+        // Preserves the API's seven fractional digits for rolling-window boundary checks.
         if (!hasText(value)) return null;
         Matcher match = API_TIMESTAMP.matcher(value.trim());
         if (!match.matches()) return null;

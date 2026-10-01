@@ -11,7 +11,7 @@
     <string name="edit_station_fixed_caption">Original booking station</string>
     <string name="edit_station_fixed_note">This station stays with the reservation. Choose another slot here to change its time.</string>
     <string name="edit_slots_section">CHOOSE A SLOT</string>
-    <string name="edit_slots_subtitle">Slots within your original booking window</string>
+    <string name="edit_slots_subtitle">Available replacements from 12 hours to 7 days ahead</string>
     <string name="edit_refresh_slots">Refresh slot choices</string>
     <string name="edit_loading_slots">Loading slot choices…</string>
     <string name="edit_slots_initial_title">Checking this station’s slots</string>
@@ -19,7 +19,7 @@
     <string name="edit_slots_error_title">Slots could not be loaded</string>
     <string name="edit_slots_error_body">The server did not return slot choices. Try again.</string>
     <string name="edit_no_slots_title">No selectable slots</string>
-    <string name="edit_no_slots_body">There are no available future slots within this reservation’s original seven-day window. Refresh to check again later.</string>
+    <string name="edit_no_slots_body">No selectable slots are available within the next 7 days. Your current booking remains unchanged. Refresh to check again later.</string>
     <string name="edit_current_slot_missing">Your current slot is not present in the live station response. Your existing booking remains unchanged; choose a replacement to continue.</string>
     <string name="edit_current_slot">Current slot</string>
     <string name="edit_not_selected">Not selected</string>
@@ -29,7 +29,7 @@
     <string name="edit_current_selection">Current booking selected</string>
     <string name="edit_replacement_selection">Replacement selected</string>
     <string name="edit_notice_title">Reservation update policy</string>
-    <string name="edit_notice_body">Updates require at least 12 hours\' notice and must stay within 7 days of the original booking\'s creation. HelioGrid validates the station and slot when you save.</string>
+    <string name="edit_notice_body">Updates require at least 12 hours\' notice before both times, and the new slot must be within the next 7 days. HelioGrid validates the station and slot when you save.</string>
     <string name="edit_select_slot_hint">Choose a live slot to continue.</string>
     <string name="edit_no_changes">No changes to save.</string>
     <string name="edit_ready_hint">Review the selection, then save your changes.</string>
@@ -38,8 +38,6 @@
     <string name="edit_incomplete_response">The server did not confirm the update. Refresh your pending bookings before trying again.</string>
     <string name="edit_unavailable_title">Reservation details unavailable</string>
     <string name="edit_unavailable_body">This booking cannot be edited from the available details. Return to your pending bookings and refresh.</string>
-    <string name="edit_window_unavailable_title">Editing window unavailable</string>
-    <string name="edit_window_unavailable_body">We couldn’t verify when this reservation was created. Return to your bookings and refresh before editing.</string>
     <string name="edit_unconfirmed_title">Update result unconfirmed</string>
     <string name="edit_unconfirmed_body">The screen was recreated while saving. Return to Pending reservations and refresh before trying another update.</string>
 </resources>

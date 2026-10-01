@@ -366,7 +366,7 @@ public class CreateReservationActivity extends AppCompatActivity {
                 stationsLoading = false;
                 stationsLoaded = false;
                 activeStations.clear();
-                stationsError = getString(R.string.error_network);
+                stationsError = getString(R.string.reservation_connection_required);
                 renderStation();
                 updateActions();
             }
@@ -590,7 +590,7 @@ public class CreateReservationActivity extends AppCompatActivity {
                 slotsLoading = false;
                 slotsLoadingView.setVisibility(View.GONE);
                 showSlotsState(getString(R.string.reservation_slots_error_title),
-                        getString(R.string.error_network), true);
+                        getString(R.string.reservation_connection_required), true);
                 renderDayRow();
                 updateActions();
             }
