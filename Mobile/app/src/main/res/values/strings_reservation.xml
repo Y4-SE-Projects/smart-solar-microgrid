@@ -78,26 +78,13 @@
     <string name="detail_copied">Reservation ID copied</string>
     <string name="detail_datetime_value">%1$s at %2$s</string>
 
-    <string name="detail_status_pending_title">Booking Request Submitted!</string>
-    <string name="detail_status_pending_body">Your energy slot reservation has been created and sent to the station operator for approval.</string>
-    <string name="detail_status_approved_title">Reservation Approved!</string>
-    <string name="detail_status_approved_body">Your reservation is confirmed. Show the QR pass at the terminal to begin your energy transfer.</string>
-    <string name="detail_status_declined_title">Reservation Declined</string>
-    <string name="detail_status_declined_body">The station operator declined this reservation.</string>
-    <string name="detail_status_completed_title">Energy Transfer Completed</string>
-    <string name="detail_status_completed_body">This reservation\'s energy transfer has been completed.</string>
-    <string name="detail_status_cancelled_title">Reservation Cancelled</string>
-    <string name="detail_status_cancelled_body">This reservation has been cancelled.</string>
-    <string name="detail_status_expired_title">Reservation Expired</string>
-    <string name="detail_status_expired_body">The QR pass window for this reservation passed before it was scanned. It can no longer be used to complete a transfer.</string>
-
     <string name="detail_summary_title">Reservation Summary</string>
+    <string name="detail_summary_status">Status</string>
     <string name="detail_summary_station">Station</string>
     <string name="detail_summary_datetime">Date &amp; Time</string>
     <string name="detail_summary_nic">Prosumer NIC</string>
 
     <string name="detail_qr_title">Terminal QR Pass</string>
-    <string name="detail_qr_gate_access">Gate Access</string>
     <string name="detail_qr_loading">Loading your QR pass…</string>
     <string name="detail_qr_locked_title">Awaiting Operator Approval</string>
     <string name="detail_qr_locked_body">Your QR transfer pass will activate automatically once approved by the station operator.</string>

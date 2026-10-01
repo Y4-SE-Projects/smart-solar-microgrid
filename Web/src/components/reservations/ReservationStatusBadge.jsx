@@ -29,7 +29,7 @@ const STATUS_STYLES = {
     },
 };
 
-export default function ReservationStatusBadge({ status }) {
+export default function ReservationStatusBadge({ status, compact = false }) {
     if (!status) return <span className="text-xs text-outline">—</span>;
 
     const style = STATUS_STYLES[status] || {
@@ -39,14 +39,15 @@ export default function ReservationStatusBadge({ status }) {
 
     return (
         <span
-            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-3 py-1 text-xs font-semibold ${style.classes}`}
+            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1 font-semibold ${compact ? 'text-[11px]' : 'border text-xs'} ${style.classes}`}
         >
-            <span
-                aria-hidden="true"
-                className="material-symbols-outlined text-[15px]"
-            >
-                {style.icon}
-            </span>
+            {compact ? (
+                <span aria-hidden="true" className="size-1.5 rounded-full bg-current" />
+            ) : (
+                <span aria-hidden="true" className="material-symbols-outlined text-[15px]">
+                    {style.icon}
+                </span>
+            )}
             {status}
         </span>
     );

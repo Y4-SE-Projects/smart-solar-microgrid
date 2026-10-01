@@ -1,10 +1,5 @@
 // File: SlotSchedulesPage.jsx
 // Purpose: Shared Backoffice + Grid Operator page for a station's bookable slots, one day at a time.
-//          Slots are fetched a month at a time (the month on the calendar), so the calendar can
-//          highlight every day that has slots and the day table is filtered here, without a request.
-//          Backoffice manages the slot time windows themselves (create/edit/delete);
-//          Grid Operator manages only live availability — each role only sees the actions
-//          the API actually authorizes them to perform, everything else stays hidden.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +8,7 @@ import { fetchStations } from '../services/stationsApi';
 import { fetchSlotsForStation, generateRecurringSlots, updateSlot, setSlotAvailability, deleteSlot } from '../services/slotsApi';
 import SlotFormModal from '../components/slots/SlotFormModal';
 import GenerateSlotsModal from '../components/slots/GenerateSlotsModal';
+import StationSelectionMapModal from '../components/stations/StationSelectionMapModal';
 import Modal from '../components/ui/Modal';
 import Calendar from '../components/ui/Calendar';
 import Dropdown from '../components/ui/Dropdown';
@@ -110,6 +106,8 @@ export default function SlotSchedulesPage() {
   const [isLoadingStations, setIsLoadingStations] = useState(true);
   const [stationsError, setStationsError] = useState('');
   const [selectedStationId, setSelectedStationId] = useState('');
+  const [isStationMapOpen, setIsStationMapOpen] = useState(false);
+  const mapButtonRef = useRef(null);
 
   const [selectedDate, setSelectedDate] = useState(() => startOfToday());
   const [calendarMonth, setCalendarMonth] = useState(() => startOfToday());
@@ -233,6 +231,16 @@ export default function SlotSchedulesPage() {
     setSelectedStationId(stationId);
   }
 
+  function closeStationMap() {
+    setIsStationMapOpen(false);
+    mapButtonRef.current?.focus();
+  }
+
+  function selectStationFromMap(stationId) {
+    selectStation(stationId);
+    closeStationMap();
+  }
+
   // Also moves the calendar to that day's month, for jumps that don't come from a calendar click.
   // Picking a day leaves search mode, since the table then shows that one day.
   function selectDate(date) {
@@ -303,7 +311,7 @@ export default function SlotSchedulesPage() {
               : 'Define the bookable time windows offered at each station.'}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-3 self-start md:self-auto">
+        <div className="flex w-full flex-wrap items-center gap-3 self-start md:w-auto md:self-auto">
           {stationsError ? (
             <p className="text-body-sm text-alert-danger">{stationsError}</p>
           ) : (
@@ -314,12 +322,22 @@ export default function SlotSchedulesPage() {
               options={stationOptions}
               onChange={selectStation}
               placeholder={stations.length === 0 ? 'No stations registered yet' : 'Select a station'}
-              className="w-72"
+              className="min-w-0 flex-1 sm:w-72 sm:flex-none"
               searchable
               searchPlaceholder="Search by ID or name"
               emptyText="No stations match."
             />
           )}
+          <button
+            ref={mapButtonRef}
+            type="button"
+            onClick={() => setIsStationMapOpen(true)}
+            disabled={isLoadingStations || Boolean(stationsError) || stations.length === 0}
+            className="flex h-10 shrink-0 items-center gap-2 rounded-full border border-border-slate bg-canvas-bg px-4 text-xs font-semibold text-on-surface outline-none transition-colors hover:border-outline-variant hover:bg-surface-container-low focus-visible:ring-2 focus-visible:ring-secondary disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">map</span>
+            <span>View map</span>
+          </button>
           {isBackoffice && selectedStationId && (
             <button
               type="button"
@@ -352,10 +370,10 @@ export default function SlotSchedulesPage() {
       {actionError && (
         <div
           role="alert"
-          className="mb-6 flex items-start justify-between gap-3 rounded-2xl bg-error-container px-5 py-3 text-body-sm text-on-error-container"
+          className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-error-container px-5 py-2 text-body-sm text-on-error-container"
         >
-          <span className="flex items-start gap-2">
-            <span className="material-symbols-outlined mt-0.5 text-[18px]" aria-hidden="true">
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true">
               error
             </span>
             <span>
@@ -634,6 +652,15 @@ export default function SlotSchedulesPage() {
           </section>
         </div>
       </div>
+
+      {isStationMapOpen && (
+        <StationSelectionMapModal
+          stations={stations}
+          selectedStationId={selectedStationId}
+          onSelect={selectStationFromMap}
+          onClose={closeStationMap}
+        />
+      )}
 
       {formModal?.mode === 'create' && (
         <GenerateSlotsModal station={selectedStation} onClose={() => setFormModal(null)} onSubmit={handleGenerate} />

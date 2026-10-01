@@ -110,9 +110,9 @@ export default function RowActionsMenu({ items, label = 'More actions' }) {
                 aria-expanded={isOpen}
                 aria-controls={isOpen ? menuId : undefined}
                 onClick={() => (isOpen ? close() : open())}
-                className={`flex h-8 w-8 items-center justify-center rounded-full border text-on-surface-variant shadow-sm transition-colors hover:bg-surface-container-high ${isOpen
-                        ? 'border-secondary bg-surface-container-high'
-                        : 'border-border-slate bg-canvas-bg'
+                className={`flex size-8 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary ${isOpen
+                        ? 'bg-surface-container-high text-primary'
+                        : 'text-on-surface-variant hover:bg-surface-container-low hover:text-primary'
                     }`}
             >
                 <span aria-hidden="true" className="material-symbols-outlined text-[18px]">

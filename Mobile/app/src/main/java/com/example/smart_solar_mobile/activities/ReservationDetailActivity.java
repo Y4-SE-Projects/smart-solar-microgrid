@@ -58,7 +58,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
     private static final String EXTRA_PROSUMER_NIC = "prosumer_nic";
     private static final String EXTRA_CREATED_AT = "created_at";
 
-    private static final int QR_IMAGE_SIZE_PX = 720;
+    private static final int QR_IMAGE_SIZE_PX = 1024;
 
     // The passed fields are a read-only snapshot until this screen verifies the live record.
     public static void start(Context context, ReservationData reservation) {
@@ -93,9 +93,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
     private MaterialButton syncRetryButton;
 
     private TextView detailReferenceText;
-    private TextView statusTitleText;
     private TextView statusChip;
-    private TextView statusBodyText;
     private TextView stationValueText;
     private TextView dateTimeValueText;
     private TextView nicValueText;
@@ -213,9 +211,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
 
     private void bindViews() {
         detailReferenceText = findViewById(R.id.detailReferenceText);
-        statusTitleText = findViewById(R.id.statusTitleText);
         statusChip = findViewById(R.id.statusChip);
-        statusBodyText = findViewById(R.id.statusBodyText);
         stationValueText = findViewById(R.id.stationValueText);
         dateTimeValueText = findViewById(R.id.dateTimeValueText);
         nicValueText = findViewById(R.id.nicValueText);
@@ -368,30 +364,6 @@ public class ReservationDetailActivity extends AppCompatActivity {
         statusChip.setBackgroundResource(ReservationStatusUi.chipBackground(status));
         statusChip.setTextColor(getColor(ReservationStatusUi.chipTextColor(status)));
         statusChip.setText(ReservationStatusUi.chipLabel(status));
-
-        int title;
-        int body;
-        if ("Approved".equalsIgnoreCase(status)) {
-            title = R.string.detail_status_approved_title;
-            body = R.string.detail_status_approved_body;
-        } else if ("Completed".equalsIgnoreCase(status)) {
-            title = R.string.detail_status_completed_title;
-            body = R.string.detail_status_completed_body;
-        } else if ("Declined".equalsIgnoreCase(status)) {
-            title = R.string.detail_status_declined_title;
-            body = R.string.detail_status_declined_body;
-        } else if ("Cancelled".equalsIgnoreCase(status)) {
-            title = R.string.detail_status_cancelled_title;
-            body = R.string.detail_status_cancelled_body;
-        } else if ("Expired".equalsIgnoreCase(status)) {
-            title = R.string.detail_status_expired_title;
-            body = R.string.detail_status_expired_body;
-        } else {
-            title = R.string.detail_status_pending_title;
-            body = R.string.detail_status_pending_body;
-        }
-        statusTitleText.setText(title);
-        statusBodyText.setText(body);
     }
 
     // The QR card only ever appears for a reservation that can still use one, or already did.

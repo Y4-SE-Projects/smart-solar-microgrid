@@ -106,7 +106,9 @@
     <string name="find_station">Find a station</string>
     <string name="reserve_slot">Reserve a slot</string>
     <string name="nearby_stations">Nearby stations</string>
+    <string name="station_map_subtitle">Active stations</string>
     <string name="radius_km">%1$d km</string>
+    <string name="radius_all">All</string>
     <string name="my_location">My location</string>
     <string name="locating">Finding your location…</string>
     <string name="searching_stations">Looking for stations…</string>
@@ -114,6 +116,11 @@
         <item quantity="one">%1$d station within %2$d km</item>
         <item quantity="other">%1$d stations within %2$d km</item>
     </plurals>
+    <plurals name="stations_all">
+        <item quantity="one">%1$d station available</item>
+        <item quantity="other">%1$d stations available</item>
+    </plurals>
+    <string name="no_stations_available">No active stations available.</string>
     <string name="no_stations_within">No stations within %1$d km. Try a wider radius.</string>
     <string name="location_permission_needed">Allow location access to find stations near you.</string>
     <string name="allow_location">Allow location</string>

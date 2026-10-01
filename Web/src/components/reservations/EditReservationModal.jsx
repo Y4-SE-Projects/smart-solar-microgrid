@@ -4,7 +4,6 @@
 import { useEffect, useState } from 'react';
 import Modal from '../ui/Modal';
 import Dropdown from '../ui/Dropdown';
-import ReservationStatusBadge from './ReservationStatusBadge';
 import { fetchSlotsForStation } from '../../services/slotsApi';
 import { updateReservation } from '../../services/reservationApi';
 
@@ -37,19 +36,6 @@ function formatSlotWindow(slot) {
     return `${formatDate(start)} ${formatClock(start)} to ${formatClock(end)}`;
 }
 
-function Metadata({ label, children }) {
-    return (
-        <div className="min-w-0">
-            <dt className="text-label-sm font-semibold uppercase tracking-wider text-outline">
-                {label}
-            </dt>
-            <dd className="mt-1 break-words text-body-md font-semibold text-on-surface">
-                {children}
-            </dd>
-        </div>
-    );
-}
-
 export default function EditReservationModal({ reservation, onClose, onUpdated }) {
     const [slots, setSlots] = useState([]);
     const [selectedSlotId, setSelectedSlotId] = useState('');
@@ -65,7 +51,6 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
         if (!reservation.stationId) return undefined;
 
         let cancelled = false;
-        setIsLoadingSlots(true);
 
         fetchSlotsForStation(reservation.stationId)
             .then((response) => {
@@ -79,18 +64,10 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                         (slot) =>
                             slot.slotId === previous &&
                             slot.stationId === reservation.stationId &&
-                            (slot.isAvailable === true ||
-                                slot.slotId === reservation.slotId)
+                            slot.isAvailable === true &&
+                            slot.slotId !== reservation.slotId
                     );
-                    if (selectablePrevious) return previous;
-
-                    const currentSlot = stationSlots.find(
-                        (slot) =>
-                            slot.stationId === reservation.stationId &&
-                            slot.slotId === reservation.slotId
-                    );
-
-                    return currentSlot?.slotId || '';
+                    return selectablePrevious ? previous : '';
                 });
             })
             .catch((error) => {
@@ -117,28 +94,19 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
     const selectableSlots = slots.filter(
         (slot) =>
             slot.stationId === reservation.stationId &&
-            (slot.isAvailable === true ||
-                slot.slotId === reservation.slotId)
+            slot.isAvailable === true &&
+            slot.slotId !== reservation.slotId
     );
     const slotOptions = selectableSlots.map((slot) => ({
         value: slot.slotId,
-        label: slotLabel(slot),
+        label: formatSlotWindow(slot),
+        hint: slot.slotId,
     }));
 
     const selectedSlot =
         selectableSlots.find((slot) => slot.slotId === selectedSlotId) || null;
 
-    const selectedStart = selectedSlot ? asDate(selectedSlot.startTime) : null;
-    const selectedEnd = selectedSlot ? asDate(selectedSlot.endTime) : null;
     const currentScheduled = asDate(reservation.scheduledTime);
-    const isCurrentSlot = selectedSlot?.slotId === reservation.slotId;
-
-    function slotLabel(slot) {
-        const current = slot.slotId === reservation.slotId;
-
-        return `${formatSlotWindow(slot)}${current ? ' • Current reservation slot' : ''
-            }`;
-    }
 
     function retrySlots() {
         setIsLoadingSlots(true);
@@ -190,32 +158,27 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
 
     return (
         <Modal
-            title="Edit Reservation"
+            title="Edit reservation"
+            description={`Reservation ${reservation.reservationId}`}
             onClose={handleClose}
-            maxWidthClassName="max-w-2xl"
-            scrollable
+            maxWidthClassName="max-w-lg"
         >
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-slate pb-4">
-                    <div className="flex min-w-0 items-center gap-3">
-                        <span
-                            aria-hidden="true"
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint-surface text-primary"
-                        >
-                            <span className="material-symbols-outlined text-[21px]">
-                                confirmation_number
-                            </span>
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate aria-busy={isSubmitting}>
+                <div className="space-y-1 border-b border-border-slate pb-4 text-body-sm">
+                    <p className="text-on-surface-variant">
+                        Prosumer <strong className="font-semibold text-on-surface">{reservation.prosumerNic}</strong>
+                        {' · '}Station <strong className="font-semibold text-on-surface">{reservation.stationId || 'Unavailable'}</strong>
+                    </p>
+                    <p className="text-on-surface-variant">
+                        Current: <span className="font-medium text-on-surface">
+                            {currentScheduled ? (
+                                <>{formatDate(currentScheduled)} at {formatClock(currentScheduled)}</>
+                            ) : (
+                                'Time unavailable'
+                            )}
                         </span>
-                        <div className="min-w-0">
-                            <p className="text-label-sm font-semibold uppercase tracking-wider text-outline">
-                                Reservation ID
-                            </p>
-                            <p className="truncate text-body-md font-bold text-primary">
-                                {reservation.reservationId}
-                            </p>
-                        </div>
-                    </div>
-                    <ReservationStatusBadge status={reservation.status} />
+                        {' · '}Slot {reservation.slotId}
+                    </p>
                 </div>
 
                 <section className="rounded-2xl border border-border-slate bg-canvas-bg/60 p-4">
@@ -413,18 +376,24 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                 Changes need at least 12 hours’ notice before both times, and the new slot must be within the next 7 days. HelioGrid validates this when you save.
                             </p>
                         </div>
-                    </div>
+                    )}
+                    {!isLoadingSlots && !slotsError && reservation.stationId && selectableSlots.length === 0 && (
+                        <p className="text-body-sm text-on-surface-variant">
+                            No other available slots at this station.
+                        </p>
+                    )}
                 </div>
+
+                <p className="border-t border-border-slate pt-4 text-body-sm leading-relaxed text-on-surface-variant">
+                    Both booking times need at least 12 hours’ notice. The new slot must be within 7 days of the reservation’s creation.
+                </p>
 
                 {generalError && (
                     <div
                         role="alert"
                         className="flex items-start gap-2 rounded-xl bg-error-container px-space-md py-space-sm text-body-sm text-on-error-container"
                     >
-                        <span
-                            aria-hidden="true"
-                            className="material-symbols-outlined mt-0.5 text-[18px]"
-                        >
+                        <span aria-hidden="true" className="material-symbols-outlined mt-0.5 text-[18px]">
                             error
                         </span>
                         <span>{generalError}</span>
@@ -438,17 +407,14 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                         disabled={isSubmitting}
                         className="rounded-full px-5 py-2.5 text-sm font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-low disabled:opacity-60"
                     >
-                        Keep Current
+                        Cancel
                     </button>
                     <button
                         type="submit"
                         disabled={cannotSubmit}
-                        className="inline-flex items-center justify-center gap-2 rounded-full bg-primary-container px-5 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-all hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
+                        className="rounded-full bg-primary-container px-5 py-2.5 text-sm font-semibold text-on-primary transition-colors hover:bg-primary disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
-                            save
-                        </span>
-                        {isSubmitting ? 'Updating...' : 'Update Reservation'}
+                        {isSubmitting ? 'Saving...' : 'Save changes'}
                     </button>
                 </div>
             </form>

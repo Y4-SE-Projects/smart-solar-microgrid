@@ -1,5 +1,5 @@
 // File: LoginActivity.java
-// Purpose: Login screen for Prosumers (NIC) and Grid Operators (username) using POST /api/users/login.
+// Purpose: Login screen for Prosumers (NIC) and Grid Operators (username) using their role-specific login routes.
 // Author: IT23215856, IT23218512 (registration link, deactivated-account dialogs)
 
 package com.example.smart_solar_mobile.activities;
@@ -29,6 +29,7 @@ import com.example.smart_solar_mobile.models.Roles;
 import com.example.smart_solar_mobile.network.ApiErrorBody;
 import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
+import com.example.smart_solar_mobile.network.ApiService;
 import com.example.smart_solar_mobile.network.NetworkManager;
 import com.example.smart_solar_mobile.utils.DialogUtils;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
@@ -180,40 +181,43 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         setLoading(true);
-        NetworkManager.getInstance().getApiService()
-                .login(new LoginRequest(identifier, password))
-                .enqueue(new Callback<ApiResponse<AuthResponseData>>() {
-                    @Override
-                    public void onResponse(@NonNull Call<ApiResponse<AuthResponseData>> call,
-                                           @NonNull Response<ApiResponse<AuthResponseData>> response) {
-                        // Opens the home screen on success, otherwise shows the API's reason
-                        if (isFinishing() || isDestroyed()) {
-                            return;
-                        }
-                        ApiResponse<AuthResponseData> body = response.body();
-                        if (response.isSuccessful() && body != null && body.data != null) {
-                            handleLoginSuccess(body.data);
-                        } else {
-                            // parseError keeps the extra fields a deactivated Prosumer's 401 carries
-                            setLoading(false);
-                            ApiErrorBody error = ApiErrorParser.parseError(LoginActivity.this, response);
-                            showError(error.message);
-                            if (error.isAccountDeactivated()) {
-                                showDeactivatedDialog(identifier, password, error);
-                            }
-                        }
+        ApiService apiService = NetworkManager.getInstance().getApiService();
+        LoginRequest credentials = new LoginRequest(identifier, password);
+        Call<ApiResponse<AuthResponseData>> loginCall = prosumerSelected
+                ? apiService.loginProsumer(credentials)
+                : apiService.login(credentials);
+        loginCall.enqueue(new Callback<ApiResponse<AuthResponseData>>() {
+            @Override
+            public void onResponse(@NonNull Call<ApiResponse<AuthResponseData>> call,
+                                   @NonNull Response<ApiResponse<AuthResponseData>> response) {
+                // Opens the home screen on success, otherwise shows the API's reason
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                ApiResponse<AuthResponseData> body = response.body();
+                if (response.isSuccessful() && body != null && body.data != null) {
+                    handleLoginSuccess(body.data);
+                } else {
+                    // parseError keeps the extra fields a deactivated Prosumer's 401 carries
+                    setLoading(false);
+                    ApiErrorBody error = ApiErrorParser.parseError(LoginActivity.this, response);
+                    showError(error.message);
+                    if (error.isAccountDeactivated()) {
+                        showDeactivatedDialog(identifier, password, error);
                     }
+                }
+            }
 
-                    @Override
-                    public void onFailure(@NonNull Call<ApiResponse<AuthResponseData>> call, @NonNull Throwable t) {
-                        // The request never reached the API (no connection, wrong API_BASE_URL, server down)
-                        if (isFinishing() || isDestroyed()) {
-                            return;
-                        }
-                        setLoading(false);
-                        showError(getString(R.string.error_network));
-                    }
-                });
+            @Override
+            public void onFailure(@NonNull Call<ApiResponse<AuthResponseData>> call, @NonNull Throwable t) {
+                // The request never reached the API (no connection, wrong API_BASE_URL, server down)
+                if (isFinishing() || isDestroyed()) {
+                    return;
+                }
+                setLoading(false);
+                showError(getString(R.string.error_network));
+            }
+        });
     }
 
     private void showDeactivatedDialog(String nic, String password, ApiErrorBody error) {
