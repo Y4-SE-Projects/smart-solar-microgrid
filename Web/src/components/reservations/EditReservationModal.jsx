@@ -376,7 +376,7 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                 Changes need at least 12 hours’ notice before both times, and the new slot must be within the next 7 days. HelioGrid validates this when you save.
                             </p>
                         </div>
-                    )}
+                    </div>
                     {!isLoadingSlots && !slotsError && reservation.stationId && selectableSlots.length === 0 && (
                         <p className="text-body-sm text-on-surface-variant">
                             No other available slots at this station.
