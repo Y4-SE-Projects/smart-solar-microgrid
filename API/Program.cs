@@ -254,7 +254,28 @@ using (var scope = app.Services.CreateScope())
                 // Login would authenticate against whichever one MongoDB happened to return first.
                 var existing = await userService.FindByUsernameAsync(seedSettings.Username);
 
-                if (existing == null)
+                // The seed bypasses Register, so it applies Register's rules itself.
+                // Otherwise a mistyped setting could create an account no screen would accept ( a weak password or a username in NIC format ).
+                var seedErrors = existing != null
+                    ? new List<string>()
+                    : new[]
+                    {
+                        AccountRules.ValidateUsername(seedSettings.Username),
+                        AccountRules.ValidateNewPassword(seedSettings.Password),
+                        AccountRules.ValidateFullName(seedSettings.FullName),
+                        AccountRules.ValidateEmail(seedSettings.Email),
+                        AccountRules.ValidatePhone(seedSettings.Phone)
+                    }.OfType<string>().ToList();
+
+                if (seedErrors.Count > 0)
+                {
+                    Console.WriteLine("No active Backoffice account exists, but SeedAdminSettings breaks the account rules — skipping seed. Fix these in appsettings.json:");
+                    foreach (var seedError in seedErrors)
+                    {
+                        Console.WriteLine($"  - {seedError}");
+                    }
+                }
+                else if (existing == null)
                 {
                     var seedUser = new User
                     {
@@ -262,9 +283,9 @@ using (var scope = app.Services.CreateScope())
                         Username = seedSettings.Username.Trim().ToLowerInvariant(),
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedSettings.Password),
                         Role = Roles.Backoffice,
-                        FullName = seedSettings.FullName,
-                        Email = seedSettings.Email,
-                        Phone = seedSettings.Phone,
+                        FullName = seedSettings.FullName.Trim(),
+                        Email = seedSettings.Email.Trim(),
+                        Phone = seedSettings.Phone.Trim(),
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow
                     };
