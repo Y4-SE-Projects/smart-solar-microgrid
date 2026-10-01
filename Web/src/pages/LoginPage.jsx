@@ -34,6 +34,22 @@ export default function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setErrorMessage('');
+
+    // The form uses noValidate, so "required" doesn't stop an empty submit. 
+    // Without this check it reached the API, came back as a misleading "Invalid credentials." and used up one of the limited sign-in attempts.
+    if (!identifier.trim() && !password) {
+      setErrorMessage('Enter your username and password.');
+      return;
+    }
+    if (!identifier.trim()) {
+      setErrorMessage('Enter your username.');
+      return;
+    }
+    if (!password) {
+      setErrorMessage('Enter your password.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
