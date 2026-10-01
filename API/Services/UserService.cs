@@ -40,19 +40,32 @@ namespace API.Services
                                 .FirstOrDefaultAsync();
         }
 
-        // Finds an account of any role by the identifier a token carries in its NameIdentifier claim.
-        // ( NIC for a Prosumer, Username for Backoffice/GridOperator; and only returns it while account is still active. )
-        public async Task<User?> FindActiveByIdentifierAsync(string? identifier)
+        // Finds the still-active account a token belongs to, from its NameIdentifier and Role claims.
+        // The role decides which field the identifier is: NIC for a Prosumer, Username for Backoffice/GridOperator.
+        public async Task<User?> FindActiveByIdentifierAsync(string? identifier, string? role)
         {
-            // Guarded because an empty identifier would otherwise match any document whose Nic and Username are both unset.
-            if (string.IsNullOrWhiteSpace(identifier))
+            // Guarded because an empty identifier would otherwise match any document whose Nic or Username is unset.
+            if (string.IsNullOrWhiteSpace(identifier) || string.IsNullOrWhiteSpace(role))
             {
                 return null;
             }
 
-            return await _users
-                .Find(u => u.IsActive && (u.Nic == identifier || u.Username == identifier))
-                .FirstOrDefaultAsync();
+            if (role == Roles.Prosumer)
+            {
+                return await _users
+                    .Find(u => u.IsActive && u.Role == Roles.Prosumer && u.Nic == identifier)
+                    .FirstOrDefaultAsync();
+            }
+
+            if (role == Roles.Backoffice || role == Roles.GridOperator)
+            {
+                return await _users
+                    .Find(u => u.IsActive && u.Role == role && u.Username == identifier)
+                    .FirstOrDefaultAsync();
+            }
+
+            // A role this API doesn't issue tokens for.
+            return null;
         }
 
         // True if a user with this NIC already exists (duplicate-registration check).

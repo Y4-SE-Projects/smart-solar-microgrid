@@ -139,12 +139,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var identifier = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
 
+                // The role says whether the identifier is a NIC or a username, so the lookup never mixes the two.
+                var role = context.Principal?.FindFirstValue(ClaimTypes.Role);
+
                 // Resolved from the request scope, so this shares the scoped UserService and its MongoDB handle with the rest of the request rather than building another.
                 var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
-                var account = await userService.FindActiveByIdentifierAsync(identifier);
+                var account = await userService.FindActiveByIdentifierAsync(identifier, role);
 
                 // One null covers three cases.
-                // ( the account was deactivated, it was removed, or the token has no usable identifier. ) 
+                // ( the account was deactivated, it was removed, or the token has no usable identifier or role. )
                 // All three mean the same thing here; stop honouring this token.
                 if (account == null)
                 {
