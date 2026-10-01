@@ -9,6 +9,7 @@ using API.Data;
 using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -95,7 +96,38 @@ builder.Services.AddRateLimiter(options =>
 });
 
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // ASP.NET rejects some requests before any controller runs ( malformed JSON, an empty body, a value of the wrong type ).
+        // Its default reply has no "message" field, so both clients could only show a generic error.
+        // This keeps those replies in the { success, message } shape every endpoint uses. It changes only the reply, not what is accepted.
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var failed = context.ModelState.Where(entry => entry.Value?.Errors.Count > 0).ToList();
+
+            string message;
+            if (failed.Any(entry => entry.Value!.Errors.Any(error => error.ErrorMessage.Contains("non-empty request body"))))
+            {
+                message = "The request body is empty.";
+            }
+            else if (failed.Any(entry => entry.Key.StartsWith('$')))
+            {
+                // Keys starting with "$" are JSON paths: the body couldn't be read, or a value had the wrong type.
+                // The framework's own wording ( line and byte positions ) means nothing to a user, so it is replaced.
+                message = "The request body isn't valid JSON, or one of its values has the wrong type.";
+            }
+            else
+            {
+                message = failed.SelectMany(entry => entry.Value!.Errors)
+                                .Select(error => error.ErrorMessage)
+                                .FirstOrDefault(text => !string.IsNullOrWhiteSpace(text))
+                          ?? "The request is invalid.";
+            }
+
+            return new BadRequestObjectResult(new { success = false, message });
+        };
+    });
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
