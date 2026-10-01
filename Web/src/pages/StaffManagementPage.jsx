@@ -223,6 +223,7 @@ export default function StaffManagementPage() {
         <StaffDirectory
           staff={staff}
           isLoading={isLoading}
+          loadError={loadError}
           currentUsername={currentUsername}
           onEdit={(member) => openAction('edit', member)}
           onResetPassword={(member) => openAction('password', member)}

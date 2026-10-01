@@ -8,8 +8,8 @@ using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 
 namespace API.Controllers
 {
@@ -20,17 +20,9 @@ namespace API.Controllers
         private readonly UserService _userService;
         private readonly JwtTokenService _tokenService;
 
-        // Shortest password the API will store, applied wherever one is set.
-        // The rule lives here rather than only in the web form, so it holds for every
-        // client and for anything hitting the API directly.
-        private const int MinimumPasswordLength = 8;
-
         // Longest free-text reason accepted on deactivation or on a declined reactivation.
         // Both are shown back on the Backoffice screens, so an unbounded value would flood them.
         private const int MaximumReasonLength = 500;
-
-        // Same email rule the web staff form applies, so the two never disagree about what is valid.
-        private static readonly Regex EmailPattern = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
 
         // Constructor: DI supplies the shared UserService and JwtTokenService.
         public UsersController(UserService userService, JwtTokenService tokenService)
@@ -52,30 +44,44 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "Role must be Backoffice, GridOperator, or Prosumer." });
             }
 
-            if (string.IsNullOrEmpty(request.Password) || request.Password.Length < MinimumPasswordLength)
+            // At least 8 characters, not only spaces, at most 72 bytes (see AccountRules.ValidateNewPassword).
+            var passwordError = AccountRules.ValidateNewPassword(request.Password);
+            if (passwordError != null)
             {
-                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+                return BadRequest(new { success = false, message = passwordError });
             }
 
             // Prosumers are a mobile-only role, so their sign-up belongs to the mobile app.
             var clientType = Request.Headers["X-Client-Type"].FirstOrDefault();
 
+            // 403 rather than 401 for the refusals below where the caller isn't the problem.
+            // 401 means "not signed in", and the web client treats every 401 as an expired session and signs the user out.
             if (request.Role == Roles.Prosumer && clientType == "Web")
             {
-                return Unauthorized(new { success = false, message = "Prosumer accounts must be registered from the mobile app." });
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "Prosumer accounts must be registered from the mobile app." });
             }
 
             if (request.Role != Roles.Prosumer)
             {
-                if (!(User.Identity?.IsAuthenticated ?? false) || !User.IsInRole(Roles.Backoffice))
+                const string staffOnlyMessage = "Only a Backoffice user can register Backoffice or Grid Operator accounts.";
+
+                // Nobody signed in: a genuine authentication failure, so 401 stays.
+                if (!(User.Identity?.IsAuthenticated ?? false))
                 {
-                    return Unauthorized(new { success = false, message = "Only a Backoffice user can register Backoffice or Grid Operator accounts." });
+                    return Unauthorized(new { success = false, message = staffOnlyMessage });
+                }
+
+                // Signed in, but not as Backoffice: allowed to be here, not allowed to do this.
+                if (!User.IsInRole(Roles.Backoffice))
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = staffOnlyMessage });
                 }
             }
 
             // The identifier is cleaned up once here, and the cleaned value is what gets checked and stored.
             var nic = NicFormat.Normalize(request.Nic);
-            var username = request.Username?.Trim() ?? string.Empty;
+            // Usernames are stored in lower case, since letter case means nothing in them. What is saved is what the staff list shows.
+            var username = request.Username?.Trim().ToLowerInvariant() ?? string.Empty;
 
             if (request.Role == Roles.Prosumer)
             {
@@ -91,14 +97,11 @@ namespace API.Controllers
             }
             else
             {
-                if (username.Length == 0)
+                // Letter first, safe characters only, 3–50 long (see AccountRules.ValidateUsername).
+                var usernameError = AccountRules.ValidateUsername(username);
+                if (usernameError != null)
                 {
-                    return BadRequest(new { success = false, message = "Username is required." });
-                }
-
-                if (username.Any(char.IsWhiteSpace))
-                {
-                    return BadRequest(new { success = false, message = "Username cannot contain spaces." });
+                    return BadRequest(new { success = false, message = usernameError });
                 }
             }
 
@@ -142,6 +145,7 @@ namespace API.Controllers
 
         // Logs a Backoffice or GridOperator user in with a username and password.
         [HttpPost("login")]
+        [EnableRateLimiting("auth")]
         public Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             return LoginByRoleAsync(request, prosumerOnly: false);
@@ -149,6 +153,7 @@ namespace API.Controllers
 
         // Logs a Prosumer in with a NIC and password.
         [HttpPost("login/prosumer")]
+        [EnableRateLimiting("auth")]
         public Task<IActionResult> LoginProsumer([FromBody] LoginRequest request)
         {
             return LoginByRoleAsync(request, prosumerOnly: true);
@@ -158,6 +163,12 @@ namespace API.Controllers
         private async Task<IActionResult> LoginByRoleAsync(LoginRequest request, bool prosumerOnly)
         {
             var identifier = request.Identifier?.Trim() ?? string.Empty;
+
+            // No staff username is longer than the maximum, so a longer one can't match and isn't worth a database query.
+            if (!prosumerOnly && identifier.Length > AccountRules.MaximumUsernameLength)
+            {
+                return Unauthorized(new { success = false, message = "Invalid credentials." });
+            }
 
             // Try the exact NIC before normalizing to support accounts created before NIC normalization.
             User? user = prosumerOnly
@@ -279,6 +290,7 @@ namespace API.Controllers
         // The current password must be supplied.
         [Authorize(Roles = Roles.Prosumer)]
         [HttpPut("{nic}/password")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ChangePassword(string nic, [FromBody] ChangePasswordRequest request)
         {
             var callerNic = User.FindFirstValue("nic");
@@ -303,9 +315,10 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "Current password is incorrect." });
             }
 
-            if (string.IsNullOrEmpty(request.NewPassword) || request.NewPassword.Length < MinimumPasswordLength)
+            var newPasswordError = AccountRules.ValidateNewPassword(request.NewPassword);
+            if (newPasswordError != null)
             {
-                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+                return BadRequest(new { success = false, message = newPasswordError });
             }
 
             if (request.NewPassword == request.CurrentPassword)
@@ -355,6 +368,7 @@ namespace API.Controllers
         // Public by necessity: login won't issue a token for a deactivated account. 
         // Re-checking the NIC and password authenticates the request, and stops anyone's requests against a NIC that isn't theirs.
         [HttpPost("reactivation-request")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> RequestReactivation([FromBody] ReactivationRequest request)
         {
             var user = await AuthenticateProsumerAsync(request.Nic, request.Password);
@@ -382,6 +396,7 @@ namespace API.Controllers
         // The account stays deactivated and takes it out of the Backoffice queue.
         // ( Public for the same reason as the request endpoint above. )
         [HttpPost("reactivation-request/cancel")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> CancelReactivationRequest([FromBody] ReactivationRequest request)
         {
             var user = await AuthenticateProsumerAsync(request.Nic, request.Password);
@@ -503,7 +518,8 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = contactError });
             }
 
-            await _userService.UpdateStaffProfileAsync(username, request.FullName.Trim(), request.Email.Trim(), request.Phone.Trim());
+            // The stored spelling: the lookup ignores case, but the update matches the username exactly.
+            await _userService.UpdateStaffProfileAsync(user.Username!, request.FullName.Trim(), request.Email.Trim(), request.Phone.Trim());
 
             return Ok(new { success = true, message = "Staff account updated." });
         }
@@ -526,8 +542,9 @@ namespace API.Controllers
             }
 
             // Locking yourself out mid-session helps nobody, and the account would then need another Backoffice user to restore it.
+            // Compared with the stored username, so a differently-cased URL can't slip past this check.
             var callerUsername = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.Equals(callerUsername, username, StringComparison.Ordinal))
+            if (string.Equals(callerUsername, user.Username, StringComparison.Ordinal))
             {
                 return BadRequest(new { success = false, message = "You cannot deactivate your own account." });
             }
@@ -538,7 +555,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "This is the last active Backoffice account and cannot be deactivated." });
             }
 
-            await _userService.SetStaffActiveAsync(username, false);
+            await _userService.SetStaffActiveAsync(user.Username!, false);
 
             return Ok(new { success = true, message = "Staff account deactivated." });
         }
@@ -555,12 +572,13 @@ namespace API.Controllers
                 return NotFound(new { success = false, message = "Staff account not found." });
             }
 
-            if (string.IsNullOrEmpty(request.NewPassword) || request.NewPassword.Length < MinimumPasswordLength)
+            var newPasswordError = AccountRules.ValidateNewPassword(request.NewPassword);
+            if (newPasswordError != null)
             {
-                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+                return BadRequest(new { success = false, message = newPasswordError });
             }
 
-            await _userService.SetStaffPasswordAsync(username, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
+            await _userService.SetStaffPasswordAsync(user.Username!, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
 
             return Ok(new { success = true, message = "Password reset. Share the new password with the account holder." });
         }
@@ -582,7 +600,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "This account is already active." });
             }
 
-            await _userService.SetStaffActiveAsync(username, true);
+            await _userService.SetStaffActiveAsync(user.Username!, true);
 
             return Ok(new { success = true, message = "Staff account reactivated." });
         }
@@ -612,24 +630,22 @@ namespace API.Controllers
         // Checks the contact fields every account carries, in the order the forms show them.
         private static string? ValidateContactDetails(string? fullName, string? email, string? phone)
         {
-            if (string.IsNullOrWhiteSpace(fullName))
+            var fullNameError = AccountRules.ValidateFullName(fullName);
+            if (fullNameError != null)
             {
-                return "Full name is required.";
+                return fullNameError;
             }
 
-            if (string.IsNullOrWhiteSpace(email))
+            var emailError = AccountRules.ValidateEmail(email);
+            if (emailError != null)
             {
-                return "Email is required.";
+                return emailError;
             }
 
-            if (!EmailPattern.IsMatch(email.Trim()))
+            var phoneError = AccountRules.ValidatePhone(phone);
+            if (phoneError != null)
             {
-                return "Enter a valid email address.";
-            }
-
-            if (string.IsNullOrWhiteSpace(phone))
-            {
-                return "Phone number is required.";
+                return phoneError;
             }
 
             return null;

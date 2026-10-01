@@ -34,6 +34,22 @@ export default function LoginPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     setErrorMessage('');
+
+    // The form uses noValidate, so "required" doesn't stop an empty submit. 
+    // Without this check it reached the API, came back as a misleading "Invalid credentials." and used up one of the limited sign-in attempts.
+    if (!identifier.trim() && !password) {
+      setErrorMessage('Enter your username and password.');
+      return;
+    }
+    if (!identifier.trim()) {
+      setErrorMessage('Enter your username.');
+      return;
+    }
+    if (!password) {
+      setErrorMessage('Enter your password.');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -132,9 +148,12 @@ export default function LoginPage() {
                     autoComplete="username"
                     required
                     value={identifier}
-                    onChange={(event) => setIdentifier(event.target.value)}
-                    placeholder="Enter your username"
-                    className="h-11 w-full rounded-xl border border-border-slate bg-canvas-bg px-4 text-sm text-on-surface placeholder:text-outline focus:border-secondary focus:bg-white focus:outline-2 focus:outline-offset-2 focus:outline-secondary/45"
+                    // Usernames are stored in lower case, so the field shows what the account is actually called.
+                    onChange={(event) => setIdentifier(event.target.value.toLowerCase())}
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    placeholder="e.g. admin.jsmith"
+                    className="w-full h-11 pl-10 pr-space-md bg-canvas-bg text-on-surface text-body-md rounded-xl focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_#006c4a] transition-all"
                   />
                 </div>
               </div>

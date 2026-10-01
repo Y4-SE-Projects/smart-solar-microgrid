@@ -9,6 +9,8 @@ using API.Data;
 using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
@@ -62,17 +64,70 @@ builder.Services.AddRateLimiter(options =>
                 SegmentsPerWindow = 6,
                 QueueLimit = 0
             }));
+
+    // ACCOUNTS: rate limit for every endpoint that checks a password (both logins, change password, and the two reactivation endpoints).
+    // Stops a password being guessed by brute force. Counted per signed-in account when there is one ( change password ), otherwise per IP.
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value is { } identifier
+                ? $"user:{identifier}"
+                : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous"}",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            }));
+
+    // One rejection handler serves every policy, so the message is picked from the policy that refused the request.
     options.OnRejected = async (context, token) =>
     {
+        var policy = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
+        var message = policy == "auth"
+            ? "Too many attempts. Please wait a minute and try again."
+            : "Too many verification attempts. Please slow down.";
+
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         await context.HttpContext.Response.WriteAsJsonAsync(
-            new { success = false, code = "RATE_LIMITED", message = "Too many verification attempts. Please slow down." },
+            new { success = false, code = "RATE_LIMITED", message },
             token);
     };
 });
 
 // Controllers
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        // ASP.NET rejects some requests before any controller runs ( malformed JSON, an empty body, a value of the wrong type ).
+        // Its default reply has no "message" field, so both clients could only show a generic error.
+        // This keeps those replies in the { success, message } shape every endpoint uses. It changes only the reply, not what is accepted.
+        options.InvalidModelStateResponseFactory = context =>
+        {
+            var failed = context.ModelState.Where(entry => entry.Value?.Errors.Count > 0).ToList();
+
+            string message;
+            if (failed.Any(entry => entry.Value!.Errors.Any(error => error.ErrorMessage.Contains("non-empty request body"))))
+            {
+                message = "The request body is empty.";
+            }
+            else if (failed.Any(entry => entry.Key.StartsWith('$')))
+            {
+                // Keys starting with "$" are JSON paths: the body couldn't be read, or a value had the wrong type.
+                // The framework's own wording ( line and byte positions ) means nothing to a user, so it is replaced.
+                message = "The request body isn't valid JSON, or one of its values has the wrong type.";
+            }
+            else
+            {
+                message = failed.SelectMany(entry => entry.Value!.Errors)
+                                .Select(error => error.ErrorMessage)
+                                .FirstOrDefault(text => !string.IsNullOrWhiteSpace(text))
+                          ?? "The request is invalid.";
+            }
+
+            return new BadRequestObjectResult(new { success = false, message });
+        };
+    });
 
 // Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -139,12 +194,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var identifier = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
 
+                // The role says whether the identifier is a NIC or a username, so the lookup never mixes the two.
+                var role = context.Principal?.FindFirstValue(ClaimTypes.Role);
+
                 // Resolved from the request scope, so this shares the scoped UserService and its MongoDB handle with the rest of the request rather than building another.
                 var userService = context.HttpContext.RequestServices.GetRequiredService<UserService>();
-                var account = await userService.FindActiveByIdentifierAsync(identifier);
+                var account = await userService.FindActiveByIdentifierAsync(identifier, role);
 
                 // One null covers three cases.
-                // ( the account was deactivated, it was removed, or the token has no usable identifier. ) 
+                // ( the account was deactivated, it was removed, or the token has no usable identifier or role. )
                 // All three mean the same thing here; stop honouring this token.
                 if (account == null)
                 {
@@ -196,29 +254,52 @@ using (var scope = app.Services.CreateScope())
                 // Login would authenticate against whichever one MongoDB happened to return first.
                 var existing = await userService.FindByUsernameAsync(seedSettings.Username);
 
-                if (existing == null)
+                // The seed bypasses Register, so it applies Register's rules itself.
+                // Otherwise a mistyped setting could create an account no screen would accept ( a weak password or a username in NIC format ).
+                var seedErrors = existing != null
+                    ? new List<string>()
+                    : new[]
+                    {
+                        AccountRules.ValidateUsername(seedSettings.Username),
+                        AccountRules.ValidateNewPassword(seedSettings.Password),
+                        AccountRules.ValidateFullName(seedSettings.FullName),
+                        AccountRules.ValidateEmail(seedSettings.Email),
+                        AccountRules.ValidatePhone(seedSettings.Phone)
+                    }.OfType<string>().ToList();
+
+                if (seedErrors.Count > 0)
+                {
+                    Console.WriteLine("No active Backoffice account exists, but SeedAdminSettings breaks the account rules — skipping seed. Fix these in appsettings.json:");
+                    foreach (var seedError in seedErrors)
+                    {
+                        Console.WriteLine($"  - {seedError}");
+                    }
+                }
+                else if (existing == null)
                 {
                     var seedUser = new User
                     {
-                        Username = seedSettings.Username,
+                        // Lower case, the same as every username created through Register.
+                        Username = seedSettings.Username.Trim().ToLowerInvariant(),
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedSettings.Password),
                         Role = Roles.Backoffice,
-                        FullName = seedSettings.FullName,
-                        Email = seedSettings.Email,
-                        Phone = seedSettings.Phone,
+                        FullName = seedSettings.FullName.Trim(),
+                        Email = seedSettings.Email.Trim(),
+                        Phone = seedSettings.Phone.Trim(),
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow
                     };
 
                     await userService.CreateUserAsync(seedUser);
-                    Console.WriteLine($"Seeded initial Backoffice account: \"{seedSettings.Username}\". Create your real admin accounts and stop using this one.");
+                    Console.WriteLine($"Seeded initial Backoffice account: \"{seedUser.Username}\". Create your real admin accounts and stop using this one.");
                 }
                 else if (existing.Role == Roles.Backoffice)
                 {
-                    // The seed account is still in the database but was deactivated, which is one way a
-                    // system ends up with nobody able to administer it. Restoring it is the recovery path.
-                    await userService.SetStaffActiveAsync(seedSettings.Username, true);
-                    Console.WriteLine($"No active Backoffice account found — restored the existing seed account \"{seedSettings.Username}\".");
+                    // The seed account is still in the database but was deactivated, so the system ends up with nobody to administer it. 
+                    // Restoring it is the recovery path.
+                    // The stored spelling, since the lookup ignores case but the update matches exactly.
+                    await userService.SetStaffActiveAsync(existing.Username!, true);
+                    Console.WriteLine($"No active Backoffice account found — restored the existing seed account \"{existing.Username}\".");
                 }
                 else
                 {

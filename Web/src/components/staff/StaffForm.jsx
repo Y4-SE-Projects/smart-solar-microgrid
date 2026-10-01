@@ -16,6 +16,7 @@
 import { useState, useEffect } from 'react';
 import { Roles } from '../../constants/roles';
 import { formatRole } from '../../utils/formatters';
+import { MAXIMUM_PASSWORD_BYTES, MINIMUM_PASSWORD_LENGTH, newPasswordError } from '../../utils/passwordRules';
 
 // Roles this screen can create.
 // Prosumer is deliberately absent. Prosumers self-register from the mobile app with an NIC.
@@ -31,8 +32,41 @@ const EMPTY_FORM = {
   confirmPassword: '',
 };
 
-const MINIMUM_PASSWORD_LENGTH = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// The API's limits (AccountRules). 
+// Each input stops accepting characters at its limit, rather than letting the user type past it and then refusing the submission.
+const MAX_LENGTH = {
+  username: 50,
+  fullName: 100,
+  email: 254,
+  phone: 20,
+};
+
+// Same rule as the API's AccountRules.ValidateUsername: 3–50 characters, a letter first, then letters, digits, ".", "_" or "-".
+// Usernames go into URL paths, so "/", "#", "?" and "%" must never appear.
+const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9._-]{2,49}$/;
+const USERNAME_RULE_MESSAGE =
+  'Username must be 3–50 characters, start with a letter, and use only letters, numbers, dots, hyphens or underscores.';
+
+// Same rule as the API's AccountRules.
+// ValidatePhone: an optional "+", then digits, with spaces or hyphens between them, and 9 to 15 digits in total 
+// ( 0771234567, +94 77 123 4567, 077-123-4567 ).
+const PHONE_PATTERN = /^\+?[0-9][0-9 -]*$/;
+const MINIMUM_PHONE_DIGITS = 9;
+const MAXIMUM_PHONE_DIGITS = 15;
+
+// Checks the phone number the same way the API does, returning its message or null.
+function phoneError(phone) {
+  const trimmed = phone.trim();
+  if (!trimmed) return 'Phone number is required.';
+
+  const digitCount = (trimmed.match(/[0-9]/g) ?? []).length;
+  if (!PHONE_PATTERN.test(trimmed) || digitCount < MINIMUM_PHONE_DIGITS || digitCount > MAXIMUM_PHONE_DIGITS) {
+    return `Enter a valid phone number: ${MINIMUM_PHONE_DIGITS} to ${MAXIMUM_PHONE_DIGITS} digits, optionally starting with +.`;
+  }
+  return null;
+}
 
 // Every rule the form checks, as one pure function of the current values.
 // It runs on each render, so a message always describes what is in the field right now.
@@ -44,15 +78,13 @@ function validateStaffForm(values, isEdit) {
   if (!isEdit) {
     if (!values.username.trim()) {
       errors.username = 'Username is required.';
-    } else if (/\s/.test(values.username.trim())) {
-      errors.username = 'Username cannot contain spaces.';
+    } else if (!USERNAME_PATTERN.test(values.username.trim())) {
+      errors.username = USERNAME_RULE_MESSAGE;
     }
 
-    if (!values.password) {
-      errors.password = 'Password is required.';
-    } else if (values.password.length < MINIMUM_PASSWORD_LENGTH) {
-      errors.password = `Use at least ${MINIMUM_PASSWORD_LENGTH} characters.`;
-    }
+    // Same rule and wording as the API. ( at least 8 characters, not only spaces, at most 72 bytes )
+    const passwordMessage = newPasswordError(values.password);
+    if (passwordMessage) errors.password = passwordMessage;
 
     // Guards against a typo locking the new account holder (Grid Operator) out, since the password is set on their behalf.
     if (values.confirmPassword !== values.password) {
@@ -68,7 +100,8 @@ function validateStaffForm(values, isEdit) {
     errors.email = 'Enter a valid email address.';
   }
 
-  if (!values.phone.trim()) errors.phone = 'Phone number is required.';
+  const phoneMessage = phoneError(values.phone);
+  if (phoneMessage) errors.phone = phoneMessage;
 
   return errors;
 }
@@ -85,6 +118,8 @@ function Field({
   placeholder,
   autoComplete,
   autoFocus = false,
+  hint,
+  maxLength,
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -99,18 +134,25 @@ function Field({
         onChange={(event) => onChange(name, event.target.value)}
         onBlur={() => onBlur(name)}
         aria-invalid={Boolean(error)}
-        aria-describedby={error ? `staff-${name}-error` : undefined}
+        aria-describedby={error ? `staff-${name}-error` : hint ? `staff-${name}-hint` : undefined}
         placeholder={placeholder}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
+        maxLength={maxLength}
         className={`h-9 px-3 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all ${
           error ? 'border-alert-danger' : 'border-border-slate'
         }`}
       />
-      {error && (
+      {error ? (
         <span id={`staff-${name}-error`} className="text-body-sm text-alert-danger">
           {error}
         </span>
+      ) : (
+        hint && (
+          <span id={`staff-${name}-hint`} className="text-body-sm text-on-surface-variant">
+            {hint}
+          </span>
+        )
       )}
     </div>
   );
@@ -166,7 +208,9 @@ export default function StaffForm({
   }, []);
 
   function handleChange(name, value) {
-    setForm((current) => ({ ...current, [name]: value }));
+    // Usernames are stored in lower case, so the field shows them that way as they are typed.
+    const nextValue = name === 'username' ? value.toLowerCase() : value;
+    setForm((current) => ({ ...current, [name]: nextValue }));
   }
 
   function handleBlur(name) {
@@ -291,6 +335,8 @@ export default function StaffForm({
                   placeholder="e.g. j.silva"
                   autoComplete="off"
                   autoFocus
+                  hint="Usernames are lowercase."
+                  maxLength={MAX_LENGTH.username}
                 />
               )}
               <Field
@@ -303,6 +349,7 @@ export default function StaffForm({
                 placeholder="e.g. Jayani Silva"
                 autoComplete="off"
                 autoFocus={isEdit}
+                maxLength={MAX_LENGTH.fullName}
               />
               <Field
                 label="Email Address"
@@ -314,6 +361,7 @@ export default function StaffForm({
                 error={errorFor('email')}
                 placeholder="e.g. j.silva@heliogrid.lk"
                 autoComplete="off"
+                maxLength={MAX_LENGTH.email}
               />
               <Field
                 label="Phone Number"
@@ -325,6 +373,7 @@ export default function StaffForm({
                 error={errorFor('phone')}
                 placeholder="e.g. +94 77 123 4567"
                 autoComplete="off"
+                maxLength={MAX_LENGTH.phone}
               />
             </div>
 
@@ -351,6 +400,7 @@ export default function StaffForm({
                       aria-describedby={errorFor('password') ? 'staff-password-error' : undefined}
                       placeholder={`At least ${MINIMUM_PASSWORD_LENGTH} characters`}
                       autoComplete="new-password"
+                      maxLength={MAXIMUM_PASSWORD_BYTES}
                       className={`w-full h-9 pl-3 pr-10 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all ${
                         errorFor('password') ? 'border-alert-danger' : 'border-border-slate'
                       }`}
@@ -383,6 +433,7 @@ export default function StaffForm({
                   error={errorFor('confirmPassword')}
                   placeholder="Re-enter the password"
                   autoComplete="new-password"
+                  maxLength={MAXIMUM_PASSWORD_BYTES}
                 />
               </div>
             )}

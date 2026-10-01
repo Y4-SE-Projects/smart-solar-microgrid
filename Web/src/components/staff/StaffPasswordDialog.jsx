@@ -15,8 +15,7 @@
 import { useState, useEffect } from 'react';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { formatRole } from '../../utils/formatters';
-
-const MINIMUM_PASSWORD_LENGTH = 8;
+import { MAXIMUM_PASSWORD_BYTES, MINIMUM_PASSWORD_LENGTH, newPasswordError } from '../../utils/passwordRules';
 
 export default function StaffPasswordDialog({
   member,
@@ -44,13 +43,12 @@ export default function StaffPasswordDialog({
 
   if (!member) return null;
 
-  // The same minimum the API enforces. 
+  // The same rule and wording the API enforces. ( at least 8 characters, not only spaces, at most 72 bytes )
   // The server stays authoritative. This only saves a round trip and puts the message next to the field that caused it.
   const errors = {};
-  if (!password) {
-    errors.password = 'Password is required.';
-  } else if (password.length < MINIMUM_PASSWORD_LENGTH) {
-    errors.password = `Use at least ${MINIMUM_PASSWORD_LENGTH} characters.`;
+  const passwordMessage = newPasswordError(password);
+  if (passwordMessage) {
+    errors.password = passwordMessage;
   }
   if (confirmPassword !== password) {
     errors.confirmPassword = 'Passwords do not match.';
@@ -106,6 +104,7 @@ export default function StaffPasswordDialog({
               aria-describedby={errorFor('password') ? 'reset-password-error' : undefined}
               placeholder={`At least ${MINIMUM_PASSWORD_LENGTH} characters`}
               autoComplete="new-password"
+              maxLength={MAXIMUM_PASSWORD_BYTES}
               className={`w-full h-9 pl-3 pr-10 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border ${inputBorder('password')} focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all`}
             />
             <button
@@ -143,6 +142,7 @@ export default function StaffPasswordDialog({
             aria-describedby={errorFor('confirmPassword') ? 'reset-confirm-password-error' : undefined}
             placeholder="Re-enter the password"
             autoComplete="new-password"
+            maxLength={MAXIMUM_PASSWORD_BYTES}
             className={`h-9 px-3 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border ${inputBorder('confirmPassword')} focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all`}
           />
           {errorFor('confirmPassword') && (

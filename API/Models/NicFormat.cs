@@ -10,7 +10,9 @@ namespace API.Models
 {
     public static class NicFormat
     {
-        private static readonly Regex Pattern = new(@"^(\d{9}[VvXx]|\d{12})$", RegexOptions.Compiled);
+        // [0-9] rather than \d: in .NET, \d matches any Unicode digit ( e.g. full-width "２" or Arabic-Indic "٢" ).
+        // Those would pass as a NIC yet be stored as different text from the same number in plain digits, so the duplicate check would miss them.
+        private static readonly Regex Pattern = new(@"^([0-9]{9}[VvXx]|[0-9]{12})$", RegexOptions.Compiled);
 
         // Trims the value and upper-cases the old-format letter.
         public static string Normalize(string? nic)
