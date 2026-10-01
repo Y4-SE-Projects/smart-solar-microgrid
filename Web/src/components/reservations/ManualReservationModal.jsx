@@ -107,7 +107,14 @@ export default function ManualReservationModal({ onClose, onCreated }) {
         };
     }, [selectedStationId, slotReloadKey]);
 
-    const availableSlots = slots.filter((slot) => slot.isAvailable);
+    const now = Date.now();
+    const windowEnd = now + 7 * 24 * 60 * 60 * 1000;
+    const availableSlots = slots.filter((slot) => {
+        if (slot.isAvailable !== true || !slot.startTime) return false;
+
+        const startTime = new Date(slot.startTime).getTime();
+        return Number.isFinite(startTime) && startTime > now && startTime <= windowEnd;
+    });
     const stationOptions = stations.map((station) => ({
         value: station.stationId,
         label: `${station.name} (${station.stationId})`,
@@ -323,7 +330,7 @@ export default function ManualReservationModal({ onClose, onCreated }) {
                         slots.length > 0 &&
                         availableSlots.length === 0 && (
                             <p className="text-body-sm text-on-surface-variant">
-                                No available slots remain at this station.
+                                No eligible available slots within the next 7 days.
                             </p>
                         )}
                 </div>

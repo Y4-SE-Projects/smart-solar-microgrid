@@ -21,6 +21,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.smart_solar_mobile.R;
 import com.example.smart_solar_mobile.db.SessionManager;
+import com.example.smart_solar_mobile.db.AppDatabase;
+import com.example.smart_solar_mobile.db.ReservationCacheDao;
 import com.example.smart_solar_mobile.models.QrResponse;
 import com.example.smart_solar_mobile.models.ReservationData;
 import com.example.smart_solar_mobile.models.Roles;
@@ -28,6 +30,7 @@ import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
+import com.example.smart_solar_mobile.utils.ConnectivityRetryObserver;
 import com.example.smart_solar_mobile.utils.ReservationStatusUi;
 import com.example.smart_solar_mobile.utils.TimeUtils;
 import com.google.android.material.button.MaterialButton;
@@ -37,6 +40,9 @@ import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
 
 import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -54,8 +60,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
 
     private static final int QR_IMAGE_SIZE_PX = 1024;
 
-    // Launches the detail screen with confirmed fields from the selected history record;
-    // no extra network round trip is needed to show the summary or open Member 03 editing.
+    // The passed fields are a read-only snapshot until this screen verifies the live record.
     public static void start(Context context, ReservationData reservation) {
         Intent intent = new Intent(context, ReservationDetailActivity.class);
         intent.putExtra(EXTRA_RESERVATION_ID, reservation.reservationId);
@@ -70,10 +75,22 @@ public class ReservationDetailActivity extends AppCompatActivity {
 
     private String reservationId;
     private String status;
+    private String snapshotNic;
     private ReservationData editReservation;
     private boolean canOpenEdit;
     private boolean canOpenCancel;
+    private boolean freshDetail;
+    private boolean detailSyncing;
+    private boolean detailSyncFailed;
+    private long detailGeneration;
+    private ConnectivityRetryObserver connectivityRetryObserver;
+    private ReservationCacheDao reservationCacheDao;
+    private final ExecutorService cacheExecutor = Executors.newSingleThreadExecutor();
+    private Call<ApiResponse<List<ReservationData>>> detailCall;
     private Call<ApiResponse<QrResponse>> qrCall;
+    private View syncBanner;
+    private TextView syncText;
+    private MaterialButton syncRetryButton;
 
     private TextView detailReferenceText;
     private TextView statusChip;
@@ -100,6 +117,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_reservation_detail);
         InsetsHelper.applyEdgeToEdge(this, findViewById(R.id.detailRoot));
         bindViews();
+        reservationCacheDao = AppDatabase.getInstance(this).reservationCacheDao();
 
         Intent intent = getIntent();
         reservationId = intent.getStringExtra(EXTRA_RESERVATION_ID);
@@ -107,6 +125,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
         String stationId = intent.getStringExtra(EXTRA_STATION_ID);
         String scheduledTime = intent.getStringExtra(EXTRA_SCHEDULED_TIME);
         String prosumerNic = intent.getStringExtra(EXTRA_PROSUMER_NIC);
+        snapshotNic = prosumerNic;
         // Retains the real history record fields needed by the existing Member 03 edit launcher.
         editReservation = new ReservationData();
         editReservation.reservationId = reservationId;
@@ -114,6 +133,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
         editReservation.slotId = intent.getStringExtra(EXTRA_SLOT_ID);
         editReservation.scheduledTime = scheduledTime;
         editReservation.status = status;
+        editReservation.prosumerNic = prosumerNic;
         editReservation.createdAt = intent.getStringExtra(EXTRA_CREATED_AT);
 
         findViewById(R.id.backButton).setOnClickListener(v -> finish());
@@ -131,40 +151,61 @@ public class ReservationDetailActivity extends AppCompatActivity {
                 startActivity(CancelReservationActivity.intentFor(this, editReservation));
             }
         });
-        retryQrButton.setOnClickListener(v -> loadQr());
-        regenerateQrButton.setOnClickListener(v -> confirmRegenerate());
+        retryQrButton.setOnClickListener(v -> { if (freshDetail) loadQr(); else refreshDetail(); });
+        regenerateQrButton.setOnClickListener(v -> { if (freshDetail) confirmRegenerate(); });
+        syncRetryButton.setOnClickListener(v -> refreshDetail());
+        connectivityRetryObserver = new ConnectivityRetryObserver(this,
+                () -> { if (detailSyncFailed && !detailSyncing) refreshDetail(); },
+                () -> { if (freshDetail) showDetailStale(R.string.detail_stale); });
+        findViewById(R.id.detailRoot).setVisibility(View.INVISIBLE);
+    }
 
-        renderSummary(stationId, scheduledTime, prosumerNic);
-        renderStatus();
-        renderQrCard();
-
+    @Override
+    protected void onResume() {
+        // A cached or passed status never authorizes actions until this activation's API GET succeeds.
+        super.onResume();
+        final long currentGeneration = ++detailGeneration;
+        freshDetail = false;
+        detailSyncFailed = false;
+        detailSyncing = false;
+        hideServerActions();
+        findViewById(R.id.detailRoot).setVisibility(View.INVISIBLE);
+        connectivityRetryObserver.start();
         SessionManager.getInstance().loadSession(session -> {
-            if (isFinishing() || isDestroyed()) {
-                return;
-            }
-            if (session == null || !Roles.PROSUMER.equals(session.role)) {
+            if (currentGeneration != detailGeneration || isFinishing() || isDestroyed()) return;
+            if (session == null || !Roles.PROSUMER.equals(session.role)
+                    || !hasText(session.identifier)) {
                 Navigator.openLogin(this, false);
                 return;
             }
-            canOpenEdit = "Pending".equalsIgnoreCase(editReservation.status)
-                    && hasText(editReservation.reservationId)
-                    && hasText(editReservation.stationId)
-                    && hasText(editReservation.slotId)
-                    && hasText(editReservation.scheduledTime);
-            editBookingButton.setVisibility(canOpenEdit ? View.VISIBLE : View.GONE);
-            canOpenCancel = ("Pending".equalsIgnoreCase(editReservation.status)
-                    || "Approved".equalsIgnoreCase(editReservation.status))
-                    && hasText(editReservation.reservationId)
-                    && hasText(editReservation.stationId)
-                    && hasText(editReservation.slotId)
-                    && hasText(editReservation.scheduledTime);
-            cancelBookingButton.setVisibility(canOpenCancel ? View.VISIBLE : View.GONE);
+            if (!session.identifier.equals(snapshotNic)) {
+                // A late Intent from another account must not display that account's details.
+                finish();
+                return;
+            }
+            findViewById(R.id.detailRoot).setVisibility(View.VISIBLE);
+            renderSummary(editReservation.stationId, editReservation.scheduledTime, snapshotNic);
+            renderStatus();
+            refreshDetail();
         });
     }
 
     @Override
-    protected void onDestroy() {
+    protected void onStop() {
+        connectivityRetryObserver.stop();
+        detailGeneration++;
+        if (detailCall != null) detailCall.cancel();
         if (qrCall != null) qrCall.cancel();
+        hideServerActions();
+        findViewById(R.id.detailRoot).setVisibility(View.INVISIBLE);
+        super.onStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (detailCall != null) detailCall.cancel();
+        if (qrCall != null) qrCall.cancel();
+        cacheExecutor.shutdown();
         super.onDestroy();
     }
 
@@ -187,6 +228,124 @@ public class ReservationDetailActivity extends AppCompatActivity {
         qrErrorMessageText = findViewById(R.id.qrErrorMessageText);
         regenerateQrButton = findViewById(R.id.regenerateQrButton);
         retryQrButton = findViewById(R.id.retryQrButton);
+        syncBanner = findViewById(R.id.detailSyncBanner);
+        syncText = findViewById(R.id.detailSyncText);
+        syncRetryButton = findViewById(R.id.detailSyncRetryButton);
+    }
+
+    private void refreshDetail() {
+        // Recheck the complete, owner-scoped history before showing Edit, Cancel or live QR.
+        if (!hasText(snapshotNic) || !hasText(reservationId)) return;
+        if (detailCall != null) detailCall.cancel();
+        if (qrCall != null) qrCall.cancel();
+        hideServerActions();
+        detailSyncing = true;
+        detailSyncFailed = false;
+        syncBanner.setVisibility(View.VISIBLE);
+        syncRetryButton.setVisibility(View.GONE);
+        syncText.setText(R.string.detail_syncing);
+        final long currentGeneration = detailGeneration;
+        detailCall = NetworkManager.getInstance().getApiService()
+                .getProsumerReservations(snapshotNic);
+        final Call<ApiResponse<List<ReservationData>>> call = detailCall;
+        call.enqueue(new Callback<ApiResponse<List<ReservationData>>>() {
+            @Override
+            public void onResponse(@NonNull Call<ApiResponse<List<ReservationData>>> request,
+                                   @NonNull Response<ApiResponse<List<ReservationData>>> response) {
+                if (obsoleteDetail(call, currentGeneration)) return;
+                ApiResponse<List<ReservationData>> body = response.body();
+                if (!response.isSuccessful() || body == null || body.data == null) {
+                    if (response.code() == 401 || response.code() == 403) {
+                        // Do not reveal a saved snapshot if the server denies current access.
+                        finish();
+                        return;
+                    }
+                    showDetailStale(R.string.detail_stale);
+                    return;
+                }
+                ReservationData current = null;
+                for (ReservationData row : body.data) {
+                    if (row != null && reservationId.equals(row.reservationId)
+                            && snapshotNic.equals(row.prosumerNic)) {
+                        current = row;
+                        break;
+                    }
+                }
+                if (current == null) {
+                    showDetailStale(R.string.detail_missing);
+                    return;
+                }
+                final long syncedAt = System.currentTimeMillis();
+                cacheExecutor.execute(() -> {
+                    try {
+                        reservationCacheDao.replaceForProsumer(snapshotNic, body.data, syncedAt);
+                    } catch (RuntimeException ignored) {
+                        // Detail may still use its fresh API result if local persistence fails.
+                    }
+                });
+                editReservation = current;
+                status = current.status;
+                detailSyncing = false;
+                detailSyncFailed = false;
+                freshDetail = true;
+                syncBanner.setVisibility(View.GONE);
+                renderSummary(current.stationId, current.scheduledTime, snapshotNic);
+                renderStatus();
+                showServerActions();
+                renderQrCard();
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<ApiResponse<List<ReservationData>>> request,
+                                  @NonNull Throwable error) {
+                if (!obsoleteDetail(call, currentGeneration)) showDetailStale(R.string.detail_stale);
+            }
+        });
+    }
+
+    private boolean obsoleteDetail(Call<?> call, long currentGeneration) {
+        return isFinishing() || isDestroyed() || call != detailCall || call.isCanceled()
+                || currentGeneration != detailGeneration;
+    }
+
+    private void hideServerActions() {
+        // Never leave an old status, QR image or action enabled while data is stale or syncing.
+        freshDetail = false;
+        canOpenEdit = false;
+        canOpenCancel = false;
+        editBookingButton.setVisibility(View.GONE);
+        cancelBookingButton.setVisibility(View.GONE);
+        qrCard.setVisibility(View.GONE);
+        qrImage.setImageDrawable(null);
+    }
+
+    private void showServerActions() {
+        // These buttons are based on a fresh owner-scoped GET; mutations still go through the API.
+        canOpenEdit = "Pending".equalsIgnoreCase(editReservation.status)
+                && hasText(editReservation.reservationId)
+                && hasText(editReservation.stationId)
+                && hasText(editReservation.slotId)
+                && hasText(editReservation.scheduledTime);
+        canOpenCancel = ("Pending".equalsIgnoreCase(editReservation.status)
+                || "Approved".equalsIgnoreCase(editReservation.status))
+                && hasText(editReservation.reservationId)
+                && hasText(editReservation.stationId)
+                && hasText(editReservation.slotId)
+                && hasText(editReservation.scheduledTime);
+        editBookingButton.setVisibility(canOpenEdit ? View.VISIBLE : View.GONE);
+        cancelBookingButton.setVisibility(canOpenCancel ? View.VISIBLE : View.GONE);
+    }
+
+    private void showDetailStale(int messageRes) {
+        if (detailCall != null) detailCall.cancel();
+        if (qrCall != null) qrCall.cancel();
+        detailSyncing = false;
+        detailSyncFailed = true;
+        hideServerActions();
+        statusBodyText.setText(R.string.detail_cached_status_body);
+        syncText.setText(messageRes);
+        syncRetryButton.setVisibility(View.VISIBLE);
+        syncBanner.setVisibility(View.VISIBLE);
     }
 
     private void renderSummary(String stationId, String scheduledTime, String prosumerNic) {
@@ -226,6 +385,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
     }
 
     private void loadQr() {
+        if (!freshDetail) return;
         showQrState(qrLoadingState);
         if (qrCall != null) qrCall.cancel();
 
@@ -258,6 +418,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
     }
 
     private void confirmRegenerate() {
+        if (!freshDetail) return;
         new AlertDialog.Builder(this)
                 .setTitle(R.string.detail_regenerate_confirm_title)
                 .setMessage(R.string.detail_regenerate_confirm_body)
@@ -267,6 +428,7 @@ public class ReservationDetailActivity extends AppCompatActivity {
     }
 
     private void regenerateQr() {
+        if (!freshDetail) return;
         regenerateQrButton.setEnabled(false);
         regenerateQrButton.setText(R.string.detail_regenerating_qr);
         if (qrCall != null) qrCall.cancel();

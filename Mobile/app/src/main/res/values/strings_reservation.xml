@@ -11,6 +11,7 @@
     <string name="reservation_choose_station">Choose station</string>
     <string name="reservation_change_station">Change station</string>
     <string name="reservation_retry_stations">Retry stations</string>
+    <string name="reservation_connection_required">Reservation creation needs a server connection to refresh current availability. Check your connection and retry.</string>
     <string name="reservation_choose_station_title">Choose a station first</string>
     <string name="reservation_choose_station_body">Select an active station above to load its available energy slots.</string>
     <string name="reservation_station_hours">Hours · %1$s</string>
@@ -53,6 +54,14 @@
     <string name="history_empty_filtered_title">No matching reservations</string>
     <string name="history_empty_filtered_body">Try a different filter.</string>
     <string name="history_item_meta">%1$s · %2$s</string>
+    <string name="history_syncing">Updating reservations…</string>
+    <string name="history_stale">Could not refresh. Showing previously synced bookings from %1$s.</string>
+    <string name="history_stale_no_time">Could not refresh. Showing previously synced bookings.</string>
+    <string name="history_search_hint">Search bookings</string>
+    <string name="detail_syncing">Checking current reservation with the server…</string>
+    <string name="detail_stale">Current reservation could not be verified. Details may be out of date. Edit, Cancel and QR are unavailable.</string>
+    <string name="detail_cached_status_body">Last-known status. Reconnect to check current reservation actions and QR availability.</string>
+    <string name="detail_missing">This reservation is no longer available in your current bookings.</string>
 
     <string name="filter_all">All</string>
     <string name="reservation_status_pending">Pending</string>

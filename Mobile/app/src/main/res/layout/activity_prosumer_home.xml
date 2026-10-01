@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Prosumer dashboard, based on the prosumer dashboard design. Every value on it comes from the API or the saved session -->
+<!-- Prosumer dashboard. Counts may show an account-scoped last-known API response while refreshing. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -725,6 +725,29 @@
             </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <!-- Non-blocking sync state stays at the bottom of Home content, above navigation. -->
+    <TextView
+        android:id="@+id/homeSyncStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/surface_container_lowest"
+        android:paddingStart="16dp"
+        android:paddingTop="5dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="5dp"
+        android:textColor="@color/on_surface_variant"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <com.google.android.material.progressindicator.LinearProgressIndicator
+        android:id="@+id/homeCountsSyncProgress"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:indeterminate="true"
+        android:visibility="gone"
+        app:indicatorColor="@color/secondary"
+        app:trackColor="@color/surface_container" />
 
     <com.example.smart_solar_mobile.views.ProsumerBottomNavigation
         android:id="@+id/prosumerBottomNavigation"

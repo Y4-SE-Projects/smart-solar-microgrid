@@ -7,6 +7,13 @@
     <string name="dashboard_approved_caption">Ready for transfer</string>
     <string name="dashboard_book_energy">Book Energy Slot</string>
     <string name="dashboard_booking_history">Booking History</string>
+    <string name="dashboard_syncing">Updating latest counts…</string>
+    <string name="dashboard_syncing_cached">Updating latest counts… Last synced %1$s</string>
+    <string name="dashboard_last_synced">Last updated %1$s</string>
+    <string name="dashboard_sync_failed_cached">%1$s Showing last-synced counts from %2$s.</string>
+    <string name="dashboard_sync_failed_cached_no_time">%1$s Showing last-synced counts.</string>
+    <string name="dashboard_bookings_stale">%1$s Showing previously synced bookings from %2$s.</string>
+    <string name="dashboard_bookings_stale_no_time">%1$s Showing previously synced bookings.</string>
 
     <!-- Dashboard welcome banner -->
     <string name="dashboard_greeting_morning">Good morning</string>
