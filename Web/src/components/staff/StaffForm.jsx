@@ -16,6 +16,7 @@
 import { useState, useEffect } from 'react';
 import { Roles } from '../../constants/roles';
 import { formatRole } from '../../utils/formatters';
+import { MAXIMUM_PASSWORD_BYTES, MINIMUM_PASSWORD_LENGTH, newPasswordError } from '../../utils/passwordRules';
 
 // Roles this screen can create.
 // Prosumer is deliberately absent. Prosumers self-register from the mobile app with an NIC.
@@ -31,7 +32,6 @@ const EMPTY_FORM = {
   confirmPassword: '',
 };
 
-const MINIMUM_PASSWORD_LENGTH = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // The API's limits (AccountRules). 
@@ -82,11 +82,9 @@ function validateStaffForm(values, isEdit) {
       errors.username = USERNAME_RULE_MESSAGE;
     }
 
-    if (!values.password) {
-      errors.password = 'Password is required.';
-    } else if (values.password.length < MINIMUM_PASSWORD_LENGTH) {
-      errors.password = `Use at least ${MINIMUM_PASSWORD_LENGTH} characters.`;
-    }
+    // Same rule and wording as the API. ( at least 8 characters, not only spaces, at most 72 bytes )
+    const passwordMessage = newPasswordError(values.password);
+    if (passwordMessage) errors.password = passwordMessage;
 
     // Guards against a typo locking the new account holder (Grid Operator) out, since the password is set on their behalf.
     if (values.confirmPassword !== values.password) {
@@ -402,6 +400,7 @@ export default function StaffForm({
                       aria-describedby={errorFor('password') ? 'staff-password-error' : undefined}
                       placeholder={`At least ${MINIMUM_PASSWORD_LENGTH} characters`}
                       autoComplete="new-password"
+                      maxLength={MAXIMUM_PASSWORD_BYTES}
                       className={`w-full h-9 pl-3 pr-10 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all ${
                         errorFor('password') ? 'border-alert-danger' : 'border-border-slate'
                       }`}
@@ -434,6 +433,7 @@ export default function StaffForm({
                   error={errorFor('confirmPassword')}
                   placeholder="Re-enter the password"
                   autoComplete="new-password"
+                  maxLength={MAXIMUM_PASSWORD_BYTES}
                 />
               </div>
             )}
