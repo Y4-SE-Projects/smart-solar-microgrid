@@ -267,11 +267,16 @@
                 android:orientation="horizontal">
 
                 <LinearLayout
+                    android:id="@+id/pendingDashboardCard"
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_marginEnd="6dp"
                     android:layout_weight="1"
                     android:background="@drawable/bg_card"
+                    android:clickable="true"
+                    android:clipToOutline="true"
+                    android:focusable="true"
+                    android:foreground="?attr/selectableItemBackground"
                     android:orientation="vertical"
                     android:padding="16dp">
 
@@ -323,6 +328,30 @@
                         android:text="@string/dashboard_pending_caption"
                         android:textColor="@color/on_surface_variant"
                         android:textSize="12sp" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/pending_reservations_title"
+                            android:textColor="@color/secondary"
+                            android:textSize="12sp" />
+
+                        <ImageView
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_arrow_forward"
+                            app:tint="@color/secondary" />
+                    </LinearLayout>
                 </LinearLayout>
 
                 <LinearLayout
