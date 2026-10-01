@@ -40,6 +40,25 @@ const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9._-]{2,49}$/;
 const USERNAME_RULE_MESSAGE =
   'Username must be 3–50 characters, start with a letter, and use only letters, numbers, dots, hyphens or underscores.';
 
+// Same rule as the API's AccountRules.
+// ValidatePhone: an optional "+", then digits, with spaces or hyphens between them, and 9 to 15 digits in total 
+// ( 0771234567, +94 77 123 4567, 077-123-4567 ).
+const PHONE_PATTERN = /^\+?[0-9][0-9 -]*$/;
+const MINIMUM_PHONE_DIGITS = 9;
+const MAXIMUM_PHONE_DIGITS = 15;
+
+// Checks the phone number the same way the API does, returning its message or null.
+function phoneError(phone) {
+  const trimmed = phone.trim();
+  if (!trimmed) return 'Phone number is required.';
+
+  const digitCount = (trimmed.match(/[0-9]/g) ?? []).length;
+  if (!PHONE_PATTERN.test(trimmed) || digitCount < MINIMUM_PHONE_DIGITS || digitCount > MAXIMUM_PHONE_DIGITS) {
+    return `Enter a valid phone number: ${MINIMUM_PHONE_DIGITS} to ${MAXIMUM_PHONE_DIGITS} digits, optionally starting with +.`;
+  }
+  return null;
+}
+
 // Every rule the form checks, as one pure function of the current values.
 // It runs on each render, so a message always describes what is in the field right now.
 // The API applies the same rules with the same wording and stays authoritative.
@@ -74,7 +93,8 @@ function validateStaffForm(values, isEdit) {
     errors.email = 'Enter a valid email address.';
   }
 
-  if (!values.phone.trim()) errors.phone = 'Phone number is required.';
+  const phoneMessage = phoneError(values.phone);
+  if (phoneMessage) errors.phone = phoneMessage;
 
   return errors;
 }
