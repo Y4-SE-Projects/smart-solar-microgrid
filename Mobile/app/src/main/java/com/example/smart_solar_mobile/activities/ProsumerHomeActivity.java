@@ -1,12 +1,14 @@
 // File: ProsumerHomeActivity.java
-// Purpose: Prosumer dashboard: welcome banner, account card, the live pending and approved-future counts,
-//          upcoming bookings and an activity summary, all read from the API.
+// Purpose: Prosumer dashboard: account, bookings and API-backed counts, with last-known counts
+//          shown from an account-scoped Room cache while the API refreshes.
 // Author: IT23215856 (original home screen), IT23218512 (dashboard)
 
 package com.example.smart_solar_mobile.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.LinearLayout;
@@ -17,6 +19,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.smart_solar_mobile.R;
+import com.example.smart_solar_mobile.db.AppDatabase;
+import com.example.smart_solar_mobile.db.DashboardCacheDao;
+import com.example.smart_solar_mobile.db.DashboardCacheEntity;
+import com.example.smart_solar_mobile.db.ReservationCacheDao;
+import com.example.smart_solar_mobile.db.ReservationCacheEntity;
 import com.example.smart_solar_mobile.db.SessionEntity;
 import com.example.smart_solar_mobile.db.SessionManager;
 import com.example.smart_solar_mobile.models.DashboardCounts;
@@ -28,12 +35,15 @@ import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
+import com.example.smart_solar_mobile.utils.ConnectivityRetryObserver;
 import com.example.smart_solar_mobile.utils.NameUtils;
 import com.example.smart_solar_mobile.utils.ReservationStatusUi;
 import com.example.smart_solar_mobile.utils.TimeUtils;
 import com.example.smart_solar_mobile.views.ProsumerBottomNavigation;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 
+import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
@@ -42,6 +52,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -66,6 +79,8 @@ public class ProsumerHomeActivity extends AppCompatActivity {
     private TextView approvedCountText;
     private TextView countsErrorText;
     private View countsErrorBanner;
+    private TextView syncStatusText;
+    private LinearProgressIndicator countsSyncProgress;
     private View bookingsLoadingText;
     private View bookingsErrorBanner;
     private TextView bookingsErrorText;
@@ -79,6 +94,20 @@ public class ProsumerHomeActivity extends AppCompatActivity {
     // NIC from the saved session; every endpoint used here only answers for the signed-in Prosumer's own NIC
     private String prosumerNic;
     private boolean countsLoaded;
+    private boolean freshCountsThisActivation;
+    private boolean syncingCounts;
+    private long lastSyncedAt;
+    private long homeGeneration;
+    private String lastCountsError;
+    private DashboardCacheDao dashboardCacheDao;
+    private ReservationCacheDao reservationCacheDao;
+    private ConnectivityRetryObserver connectivityRetryObserver;
+    private boolean freshBookingsThisActivation;
+    private boolean syncingBookings;
+    private long bookingsLastSyncedAt;
+    private String lastBookingsError;
+    private final ExecutorService cacheExecutor = Executors.newSingleThreadExecutor();
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     // Null until the booking history has loaded once
     private List<ReservationData> reservations;
     // Station ID -> name, so booking cards can show "Colombo North Hub" rather than only "STN-001"
@@ -91,19 +120,34 @@ public class ProsumerHomeActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // Builds the dashboard, wires the booking entry points and loads the signed-in Prosumer
+        // Builds the dashboard and wires the booking entry points; onResume resolves the session.
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_prosumer_home);
         InsetsHelper.applyEdgeToEdge(this, findViewById(R.id.homeRoot));
         ((ProsumerBottomNavigation) findViewById(R.id.prosumerBottomNavigation))
                 .setup(this, ProsumerBottomNavigation.Destination.HOME);
         bindViews();
+        dashboardCacheDao = AppDatabase.getInstance(this).dashboardCacheDao();
+        reservationCacheDao = AppDatabase.getInstance(this).reservationCacheDao();
+        connectivityRetryObserver = new ConnectivityRetryObserver(this, () -> {
+            // Network availability only retries failed calls; successful API replies establish freshness.
+            if (prosumerNic == null) return;
+            if (lastCountsError != null && !syncingCounts) loadCounts();
+            if (lastBookingsError != null && !syncingBookings) loadBookings();
+        }, () -> {
+            if (prosumerNic == null) return;
+            if (countsLoaded && !syncingCounts) showCountsError(getString(R.string.error_network));
+            if (reservations != null && !syncingBookings) showBookingsError(getString(R.string.error_network));
+        });
 
         // Clips the faint sun to the banner's rounded corners (the XML attribute needs API 31)
         findViewById(R.id.welcomeBanner).setClipToOutline(true);
 
-        findViewById(R.id.signOutButton).setOnClickListener(v ->
-                SessionManager.getInstance().endSession(() -> Navigator.openLogin(this, false)));
+        findViewById(R.id.signOutButton).setOnClickListener(v -> {
+            homeGeneration++;
+            clearHomeState();
+            SessionManager.getInstance().endSession(() -> Navigator.openLogin(this, false));
+        });
         findViewById(R.id.countsRetryButton).setOnClickListener(v -> loadCounts());
         findViewById(R.id.bookingsRetryButton).setOnClickListener(v -> loadBookings());
         findViewById(R.id.pendingDashboardCard).setOnClickListener(v ->
@@ -117,20 +161,27 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                 startActivity(new Intent(this, StationMapActivity.class)));
         findViewById(R.id.viewReservationsButton).setOnClickListener(v -> openHistory());
         findViewById(R.id.seeAllBookingsButton).setOnClickListener(v -> openHistory());
+    }
 
-        // Loads the session here too, because Android can reopen the app straight onto this screen
+    @Override
+    protected void onResume() {
+        // Resolve the current session before showing any account-specific Home data.
+        super.onResume();
+        greetingText.setText(greetingForNow());
+        final long generation = ++homeGeneration;
+        clearHomeState();
+        connectivityRetryObserver.start();
         SessionManager.getInstance().loadSession(session -> {
-            if (isFinishing() || isDestroyed()) {
-                return;
-            }
+            if (generation != homeGeneration || isFinishing() || isDestroyed()) return;
             if (session == null || !Roles.PROSUMER.equals(session.role)
                     || session.identifier == null || session.identifier.trim().isEmpty()) {
                 Navigator.openLogin(this, false);
                 return;
             }
-            renderIdentity(session);
-
             prosumerNic = session.identifier;
+            renderIdentity(session);
+            loadCachedCounts(prosumerNic, generation);
+            loadCachedBookings(prosumerNic, generation);
             loadProfile();
             loadStations();
             loadCounts();
@@ -138,21 +189,45 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         });
     }
 
-    @Override
-    protected void onResume() {
-        // Refreshes the greeting, name, counts and bookings on return, so they are right after booking,
-        // cancelling or editing the profile
-        super.onResume();
-        greetingText.setText(greetingForNow());
-        if (prosumerNic != null) {
-            SessionManager.getInstance().loadSession(session -> {
-                if (session != null && !isFinishing() && !isDestroyed()) {
-                    renderIdentity(session);
-                }
-            });
-            loadCounts();
-            loadBookings();
-        }
+    private void clearHomeState() {
+        // Clears the previous account before a new session resolves, including in-flight replies.
+        cancel(countsCall);
+        cancel(profileCall);
+        cancel(bookingsCall);
+        cancel(stationsCall);
+        countsCall = null;
+        profileCall = null;
+        bookingsCall = null;
+        stationsCall = null;
+        prosumerNic = null;
+        countsLoaded = false;
+        freshCountsThisActivation = false;
+        syncingCounts = false;
+        lastSyncedAt = 0;
+        lastCountsError = null;
+        freshBookingsThisActivation = false;
+        syncingBookings = false;
+        bookingsLastSyncedAt = 0;
+        lastBookingsError = null;
+        reservations = null;
+        stationNames.clear();
+        pendingCountText.setText(R.string.metric_empty);
+        approvedCountText.setText(R.string.metric_empty);
+        countsErrorBanner.setVisibility(View.GONE);
+        countsSyncProgress.setVisibility(View.GONE);
+        syncStatusText.setVisibility(View.GONE);
+        bookingsLoadingText.setVisibility(View.GONE);
+        bookingsErrorBanner.setVisibility(View.GONE);
+        bookingsEmptyCard.setVisibility(View.GONE);
+        upcomingList.removeAllViews();
+        nextTransferRow.setVisibility(View.GONE);
+        activityCard.setVisibility(View.GONE);
+        accountStatusChip.setVisibility(View.GONE);
+        memberSinceText.setText(R.string.metric_empty);
+        ((TextView) findViewById(R.id.bannerNameText)).setText("");
+        ((TextView) findViewById(R.id.avatarText)).setText("");
+        ((TextView) findViewById(R.id.nameText)).setText("");
+        ((TextView) findViewById(R.id.nicText)).setText("");
     }
 
     private void renderIdentity(SessionEntity session) {
@@ -166,12 +241,25 @@ public class ProsumerHomeActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onStop() {
+        // Foreground return starts fresh, account-scoped requests; callbacks do not leak.
+        connectivityRetryObserver.stop();
+        homeGeneration++;
+        cancel(countsCall);
+        cancel(bookingsCall);
+        cancel(profileCall);
+        cancel(stationsCall);
+        super.onStop();
+    }
+
+    @Override
     protected void onDestroy() {
         // Drops in-flight requests so their replies can't touch a closed screen
         cancel(countsCall);
         cancel(profileCall);
         cancel(bookingsCall);
         cancel(stationsCall);
+        cacheExecutor.shutdown();
         super.onDestroy();
     }
 
@@ -187,6 +275,8 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         approvedCountText = findViewById(R.id.approvedCountText);
         countsErrorText = findViewById(R.id.countsErrorText);
         countsErrorBanner = findViewById(R.id.countsErrorBanner);
+        syncStatusText = findViewById(R.id.homeSyncStatusText);
+        countsSyncProgress = findViewById(R.id.homeCountsSyncProgress);
         bookingsLoadingText = findViewById(R.id.bookingsLoadingText);
         bookingsErrorBanner = findViewById(R.id.bookingsErrorBanner);
         bookingsErrorText = findViewById(R.id.bookingsErrorText);
@@ -205,34 +295,118 @@ public class ProsumerHomeActivity extends AppCompatActivity {
 
     // ---------------------------------------------------------------- Counts
 
+    private void loadCachedCounts(String nic, long generation) {
+        // Room is read off the UI thread and always queried by the authenticated session NIC.
+        cacheExecutor.execute(() -> {
+            DashboardCacheEntity cache;
+            try {
+                cache = dashboardCacheDao.getForProsumer(nic);
+            } catch (RuntimeException ignored) {
+                // A cache failure must not delay or replace the authoritative API request.
+                return;
+            }
+            mainHandler.post(() -> {
+                if (generation != homeGeneration || isFinishing() || isDestroyed()
+                        || !nic.equals(prosumerNic) || freshCountsThisActivation
+                        || cache == null || !nic.equals(cache.prosumerNic)) return;
+                pendingCountText.setText(formatCount(cache.pendingCount));
+                approvedCountText.setText(formatCount(cache.approvedFutureCount));
+                countsLoaded = true;
+                lastSyncedAt = cache.lastSyncedAt;
+                if (syncingCounts) {
+                    syncStatusText.setText(getString(R.string.dashboard_syncing_cached,
+                            formattedSyncTime()));
+                } else if (lastCountsError != null) {
+                    showCountsError(lastCountsError);
+                }
+            });
+        });
+    }
+
+    private void loadCachedBookings(String nic, long generation) {
+        // Home derives upcoming cards from the same per-Prosumer history cache as My Reservations.
+        cacheExecutor.execute(() -> {
+            List<ReservationCacheEntity> rows;
+            try {
+                rows = reservationCacheDao.getForProsumer(nic);
+            } catch (RuntimeException ignored) {
+                return;
+            }
+            mainHandler.post(() -> {
+                if (generation != homeGeneration || isFinishing() || isDestroyed()
+                        || !nic.equals(prosumerNic) || freshBookingsThisActivation || rows.isEmpty()) return;
+                List<ReservationData> cached = new ArrayList<>();
+                for (ReservationCacheEntity row : rows) {
+                    if (nic.equals(row.prosumerNic)) cached.add(row.toReservationData());
+                }
+                if (cached.isEmpty()) return;
+                reservations = cached;
+                bookingsLastSyncedAt = rows.get(0).lastSyncedAt;
+                bookingsLoadingText.setVisibility(View.GONE);
+                renderBookings();
+                renderActivity();
+                if (lastBookingsError != null) showBookingsError(lastBookingsError);
+            });
+        });
+    }
+
+    private void updateSyncProgress() {
+        // One existing bottom indicator reflects both count and reservation refreshes.
+        countsSyncProgress.setVisibility(syncingCounts || syncingBookings ? View.VISIBLE : View.GONE);
+    }
+
     private void loadCounts() {
-        // Asks the API for the two dashboard counts; only the latest request is allowed to update the screen
+        // Refreshes immediately; cached counts stay visible until the API replies.
         if (prosumerNic == null) {
             return;
         }
+        final String nic = prosumerNic;
         cancel(countsCall);
+        lastCountsError = null;
         countsErrorBanner.setVisibility(View.GONE);
+        syncingCounts = true;
+        updateSyncProgress();
+        syncStatusText.setText(countsLoaded && lastSyncedAt > 0
+                ? getString(R.string.dashboard_syncing_cached, formattedSyncTime())
+                : getString(R.string.dashboard_syncing));
+        syncStatusText.setVisibility(View.VISIBLE);
         // Dashes only before the first load; a refresh keeps the last numbers until new ones arrive
         if (!countsLoaded) {
             pendingCountText.setText(R.string.metric_empty);
             approvedCountText.setText(R.string.metric_empty);
         }
 
-        countsCall = NetworkManager.getInstance().getApiService().getDashboardCounts(prosumerNic);
+        countsCall = NetworkManager.getInstance().getApiService().getDashboardCounts(nic);
+        countsCall.timeout().timeout(60, TimeUnit.SECONDS);
         final Call<DashboardCounts> call = countsCall;
         call.enqueue(new Callback<DashboardCounts>() {
             @Override
             public void onResponse(@NonNull Call<DashboardCounts> request,
                                    @NonNull Response<DashboardCounts> response) {
                 // This endpoint replies without the usual envelope, so success is judged by the HTTP status
-                if (isStale(call, countsCall)) {
+                if (isStale(call, countsCall) || !nic.equals(prosumerNic)) {
                     return;
                 }
+                syncingCounts = false;
+                updateSyncProgress();
                 DashboardCounts body = response.body();
                 if (response.isSuccessful() && body != null) {
                     pendingCountText.setText(formatCount(body.pendingCount));
                     approvedCountText.setText(formatCount(body.approvedFutureCount));
                     countsLoaded = true;
+                    freshCountsThisActivation = true;
+                    lastSyncedAt = System.currentTimeMillis();
+                    syncStatusText.setText(getString(R.string.dashboard_last_synced,
+                            formattedSyncTime()));
+                    final DashboardCacheEntity cache = new DashboardCacheEntity(nic,
+                            body.pendingCount, body.approvedFutureCount, lastSyncedAt);
+                    cacheExecutor.execute(() -> {
+                        try {
+                            dashboardCacheDao.save(cache);
+                        } catch (RuntimeException ignored) {
+                            // The fresh API values remain usable even if local persistence fails.
+                        }
+                    });
                 } else {
                     showCountsError(ApiErrorParser.getMessage(ProsumerHomeActivity.this, response));
                 }
@@ -241,18 +415,32 @@ public class ProsumerHomeActivity extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call<DashboardCounts> request, @NonNull Throwable t) {
                 // The request never reached the API (no connection, wrong API_BASE_URL, server down)
-                if (isStale(call, countsCall)) {
+                if (isStale(call, countsCall) || !nic.equals(prosumerNic)) {
                     return;
                 }
+                syncingCounts = false;
+                updateSyncProgress();
                 showCountsError(getString(R.string.error_network));
             }
         });
     }
 
     private void showCountsError(String message) {
-        // Shows why the counts failed, with Retry beside the message
-        countsErrorText.setText(message);
+        // Keeps last-known counts visible but labels them as stale until a successful refresh.
+        lastCountsError = message;
+        countsErrorText.setText(countsLoaded && lastSyncedAt > 0
+                ? getString(R.string.dashboard_sync_failed_cached, message, formattedSyncTime())
+                : countsLoaded
+                ? getString(R.string.dashboard_sync_failed_cached_no_time, message)
+                : message);
         countsErrorBanner.setVisibility(View.VISIBLE);
+        syncStatusText.setVisibility(View.GONE);
+    }
+
+    private String formattedSyncTime() {
+        // Show the local date and time so an older cache cannot look current.
+        return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                .format(new Date(lastSyncedAt));
     }
 
     // ---------------------------------------------------------------- Account card
@@ -332,27 +520,53 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         if (prosumerNic == null) {
             return;
         }
+        final String nic = prosumerNic;
+        final long generation = homeGeneration;
         cancel(bookingsCall);
+        syncingBookings = true;
+        lastBookingsError = null;
+        updateSyncProgress();
         bookingsErrorBanner.setVisibility(View.GONE);
         bookingsLoadingText.setVisibility(reservations == null ? View.VISIBLE : View.GONE);
 
-        bookingsCall = NetworkManager.getInstance().getApiService().getProsumerReservations(prosumerNic);
+        bookingsCall = NetworkManager.getInstance().getApiService().getProsumerReservations(nic);
         final Call<ApiResponse<List<ReservationData>>> call = bookingsCall;
         call.enqueue(new Callback<ApiResponse<List<ReservationData>>>() {
             @Override
             public void onResponse(@NonNull Call<ApiResponse<List<ReservationData>>> request,
                                    @NonNull Response<ApiResponse<List<ReservationData>>> response) {
                 // Redraws everything that depends on the bookings, or reports why they failed
-                if (isStale(call, bookingsCall)) {
+                if (isStale(call, bookingsCall) || generation != homeGeneration || !nic.equals(prosumerNic)) {
                     return;
                 }
+                syncingBookings = false;
+                updateSyncProgress();
                 bookingsLoadingText.setVisibility(View.GONE);
                 ApiResponse<List<ReservationData>> body = response.body();
                 if (response.isSuccessful() && body != null && body.data != null) {
                     reservations = body.data;
+                    freshBookingsThisActivation = true;
+                    bookingsLastSyncedAt = System.currentTimeMillis();
                     renderBookings();
                     renderActivity();
+                    final long syncedAt = bookingsLastSyncedAt;
+                    cacheExecutor.execute(() -> {
+                        try {
+                            reservationCacheDao.replaceForProsumer(nic, body.data, syncedAt);
+                        } catch (RuntimeException ignored) {
+                            // Fresh server data remains visible if local persistence fails.
+                        }
+                    });
                 } else {
+                    if (response.code() == 401 || response.code() == 403) {
+                        // Do not present an old reservation snapshot after explicit server denial.
+                        freshBookingsThisActivation = true;
+                        reservations = null;
+                        upcomingList.removeAllViews();
+                        bookingsEmptyCard.setVisibility(View.GONE);
+                        nextTransferRow.setVisibility(View.GONE);
+                        activityCard.setVisibility(View.GONE);
+                    }
                     showBookingsError(ApiErrorParser.getMessage(ProsumerHomeActivity.this, response));
                 }
             }
@@ -360,9 +574,11 @@ public class ProsumerHomeActivity extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call<ApiResponse<List<ReservationData>>> request, @NonNull Throwable t) {
                 // The request never reached the API (no connection, wrong API_BASE_URL, server down)
-                if (isStale(call, bookingsCall)) {
+                if (isStale(call, bookingsCall) || generation != homeGeneration || !nic.equals(prosumerNic)) {
                     return;
                 }
+                syncingBookings = false;
+                updateSyncProgress();
                 bookingsLoadingText.setVisibility(View.GONE);
                 showBookingsError(getString(R.string.error_network));
             }
@@ -370,9 +586,17 @@ public class ProsumerHomeActivity extends AppCompatActivity {
     }
 
     private void showBookingsError(String message) {
-        // Shows why the bookings failed, with Retry beside the message
-        bookingsErrorText.setText(getString(R.string.action_error, getString(R.string.history_error_title), message));
+        // Cached bookings stay visible, explicitly labeled as last-known until API success.
+        lastBookingsError = message;
+        bookingsErrorText.setText(reservations == null
+                ? getString(R.string.action_error, getString(R.string.history_error_title), message)
+                : bookingsLastSyncedAt > 0
+                ? getString(R.string.dashboard_bookings_stale, message,
+                DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT)
+                        .format(new Date(bookingsLastSyncedAt)))
+                : getString(R.string.dashboard_bookings_stale_no_time, message));
         bookingsErrorBanner.setVisibility(View.VISIBLE);
+        if (reservations != null) renderBookings();
     }
 
     private void renderBookings() {
@@ -419,7 +643,8 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         ((TextView) card.findViewById(R.id.bookingReferenceText)).setText(reservation.reservationId);
 
         MaterialButton action = card.findViewById(R.id.bookingActionButton);
-        boolean approved = STATUS_APPROVED.equalsIgnoreCase(reservation.status);
+        boolean approved = STATUS_APPROVED.equalsIgnoreCase(reservation.status)
+                && freshBookingsThisActivation && lastBookingsError == null;
         action.setText(approved ? R.string.dashboard_view_qr : R.string.dashboard_view_details);
         action.setIconResource(approved ? R.drawable.ic_qr_code : R.drawable.ic_arrow_forward);
         action.setOnClickListener(v -> ReservationDetailActivity.start(this, reservation));
