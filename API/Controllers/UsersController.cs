@@ -8,6 +8,7 @@ using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 
@@ -21,8 +22,7 @@ namespace API.Controllers
         private readonly JwtTokenService _tokenService;
 
         // Shortest password the API will store, applied wherever one is set.
-        // The rule lives here rather than only in the web form, so it holds for every
-        // client and for anything hitting the API directly.
+        // The rule lives here rather than only in the web form, so it holds for anything hitting the API directly.
         private const int MinimumPasswordLength = 8;
 
         // Longest free-text reason accepted on deactivation or on a declined reactivation.
@@ -142,6 +142,7 @@ namespace API.Controllers
 
         // Logs a Backoffice or GridOperator user in with a username and password.
         [HttpPost("login")]
+        [EnableRateLimiting("auth")]
         public Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             return LoginByRoleAsync(request, prosumerOnly: false);
@@ -149,6 +150,7 @@ namespace API.Controllers
 
         // Logs a Prosumer in with a NIC and password.
         [HttpPost("login/prosumer")]
+        [EnableRateLimiting("auth")]
         public Task<IActionResult> LoginProsumer([FromBody] LoginRequest request)
         {
             return LoginByRoleAsync(request, prosumerOnly: true);
@@ -279,6 +281,7 @@ namespace API.Controllers
         // The current password must be supplied.
         [Authorize(Roles = Roles.Prosumer)]
         [HttpPut("{nic}/password")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> ChangePassword(string nic, [FromBody] ChangePasswordRequest request)
         {
             var callerNic = User.FindFirstValue("nic");
@@ -355,6 +358,7 @@ namespace API.Controllers
         // Public by necessity: login won't issue a token for a deactivated account. 
         // Re-checking the NIC and password authenticates the request, and stops anyone's requests against a NIC that isn't theirs.
         [HttpPost("reactivation-request")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> RequestReactivation([FromBody] ReactivationRequest request)
         {
             var user = await AuthenticateProsumerAsync(request.Nic, request.Password);
@@ -382,6 +386,7 @@ namespace API.Controllers
         // The account stays deactivated and takes it out of the Backoffice queue.
         // ( Public for the same reason as the request endpoint above. )
         [HttpPost("reactivation-request/cancel")]
+        [EnableRateLimiting("auth")]
         public async Task<IActionResult> CancelReactivationRequest([FromBody] ReactivationRequest request)
         {
             var user = await AuthenticateProsumerAsync(request.Nic, request.Password);

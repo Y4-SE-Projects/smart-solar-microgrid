@@ -9,6 +9,7 @@ using API.Data;
 using API.Models;
 using API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Security.Claims;
@@ -62,11 +63,33 @@ builder.Services.AddRateLimiter(options =>
                 SegmentsPerWindow = 6,
                 QueueLimit = 0
             }));
+
+    // ACCOUNTS: rate limit for every endpoint that checks a password (both logins, change password, and the two reactivation endpoints).
+    // Stops a password being guessed by brute force. Counted per signed-in account when there is one ( change password ), otherwise per IP.
+    options.AddPolicy("auth", httpContext =>
+        RateLimitPartition.GetSlidingWindowLimiter(
+            httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value is { } identifier
+                ? $"user:{identifier}"
+                : $"ip:{httpContext.Connection.RemoteIpAddress?.ToString() ?? "anonymous"}",
+            _ => new SlidingWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueLimit = 0
+            }));
+
+    // One rejection handler serves every policy, so the message is picked from the policy that refused the request.
     options.OnRejected = async (context, token) =>
     {
+        var policy = context.HttpContext.GetEndpoint()?.Metadata.GetMetadata<EnableRateLimitingAttribute>()?.PolicyName;
+        var message = policy == "auth"
+            ? "Too many attempts. Please wait a minute and try again."
+            : "Too many verification attempts. Please slow down.";
+
         context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
         await context.HttpContext.Response.WriteAsJsonAsync(
-            new { success = false, code = "RATE_LIMITED", message = "Too many verification attempts. Please slow down." },
+            new { success = false, code = "RATE_LIMITED", message },
             token);
     };
 });
