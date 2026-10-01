@@ -226,7 +226,8 @@ using (var scope = app.Services.CreateScope())
                 {
                     var seedUser = new User
                     {
-                        Username = seedSettings.Username,
+                        // Lower case, the same as every username created through Register.
+                        Username = seedSettings.Username.Trim().ToLowerInvariant(),
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(seedSettings.Password),
                         Role = Roles.Backoffice,
                         FullName = seedSettings.FullName,
@@ -237,14 +238,15 @@ using (var scope = app.Services.CreateScope())
                     };
 
                     await userService.CreateUserAsync(seedUser);
-                    Console.WriteLine($"Seeded initial Backoffice account: \"{seedSettings.Username}\". Create your real admin accounts and stop using this one.");
+                    Console.WriteLine($"Seeded initial Backoffice account: \"{seedUser.Username}\". Create your real admin accounts and stop using this one.");
                 }
                 else if (existing.Role == Roles.Backoffice)
                 {
-                    // The seed account is still in the database but was deactivated, which is one way a
-                    // system ends up with nobody able to administer it. Restoring it is the recovery path.
-                    await userService.SetStaffActiveAsync(seedSettings.Username, true);
-                    Console.WriteLine($"No active Backoffice account found — restored the existing seed account \"{seedSettings.Username}\".");
+                    // The seed account is still in the database but was deactivated, so the system ends up with nobody to administer it. 
+                    // Restoring it is the recovery path.
+                    // The stored spelling, since the lookup ignores case but the update matches exactly.
+                    await userService.SetStaffActiveAsync(existing.Username!, true);
+                    Console.WriteLine($"No active Backoffice account found — restored the existing seed account \"{existing.Username}\".");
                 }
                 else
                 {

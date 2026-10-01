@@ -85,6 +85,7 @@ function Field({
   placeholder,
   autoComplete,
   autoFocus = false,
+  hint,
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -99,7 +100,7 @@ function Field({
         onChange={(event) => onChange(name, event.target.value)}
         onBlur={() => onBlur(name)}
         aria-invalid={Boolean(error)}
-        aria-describedby={error ? `staff-${name}-error` : undefined}
+        aria-describedby={error ? `staff-${name}-error` : hint ? `staff-${name}-hint` : undefined}
         placeholder={placeholder}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
@@ -107,10 +108,16 @@ function Field({
           error ? 'border-alert-danger' : 'border-border-slate'
         }`}
       />
-      {error && (
+      {error ? (
         <span id={`staff-${name}-error`} className="text-body-sm text-alert-danger">
           {error}
         </span>
+      ) : (
+        hint && (
+          <span id={`staff-${name}-hint`} className="text-body-sm text-on-surface-variant">
+            {hint}
+          </span>
+        )
       )}
     </div>
   );
@@ -166,7 +173,9 @@ export default function StaffForm({
   }, []);
 
   function handleChange(name, value) {
-    setForm((current) => ({ ...current, [name]: value }));
+    // Usernames are stored in lower case, so the field shows them that way as they are typed.
+    const nextValue = name === 'username' ? value.toLowerCase() : value;
+    setForm((current) => ({ ...current, [name]: nextValue }));
   }
 
   function handleBlur(name) {
@@ -291,6 +300,7 @@ export default function StaffForm({
                   placeholder="e.g. j.silva"
                   autoComplete="off"
                   autoFocus
+                  hint="Usernames are lowercase."
                 />
               )}
               <Field

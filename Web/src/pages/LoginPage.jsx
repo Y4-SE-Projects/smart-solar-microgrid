@@ -109,7 +109,10 @@ export default function LoginPage() {
                     autoComplete="username"
                     required
                     value={identifier}
-                    onChange={(event) => setIdentifier(event.target.value)}
+                    // Usernames are stored in lower case, so the field shows what the account is actually called.
+                    onChange={(event) => setIdentifier(event.target.value.toLowerCase())}
+                    autoCapitalize="none"
+                    spellCheck={false}
                     placeholder="e.g. admin.jsmith"
                     className="w-full h-11 pl-10 pr-space-md bg-canvas-bg text-on-surface text-body-md rounded-xl focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_#006c4a] transition-all"
                   />

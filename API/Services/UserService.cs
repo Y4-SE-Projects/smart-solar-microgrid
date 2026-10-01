@@ -27,10 +27,16 @@ namespace API.Services
             return await _users.Find(u => u.Nic == nic).FirstOrDefaultAsync();
         }
 
-        // Finds a Backoffice / GridOperator user by username. Returns null if not found.
+        // Finds a Backoffice / GridOperator user by username, ignoring letter case. Returns null if not found.
+        // Case is ignored to match UsernameExistsAsync.
         public async Task<User?> FindByUsernameAsync(string username)
         {
-            return await _users.Find(u => u.Username == username).FirstOrDefaultAsync();
+            if (string.IsNullOrEmpty(username))
+            {
+                return null;
+            }
+
+            return await _users.Find(Builders<User>.Filter.Regex(u => u.Username!, ExactIgnoringCase(username))).FirstOrDefaultAsync();
         }
 
         // Finds a Prosumer by NIC, but only if the account is currently active.

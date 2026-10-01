@@ -71,7 +71,8 @@ namespace API.Controllers
 
             // The identifier is cleaned up once here, and the cleaned value is what gets checked and stored.
             var nic = NicFormat.Normalize(request.Nic);
-            var username = request.Username?.Trim() ?? string.Empty;
+            // Usernames are stored in lower case, since letter case means nothing in them. What is saved is what the staff list shows.
+            var username = request.Username?.Trim().ToLowerInvariant() ?? string.Empty;
 
             if (request.Role == Roles.Prosumer)
             {
@@ -153,6 +154,12 @@ namespace API.Controllers
         private async Task<IActionResult> LoginByRoleAsync(LoginRequest request, bool prosumerOnly)
         {
             var identifier = request.Identifier?.Trim() ?? string.Empty;
+
+            // No staff username is longer than the maximum, so a longer one can't match and isn't worth a database query.
+            if (!prosumerOnly && identifier.Length > AccountRules.MaximumUsernameLength)
+            {
+                return Unauthorized(new { success = false, message = "Invalid credentials." });
+            }
 
             // Try the exact NIC before normalizing to support accounts created before NIC normalization.
             User? user = prosumerOnly
@@ -501,7 +508,8 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = contactError });
             }
 
-            await _userService.UpdateStaffProfileAsync(username, request.FullName.Trim(), request.Email.Trim(), request.Phone.Trim());
+            // The stored spelling: the lookup ignores case, but the update matches the username exactly.
+            await _userService.UpdateStaffProfileAsync(user.Username!, request.FullName.Trim(), request.Email.Trim(), request.Phone.Trim());
 
             return Ok(new { success = true, message = "Staff account updated." });
         }
@@ -524,8 +532,9 @@ namespace API.Controllers
             }
 
             // Locking yourself out mid-session helps nobody, and the account would then need another Backoffice user to restore it.
+            // Compared with the stored username, so a differently-cased URL can't slip past this check.
             var callerUsername = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.Equals(callerUsername, username, StringComparison.Ordinal))
+            if (string.Equals(callerUsername, user.Username, StringComparison.Ordinal))
             {
                 return BadRequest(new { success = false, message = "You cannot deactivate your own account." });
             }
@@ -536,7 +545,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "This is the last active Backoffice account and cannot be deactivated." });
             }
 
-            await _userService.SetStaffActiveAsync(username, false);
+            await _userService.SetStaffActiveAsync(user.Username!, false);
 
             return Ok(new { success = true, message = "Staff account deactivated." });
         }
@@ -558,7 +567,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
             }
 
-            await _userService.SetStaffPasswordAsync(username, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
+            await _userService.SetStaffPasswordAsync(user.Username!, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
 
             return Ok(new { success = true, message = "Password reset. Share the new password with the account holder." });
         }
@@ -580,7 +589,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "This account is already active." });
             }
 
-            await _userService.SetStaffActiveAsync(username, true);
+            await _userService.SetStaffActiveAsync(user.Username!, true);
 
             return Ok(new { success = true, message = "Staff account reactivated." });
         }
