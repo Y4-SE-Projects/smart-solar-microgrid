@@ -54,16 +54,27 @@ namespace API.Controllers
             // Prosumers are a mobile-only role, so their sign-up belongs to the mobile app.
             var clientType = Request.Headers["X-Client-Type"].FirstOrDefault();
 
+            // 403 rather than 401 for the refusals below where the caller isn't the problem.
+            // 401 means "not signed in", and the web client treats every 401 as an expired session and signs the user out.
             if (request.Role == Roles.Prosumer && clientType == "Web")
             {
-                return Unauthorized(new { success = false, message = "Prosumer accounts must be registered from the mobile app." });
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "Prosumer accounts must be registered from the mobile app." });
             }
 
             if (request.Role != Roles.Prosumer)
             {
-                if (!(User.Identity?.IsAuthenticated ?? false) || !User.IsInRole(Roles.Backoffice))
+                const string staffOnlyMessage = "Only a Backoffice user can register Backoffice or Grid Operator accounts.";
+
+                // Nobody signed in: a genuine authentication failure, so 401 stays.
+                if (!(User.Identity?.IsAuthenticated ?? false))
                 {
-                    return Unauthorized(new { success = false, message = "Only a Backoffice user can register Backoffice or Grid Operator accounts." });
+                    return Unauthorized(new { success = false, message = staffOnlyMessage });
+                }
+
+                // Signed in, but not as Backoffice: allowed to be here, not allowed to do this.
+                if (!User.IsInRole(Roles.Backoffice))
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = staffOnlyMessage });
                 }
             }
 
