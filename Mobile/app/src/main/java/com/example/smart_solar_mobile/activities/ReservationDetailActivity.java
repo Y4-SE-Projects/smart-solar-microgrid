@@ -342,7 +342,6 @@ public class ReservationDetailActivity extends AppCompatActivity {
         detailSyncing = false;
         detailSyncFailed = true;
         hideServerActions();
-        statusBodyText.setText(R.string.detail_cached_status_body);
         syncText.setText(messageRes);
         syncRetryButton.setVisibility(View.VISIBLE);
         syncBanner.setVisibility(View.VISIBLE);
