@@ -87,14 +87,11 @@ namespace API.Controllers
             }
             else
             {
-                if (username.Length == 0)
+                // Letter first, safe characters only, 3–50 long (see AccountRules.ValidateUsername).
+                var usernameError = AccountRules.ValidateUsername(username);
+                if (usernameError != null)
                 {
-                    return BadRequest(new { success = false, message = "Username is required." });
-                }
-
-                if (username.Any(char.IsWhiteSpace))
-                {
-                    return BadRequest(new { success = false, message = "Username cannot contain spaces." });
+                    return BadRequest(new { success = false, message = usernameError });
                 }
             }
 

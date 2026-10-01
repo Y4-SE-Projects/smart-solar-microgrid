@@ -18,6 +18,36 @@ namespace API.Models
         // ( The default engine backtracks: matching time grows with the square of the length on inputs like "a@a.a.a.…@". )
         private static readonly Regex EmailPattern = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.NonBacktracking);
 
+        // Shortest and longest staff username the API accepts.
+        public const int MinimumUsernameLength = 3;
+        public const int MaximumUsernameLength = 50;
+
+        // A letter first, then letters, digits, ".", "_" or "-".
+        // Usernames travel in URL paths ( /users/staff/{username} ), so "/", "#", "?" and "%" must never appear, and "." or ".." can't be a whole name.
+        // Starting with a letter also keeps a username from ever looking like a NIC, which always starts with a digit.
+        private static readonly Regex UsernamePattern = new(@"^[A-Za-z][A-Za-z0-9._-]*$", RegexOptions.NonBacktracking);
+
+        // Checks a required staff username.
+        public static string? ValidateUsername(string? username)
+        {
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                return "Username is required.";
+            }
+
+            var trimmed = username.Trim();
+
+            if (trimmed.Length < MinimumUsernameLength
+                || trimmed.Length > MaximumUsernameLength
+                || !UsernamePattern.IsMatch(trimmed))
+            {
+                return $"Username must be {MinimumUsernameLength}–{MaximumUsernameLength} characters, start with a letter, " +
+                       "and use only letters, numbers, dots, hyphens or underscores.";
+            }
+
+            return null;
+        }
+
         // Checks a required email address. The length is checked before the pattern runs.
         public static string? ValidateEmail(string? email)
         {
