@@ -10,7 +10,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 
 namespace API.Controllers
 {
@@ -28,9 +27,6 @@ namespace API.Controllers
         // Longest free-text reason accepted on deactivation or on a declined reactivation.
         // Both are shown back on the Backoffice screens, so an unbounded value would flood them.
         private const int MaximumReasonLength = 500;
-
-        // Same email rule the web staff form applies, so the two never disagree about what is valid.
-        private static readonly Regex EmailPattern = new(@"^[^\s@]+@[^\s@]+\.[^\s@]+$", RegexOptions.Compiled);
 
         // Constructor: DI supplies the shared UserService and JwtTokenService.
         public UsersController(UserService userService, JwtTokenService tokenService)
@@ -622,14 +618,10 @@ namespace API.Controllers
                 return "Full name is required.";
             }
 
-            if (string.IsNullOrWhiteSpace(email))
+            var emailError = AccountRules.ValidateEmail(email);
+            if (emailError != null)
             {
-                return "Email is required.";
-            }
-
-            if (!EmailPattern.IsMatch(email.Trim()))
-            {
-                return "Enter a valid email address.";
+                return emailError;
             }
 
             if (string.IsNullOrWhiteSpace(phone))
