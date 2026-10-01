@@ -410,7 +410,7 @@ export default function EditReservationModal({ reservation, onClose, onUpdated }
                                 Reservation Update Policy
                             </p>
                             <p className="mt-0.5 text-body-sm text-on-surface-variant">
-                                Changes need at least 12 hours’ notice before both times and must stay within 7 days of the original booking’s creation. HelioGrid validates this when you save.
+                                Changes need at least 12 hours’ notice before both times, and the new slot must be within the next 7 days. HelioGrid validates this when you save.
                             </p>
                         </div>
                     </div>
