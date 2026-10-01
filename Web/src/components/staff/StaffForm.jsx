@@ -34,6 +34,15 @@ const EMPTY_FORM = {
 const MINIMUM_PASSWORD_LENGTH = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// The API's limits (AccountRules). 
+// Each input stops accepting characters at its limit, rather than letting the user type past it and then refusing the submission.
+const MAX_LENGTH = {
+  username: 50,
+  fullName: 100,
+  email: 254,
+  phone: 20,
+};
+
 // Same rule as the API's AccountRules.ValidateUsername: 3–50 characters, a letter first, then letters, digits, ".", "_" or "-".
 // Usernames go into URL paths, so "/", "#", "?" and "%" must never appear.
 const USERNAME_PATTERN = /^[A-Za-z][A-Za-z0-9._-]{2,49}$/;
@@ -112,6 +121,7 @@ function Field({
   autoComplete,
   autoFocus = false,
   hint,
+  maxLength,
 }) {
   return (
     <div className="flex flex-col gap-1">
@@ -130,6 +140,7 @@ function Field({
         placeholder={placeholder}
         autoComplete={autoComplete}
         autoFocus={autoFocus}
+        maxLength={maxLength}
         className={`h-9 px-3 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all ${
           error ? 'border-alert-danger' : 'border-border-slate'
         }`}
@@ -327,6 +338,7 @@ export default function StaffForm({
                   autoComplete="off"
                   autoFocus
                   hint="Usernames are lowercase."
+                  maxLength={MAX_LENGTH.username}
                 />
               )}
               <Field
@@ -339,6 +351,7 @@ export default function StaffForm({
                 placeholder="e.g. Jayani Silva"
                 autoComplete="off"
                 autoFocus={isEdit}
+                maxLength={MAX_LENGTH.fullName}
               />
               <Field
                 label="Email Address"
@@ -350,6 +363,7 @@ export default function StaffForm({
                 error={errorFor('email')}
                 placeholder="e.g. j.silva@heliogrid.lk"
                 autoComplete="off"
+                maxLength={MAX_LENGTH.email}
               />
               <Field
                 label="Phone Number"
@@ -361,6 +375,7 @@ export default function StaffForm({
                 error={errorFor('phone')}
                 placeholder="e.g. +94 77 123 4567"
                 autoComplete="off"
+                maxLength={MAX_LENGTH.phone}
               />
             </div>
 
