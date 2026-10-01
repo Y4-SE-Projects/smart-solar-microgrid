@@ -1,10 +1,5 @@
 // File: SlotSchedulesPage.jsx
 // Purpose: Shared Backoffice + Grid Operator page for a station's bookable slots, one day at a time.
-//          Slots are fetched a month at a time (the month on the calendar), so the calendar can
-//          highlight every day that has slots and the day table is filtered here, without a request.
-//          Backoffice manages the slot time windows themselves (create/edit/delete);
-//          Grid Operator manages only live availability — each role only sees the actions
-//          the API actually authorizes them to perform, everything else stays hidden.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
