@@ -619,9 +619,10 @@ namespace API.Controllers
         // Checks the contact fields every account carries, in the order the forms show them.
         private static string? ValidateContactDetails(string? fullName, string? email, string? phone)
         {
-            if (string.IsNullOrWhiteSpace(fullName))
+            var fullNameError = AccountRules.ValidateFullName(fullName);
+            if (fullNameError != null)
             {
-                return "Full name is required.";
+                return fullNameError;
             }
 
             var emailError = AccountRules.ValidateEmail(email);

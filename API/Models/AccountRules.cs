@@ -48,15 +48,37 @@ namespace API.Models
             return null;
         }
 
+        // Longest full name the API accepts. Names are shown in web tables and on mobile cards, so an unbounded one would break those layouts.
+        public const int MaximumFullNameLength = 100;
+
+        // Checks a required full name.
+        public static string? ValidateFullName(string? fullName)
+        {
+            if (string.IsNullOrWhiteSpace(fullName))
+            {
+                return "Full name is required.";
+            }
+
+            if (fullName.Trim().Length > MaximumFullNameLength)
+            {
+                return $"Full name must be at most {MaximumFullNameLength} characters.";
+            }
+
+            return null;
+        }
+
         // Fewest and most digits a phone number may have: covers local numbers ( 0771234567 ) and international ones ( +94 77 123 4567 ).
         public const int MinimumPhoneDigits = 9;
         public const int MaximumPhoneDigits = 15;
+
+        // Longest phone number including spaces, hyphens and "+". Room for 15 digits with separators, without allowing padding.
+        public const int MaximumPhoneLength = 20;
 
         // An optional "+", then digits, with spaces or hyphens allowed between them ( the Android phone keyboard offers hyphens ).
         // [0-9] rather than \d, which in .NET also matches non-English digits.
         private static readonly Regex PhonePattern = new(@"^\+?[0-9][0-9 -]*$", RegexOptions.NonBacktracking);
 
-        // Checks a required phone number: allowed characters first, then how many digits it has.
+        // Checks a required phone number: overall length, then allowed characters, then how many digits it has.
         public static string? ValidatePhone(string? phone)
         {
             if (string.IsNullOrWhiteSpace(phone))
@@ -65,6 +87,11 @@ namespace API.Models
             }
 
             var trimmed = phone.Trim();
+
+            if (trimmed.Length > MaximumPhoneLength)
+            {
+                return $"Phone number must be at most {MaximumPhoneLength} characters.";
+            }
             var digitCount = trimmed.Count(c => c >= '0' && c <= '9');
 
             if (!PhonePattern.IsMatch(trimmed) || digitCount < MinimumPhoneDigits || digitCount > MaximumPhoneDigits)
