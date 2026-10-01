@@ -20,10 +20,6 @@ namespace API.Controllers
         private readonly UserService _userService;
         private readonly JwtTokenService _tokenService;
 
-        // Shortest password the API will store, applied wherever one is set.
-        // The rule lives here rather than only in the web form, so it holds for anything hitting the API directly.
-        private const int MinimumPasswordLength = 8;
-
         // Longest free-text reason accepted on deactivation or on a declined reactivation.
         // Both are shown back on the Backoffice screens, so an unbounded value would flood them.
         private const int MaximumReasonLength = 500;
@@ -48,9 +44,11 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "Role must be Backoffice, GridOperator, or Prosumer." });
             }
 
-            if (string.IsNullOrEmpty(request.Password) || request.Password.Length < MinimumPasswordLength)
+            // At least 8 characters, not only spaces, at most 72 bytes (see AccountRules.ValidateNewPassword).
+            var passwordError = AccountRules.ValidateNewPassword(request.Password);
+            if (passwordError != null)
             {
-                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+                return BadRequest(new { success = false, message = passwordError });
             }
 
             // Prosumers are a mobile-only role, so their sign-up belongs to the mobile app.
@@ -306,9 +304,10 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "Current password is incorrect." });
             }
 
-            if (string.IsNullOrEmpty(request.NewPassword) || request.NewPassword.Length < MinimumPasswordLength)
+            var newPasswordError = AccountRules.ValidateNewPassword(request.NewPassword);
+            if (newPasswordError != null)
             {
-                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+                return BadRequest(new { success = false, message = newPasswordError });
             }
 
             if (request.NewPassword == request.CurrentPassword)
@@ -562,9 +561,10 @@ namespace API.Controllers
                 return NotFound(new { success = false, message = "Staff account not found." });
             }
 
-            if (string.IsNullOrEmpty(request.NewPassword) || request.NewPassword.Length < MinimumPasswordLength)
+            var newPasswordError = AccountRules.ValidateNewPassword(request.NewPassword);
+            if (newPasswordError != null)
             {
-                return BadRequest(new { success = false, message = $"Password must be at least {MinimumPasswordLength} characters." });
+                return BadRequest(new { success = false, message = newPasswordError });
             }
 
             await _userService.SetStaffPasswordAsync(user.Username!, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
