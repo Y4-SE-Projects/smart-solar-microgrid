@@ -95,38 +95,52 @@
                         android:orientation="vertical"
                         android:padding="20dp">
 
-                        <ImageView
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            android:background="@drawable/bg_cancel_hero_mark"
-                            android:importantForAccessibility="no"
-                            android:padding="15dp"
-                            android:src="@drawable/ic_cancel_booking"
-                            app:tint="@color/alert_danger" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="56dp"
+                                android:layout_height="56dp"
+                                android:background="@drawable/bg_cancel_hero_mark"
+                                android:importantForAccessibility="no"
+                                android:padding="15dp"
+                                android:src="@drawable/ic_cancel_booking"
+                                app:tint="@color/alert_danger" />
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="16dp"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:letterSpacing="0.08"
+                                    android:text="@string/cancel_hero_eyebrow"
+                                    android:textColor="@color/alert_danger"
+                                    android:textSize="11sp" />
+
+                                <TextView
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="5dp"
+                                    android:fontFamily="sans-serif-medium"
+                                    android:text="@string/cancel_hero_title"
+                                    android:textColor="@color/on_surface"
+                                    android:textSize="22sp" />
+                            </LinearLayout>
+                        </LinearLayout>
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="18dp"
-                            android:fontFamily="sans-serif-medium"
-                            android:letterSpacing="0.08"
-                            android:text="@string/cancel_hero_eyebrow"
-                            android:textColor="@color/alert_danger"
-                            android:textSize="11sp" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="5dp"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="@string/cancel_hero_title"
-                            android:textColor="@color/on_surface"
-                            android:textSize="24sp" />
-
-                        <TextView
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
+                            android:layout_marginTop="16dp"
                             android:text="@string/cancel_hero_body"
                             android:textColor="@color/on_surface_variant"
                             android:textSize="14sp" />

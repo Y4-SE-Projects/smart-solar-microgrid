@@ -4,6 +4,7 @@
     android:id="@+id/detailRoot"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/surface_container_lowest"
     android:orientation="vertical">
 
     <LinearLayout
@@ -57,466 +58,465 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
+        android:background="@color/surface"
         android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
-
-            <!-- Status banner -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <ImageView
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:background="@drawable/bg_icon_tile"
-                        android:importantForAccessibility="no"
-                        android:padding="8dp"
-                        android:src="@drawable/ic_check"
-                        app:tint="@color/secondary" />
-
-                    <TextView
-                        android:id="@+id/statusTitleText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/on_surface"
-                        android:textSize="16sp" />
-
-                    <TextView
-                        android:id="@+id/statusChip"
-                        style="@style/Widget.SmartSolar.StatusChip" />
-                </LinearLayout>
-
-                <TextView
-                    android:id="@+id/statusBodyText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:textColor="@color/on_surface_variant"
-                    android:textSize="13sp" />
-            </LinearLayout>
+            android:paddingStart="16dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="24dp">
 
             <!-- Reservation summary -->
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp">
+                app:cardBackgroundColor="@color/surface_container_lowest"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/border_slate"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="vertical"
+                    android:padding="18dp">
 
-                    <TextView
-                        android:layout_width="0dp"
+                    <LinearLayout
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/detail_summary_title"
-                        android:textAppearance="@style/TextAppearance.SmartSolar.Title" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/detail_summary_title"
+                            android:textAppearance="@style/TextAppearance.SmartSolar.Title" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/copyIdButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="40dp"
+                            android:minWidth="0dp"
+                            android:minHeight="0dp"
+                            android:text="@string/detail_copy_id"
+                            android:textColor="@color/primary"
+                            android:textSize="12sp"
+                            app:cornerRadius="8dp"
+                            app:icon="@drawable/ic_copy"
+                            app:iconGravity="textStart"
+                            app:iconPadding="6dp"
+                            app:iconSize="18dp"
+                            app:iconTint="@color/primary"
+                            app:strokeColor="@color/border_slate" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginTop="8dp"
+                        android:background="@color/border_slate" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/detail_summary_status"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/statusChip"
+                            style="@style/Widget.SmartSolar.StatusChip" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/detail_summary_station"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/stationValueText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif-medium"
+                            android:gravity="end"
+                            android:textColor="@color/on_surface"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/detail_summary_datetime"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/dateTimeValueText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif-medium"
+                            android:fontFeatureSettings="tnum"
+                            android:gravity="end"
+                            android:textColor="@color/secondary"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="@string/detail_summary_nic"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/nicValueText"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:fontFamily="sans-serif-medium"
+                            android:fontFeatureSettings="tnum"
+                            android:gravity="end"
+                            android:textColor="@color/on_surface"
+                            android:textSize="13sp" />
+                    </LinearLayout>
 
                     <com.google.android.material.button.MaterialButton
-                        android:id="@+id/copyIdButton"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:minWidth="0dp"
-                        android:minHeight="0dp"
-                        android:text="@string/detail_copy_id"
-                        android:textSize="12sp" />
+                        android:id="@+id/detailEditBookingButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="16dp"
+                        android:text="@string/edit_pending_action"
+                        android:textColor="@color/primary"
+                        android:visibility="gone"
+                        app:cornerRadius="8dp"
+                        app:icon="@drawable/ic_tune"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/secondary"
+                        app:strokeColor="@color/border_slate" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/detailCancelBookingButton"
+                        style="@style/Widget.Material3.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="48dp"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/cancel_booking_action"
+                        android:textColor="@color/alert_danger"
+                        android:visibility="gone"
+                        app:cornerRadius="8dp"
+                        app:icon="@drawable/ic_cancel_booking"
+                        app:iconGravity="textStart"
+                        app:iconTint="@color/alert_danger"
+                        app:strokeColor="@color/chip_danger_border" />
                 </LinearLayout>
-
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:layout_marginTop="8dp"
-                    android:background="@color/border_slate" />
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/detail_summary_station"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/stationValueText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:gravity="end"
-                        android:textColor="@color/on_surface"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/detail_summary_datetime"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/dateTimeValueText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:fontFeatureSettings="tnum"
-                        android:gravity="end"
-                        android:textColor="@color/secondary"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:text="@string/detail_summary_nic"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:id="@+id/nicValueText"
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:fontFamily="sans-serif-medium"
-                        android:fontFeatureSettings="tnum"
-                        android:gravity="end"
-                        android:textColor="@color/on_surface"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/detailEditBookingButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="16dp"
-                    android:text="@string/edit_pending_action"
-                    android:textColor="@color/primary"
-                    android:visibility="gone"
-                    app:cornerRadius="8dp"
-                    app:icon="@drawable/ic_tune"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/secondary"
-                    app:strokeColor="@color/border_slate" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/detailCancelBookingButton"
-                    style="@style/Widget.Material3.Button.OutlinedButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:layout_marginTop="8dp"
-                    android:text="@string/cancel_booking_action"
-                    android:textColor="@color/alert_danger"
-                    android:visibility="gone"
-                    app:cornerRadius="8dp"
-                    app:icon="@drawable/ic_cancel_booking"
-                    app:iconGravity="textStart"
-                    app:iconTint="@color/alert_danger"
-                    app:strokeColor="@color/chip_danger_border" />
-            </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Terminal QR pass -->
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/qrCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:background="@drawable/bg_card"
-                android:orientation="vertical"
-                android:padding="16dp"
-                android:visibility="gone">
+                android:visibility="gone"
+                app:cardBackgroundColor="@color/surface_container_lowest"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="1dp"
+                app:strokeColor="@color/border_slate"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
+                    android:orientation="vertical"
+                    android:padding="12dp">
 
                     <TextView
-                        android:layout_width="0dp"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:text="@string/detail_qr_title"
                         android:textAppearance="@style/TextAppearance.SmartSolar.Title" />
 
-                    <TextView
-                        style="@style/Widget.SmartSolar.StatusChip"
-                        android:background="@drawable/bg_chip_neutral"
-                        android:text="@string/detail_qr_gate_access"
-                        android:textColor="@color/on_surface_variant" />
-                </LinearLayout>
-
-                <!-- Locked: reservation is still Pending -->
-                <LinearLayout
-                    android:id="@+id/qrLockedState"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <FrameLayout
-                        android:layout_width="160dp"
-                        android:layout_height="160dp"
-                        android:background="@drawable/bg_chip_neutral">
-
-                        <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:layout_gravity="center"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_lock"
-                            app:tint="@color/on_surface_variant" />
-                    </FrameLayout>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center"
-                        android:text="@string/detail_qr_locked_title"
-                        android:textColor="@color/on_surface"
-                        android:textStyle="bold"
-                        android:textSize="13sp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:gravity="center"
-                        android:text="@string/detail_qr_locked_body"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="12sp" />
-                </LinearLayout>
-
-                <!-- Loading the live QR from the API -->
-                <LinearLayout
-                    android:id="@+id/qrLoadingState"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:gravity="center_vertical"
-                    android:minHeight="76dp"
-                    android:orientation="horizontal"
-                    android:visibility="gone">
-
-                    <com.google.android.material.progressindicator.CircularProgressIndicator
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:indeterminate="true"
-                        app:indicatorColor="@color/secondary"
-                        app:indicatorSize="24dp" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="12dp"
-                        android:text="@string/detail_qr_loading"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="13sp" />
-                </LinearLayout>
-
-                <!-- Active: reservation is Approved and the QR can be shown/regenerated -->
-                <LinearLayout
-                    android:id="@+id/qrActiveState"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <ImageView
-                        android:id="@+id/qrImage"
-                        android:layout_width="180dp"
-                        android:layout_height="180dp"
-                        android:background="@color/white"
-                        android:contentDescription="@string/detail_qr_title"
-                        android:padding="8dp" />
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center"
-                        android:text="@string/detail_qr_active_body"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="12sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/regenerateQrButton"
-                        style="@style/Widget.Material3.Button.OutlinedButton"
+                    <!-- Locked: reservation is still Pending -->
+                    <LinearLayout
+                        android:id="@+id/qrLockedState"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:text="@string/detail_regenerate_qr"
-                        app:icon="@drawable/ic_refresh" />
-                </LinearLayout>
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
-                <!-- Used: reservation is already Completed -->
-                <LinearLayout
-                    android:id="@+id/qrUsedState"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:visibility="gone">
+                        <FrameLayout
+                            android:layout_width="160dp"
+                            android:layout_height="160dp"
+                            android:background="@drawable/bg_chip_neutral">
 
-                    <FrameLayout
-                        android:layout_width="160dp"
-                        android:layout_height="160dp"
-                        android:background="@drawable/bg_chip_active">
+                            <ImageView
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="center"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_lock"
+                                app:tint="@color/on_surface_variant" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center"
+                            android:text="@string/detail_qr_locked_title"
+                            android:textColor="@color/on_surface"
+                            android:textStyle="bold"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:gravity="center"
+                            android:text="@string/detail_qr_locked_body"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Loading the live QR from the API -->
+                    <LinearLayout
+                        android:id="@+id/qrLoadingState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:gravity="center_vertical"
+                        android:minHeight="76dp"
+                        android:orientation="horizontal"
+                        android:visibility="gone">
+
+                        <com.google.android.material.progressindicator.CircularProgressIndicator
+                            android:layout_width="24dp"
+                            android:layout_height="24dp"
+                            android:indeterminate="true"
+                            app:indicatorColor="@color/secondary"
+                            app:indicatorSize="24dp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="12dp"
+                            android:text="@string/detail_qr_loading"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="13sp" />
+                    </LinearLayout>
+
+                    <!-- Active: reservation is Approved and the QR can be shown/regenerated -->
+                    <LinearLayout
+                        android:id="@+id/qrActiveState"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="14dp"
+                        android:gravity="center"
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
                         <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:layout_gravity="center"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_check"
-                            app:tint="@color/secondary" />
-                    </FrameLayout>
+                            android:id="@+id/qrImage"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                        android:adjustViewBounds="true"
+                        android:background="@color/white"
+                        android:contentDescription="@string/detail_qr_title"
+                        android:padding="4dp"
+                        android:scaleType="fitCenter" />
 
-                    <TextView
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center"
+                            android:text="@string/detail_qr_active_body"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/regenerateQrButton"
+                            style="@style/Widget.Material3.Button.OutlinedButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="14dp"
+                            android:text="@string/detail_regenerate_qr"
+                            app:icon="@drawable/ic_refresh" />
+                    </LinearLayout>
+
+                    <!-- Used: reservation is already Completed -->
+                    <LinearLayout
+                        android:id="@+id/qrUsedState"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
+                        android:layout_marginTop="14dp"
                         android:gravity="center"
-                        android:text="@string/detail_qr_used_title"
-                        android:textColor="@color/on_surface"
-                        android:textStyle="bold"
-                        android:textSize="13sp" />
+                        android:orientation="vertical"
+                        android:visibility="gone">
 
-                    <TextView
+                        <FrameLayout
+                            android:layout_width="160dp"
+                            android:layout_height="160dp"
+                            android:background="@drawable/bg_chip_active">
+
+                            <ImageView
+                                android:layout_width="32dp"
+                                android:layout_height="32dp"
+                                android:layout_gravity="center"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_check"
+                                app:tint="@color/secondary" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:gravity="center"
+                            android:text="@string/detail_qr_used_title"
+                            android:textColor="@color/on_surface"
+                            android:textStyle="bold"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:gravity="center"
+                            android:text="@string/detail_qr_used_body"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
+
+                    <!-- Error loading/regenerating the QR -->
+                    <LinearLayout
+                        android:id="@+id/qrErrorState"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
-                        android:gravity="center"
-                        android:text="@string/detail_qr_used_body"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="12sp" />
+                        android:layout_marginTop="14dp"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/detail_qr_error_title"
+                            android:textAppearance="@style/TextAppearance.SmartSolar.Title" />
+
+                        <TextView
+                            android:id="@+id/qrErrorMessageText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="5dp"
+                            android:accessibilityLiveRegion="polite"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="13sp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/retryQrButton"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="48dp"
+                            android:layout_marginTop="6dp"
+                            android:text="@string/retry" />
+                    </LinearLayout>
                 </LinearLayout>
-
-                <!-- Error loading/regenerating the QR -->
-                <LinearLayout
-                    android:id="@+id/qrErrorState"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="14dp"
-                    android:orientation="vertical"
-                    android:visibility="gone">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="@string/detail_qr_error_title"
-                        android:textAppearance="@style/TextAppearance.SmartSolar.Title" />
-
-                    <TextView
-                        android:id="@+id/qrErrorMessageText"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="5dp"
-                        android:accessibilityLiveRegion="polite"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="13sp" />
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/retryQrButton"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="wrap_content"
-                        android:layout_height="48dp"
-                        android:layout_marginTop="6dp"
-                        android:text="@string/retry" />
-                </LinearLayout>
-            </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- 12-hour modification notice -->
-            <LinearLayout
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:background="@drawable/bg_card"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="14dp">
-
-                <ImageView
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_schedule"
-                    app:tint="@color/on_surface_variant" />
+                app:cardBackgroundColor="@color/surface_container_lowest"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="1dp"
+                app:strokeColor="@color/border_slate"
+                app:strokeWidth="1dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
-                    android:orientation="vertical">
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
 
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:fontFamily="sans-serif-medium"
-                        android:text="@string/detail_notice_modification_title"
-                        android:textColor="@color/on_surface"
-                        android:textSize="13sp" />
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_schedule"
+                        app:tint="@color/on_surface_variant" />
 
-                    <TextView
-                        android:layout_width="match_parent"
+                    <LinearLayout
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="@string/detail_notice_modification_body"
-                        android:textColor="@color/on_surface_variant"
-                        android:textSize="12sp" />
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="@string/detail_notice_modification_title"
+                            android:textColor="@color/on_surface"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/detail_notice_modification_body"
+                            android:textColor="@color/on_surface_variant"
+                            android:textSize="12sp" />
+                    </LinearLayout>
                 </LinearLayout>
-            </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/viewBookingsButton"
