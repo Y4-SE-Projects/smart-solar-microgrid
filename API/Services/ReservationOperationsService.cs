@@ -448,24 +448,11 @@ namespace API.Services
 
             ValidateMinimumNotice(scheduledTimeUtc, utcNow);
 
-            // A missing or future creation timestamp cannot establish the original booking window.
-            var createdAtUtc = reservation.CreatedAt.Kind switch
-            {
-                DateTimeKind.Utc => reservation.CreatedAt,
-                DateTimeKind.Local => reservation.CreatedAt.ToUniversalTime(),
-                _ => DateTime.SpecifyKind(reservation.CreatedAt, DateTimeKind.Utc)
-            };
-
-            if (createdAtUtc == default || createdAtUtc > utcNow)
-            {
-                throw new InvalidOperationException(
-                    "The reservation creation time is missing or invalid. This reservation cannot be updated.");
-            }
-
-            if (scheduledTimeUtc > createdAtUtc.AddDays(MaximumCreationWindowDays))
+            // The update horizon starts at this request's captured UTC time.
+            if (scheduledTimeUtc > utcNow.AddDays(MaximumCreationWindowDays))
             {
                 throw new ArgumentException(
-                    "The updated reservation must be scheduled within 7 days of its original creation.",
+                    "The updated reservation must be scheduled within the next 7 days.",
                     nameof(request.ScheduledTime));
             }
 
@@ -478,6 +465,12 @@ namespace API.Services
             {
                 throw new InvalidOperationException(
                     "Selected replacement slot is unavailable.");
+            }
+
+            // Keeping the same owned slot and time needs no database or slot change.
+            if (!slotChanged && scheduledTimeUtc == reservation.ScheduledTime)
+            {
+                return reservation;
             }
 
             var replacementSlotClaimed = false;
