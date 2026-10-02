@@ -1,12 +1,13 @@
 // File: LoginActivity.java
 // Purpose: Login screen for Prosumers (NIC) and Grid Operators (username) using their role-specific login routes.
-// Author: IT23215856, IT23218512 (registration link, deactivated-account dialogs)
+// Author: IT23215856, IT23218512 (registration link, deactivated-account dialogs, lower-case operator username)
 
 package com.example.smart_solar_mobile.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -39,12 +40,21 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
+import java.util.Locale;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 public class LoginActivity extends AppCompatActivity {
     private static final String STATE_PROSUMER_SELECTED = "prosumer_selected";
+
+    // Turns capitals into lower case as they are typed or pasted; returns null (keep as is) when there are none
+    private static final InputFilter LOWER_CASE_FILTER = (source, start, end, dest, dstart, dend) -> {
+        String typed = source.subSequence(start, end).toString();
+        String lower = typed.toLowerCase(Locale.ROOT);
+        return lower.equals(typed) ? null : lower;
+    };
 
     private boolean prosumerSelected = true;
 
@@ -138,6 +148,19 @@ public class LoginActivity extends AppCompatActivity {
         identifierLayout.setError(null);
         operatorNotice.setVisibility(prosumer ? View.GONE : View.VISIBLE);
         registerPrompt.setVisibility(prosumer ? View.VISIBLE : View.GONE);
+
+        // Usernames are stored in lower case, so the box shows them that way, as the web login does.
+        // NICs are left alone; their final V or X is handled by the API.
+        identifierInput.setFilters(prosumer ? new InputFilter[0] : new InputFilter[]{LOWER_CASE_FILTER});
+        if (!prosumer) {
+            // Filters only act on new input, so text already in the box is converted once here
+            String current = textOf(identifierInput);
+            String lower = current.toLowerCase(Locale.ROOT);
+            if (!lower.equals(current)) {
+                identifierInput.setText(lower);
+                identifierInput.setSelection(lower.length());
+            }
+        }
     }
 
     private void onRegisterResult(ActivityResult result) {
