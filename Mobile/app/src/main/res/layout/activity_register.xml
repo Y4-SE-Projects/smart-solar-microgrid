@@ -85,6 +85,7 @@
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/nicInput"
+                android:maxLength="12"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:autofillHints="username"
@@ -116,6 +117,7 @@
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/fullNameInput"
+                android:maxLength="100"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:autofillHints="name"
@@ -147,6 +149,7 @@
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/emailInput"
+                android:maxLength="254"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:autofillHints="emailAddress"
@@ -178,6 +181,7 @@
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/phoneInput"
+                android:maxLength="20"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:autofillHints="phone"
