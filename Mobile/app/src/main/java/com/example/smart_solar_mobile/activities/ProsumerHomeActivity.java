@@ -153,8 +153,13 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         findViewById(R.id.pendingDashboardCard).setOnClickListener(v ->
                 startActivity(new Intent(this, ReservationHistoryActivity.class)
                         .putExtra(ReservationHistoryActivity.EXTRA_INITIAL_STATUS_FILTER, STATUS_PENDING)));
+        findViewById(R.id.approvedDashboardCard).setOnClickListener(v ->
+                startActivity(new Intent(this, ReservationHistoryActivity.class)
+                        .putExtra(ReservationHistoryActivity.EXTRA_INITIAL_STATUS_FILTER, STATUS_APPROVED)));
         // Direct booking works without location permission or a nearby-map result
         findViewById(R.id.directReservationButton).setOnClickListener(v ->
+                startActivity(new Intent(this, CreateReservationActivity.class)));
+        findViewById(R.id.bookFromEmptyButton).setOnClickListener(v ->
                 startActivity(new Intent(this, CreateReservationActivity.class)));
         // Keeps the Member 02 nearby-map path and its preselected-station handoff
         findViewById(R.id.createReservationButton).setOnClickListener(v ->
@@ -226,7 +231,6 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         memberSinceText.setText(R.string.metric_empty);
         ((TextView) findViewById(R.id.bannerNameText)).setText("");
         ((TextView) findViewById(R.id.avatarText)).setText("");
-        ((TextView) findViewById(R.id.nameText)).setText("");
         ((TextView) findViewById(R.id.nicText)).setText("");
     }
 
@@ -236,7 +240,6 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                 ? session.identifier : session.fullName.trim();
         ((TextView) findViewById(R.id.bannerNameText)).setText(name);
         ((TextView) findViewById(R.id.avatarText)).setText(NameUtils.initialsOf(name));
-        ((TextView) findViewById(R.id.nameText)).setText(name);
         ((TextView) findViewById(R.id.nicText)).setText(getString(R.string.home_nic, session.identifier));
     }
 
@@ -443,7 +446,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                 .format(new Date(lastSyncedAt));
     }
 
-    // ---------------------------------------------------------------- Account card
+    // ---------------------------------------------------------------- Profile information
 
     private void loadProfile() {
         // Reads the account status and creation date; the card still works from the session if this fails
