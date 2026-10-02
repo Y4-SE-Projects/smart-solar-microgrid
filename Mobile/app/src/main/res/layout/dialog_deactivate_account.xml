@@ -46,6 +46,7 @@
                 android:hint="@string/deactivate_hint_reason"
                 android:importantForAutofill="no"
                 android:inputType="textMultiLine|textCapSentences"
+                android:maxLength="500"
                 android:maxLines="4"
                 android:minLines="2"
                 android:textSize="14sp" />

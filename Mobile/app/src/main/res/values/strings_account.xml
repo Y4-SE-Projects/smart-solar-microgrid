@@ -65,6 +65,8 @@
     <string name="register_error_phone_required">Enter your phone number.</string>
     <string name="register_error_confirm_required">Re-enter your password.</string>
     <string name="register_error_password_mismatch">Passwords don\'t match.</string>
+    <!-- Same wording as the API's new-password rule -->
+    <string name="password_error_only_spaces">Password can\'t be only spaces.</string>
     <string name="register_have_account">Already have an account?</string>
     <string name="register_sign_in_link">Sign in</string>
 

@@ -30,6 +30,7 @@ import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
 import com.example.smart_solar_mobile.utils.DialogUtils;
+import com.example.smart_solar_mobile.utils.FieldChecks;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
 import com.example.smart_solar_mobile.utils.NameUtils;
 import com.example.smart_solar_mobile.utils.TimeUtils;
@@ -375,7 +376,9 @@ public class ProfileActivity extends AppCompatActivity {
             // Local checks only save a round trip; the 8-character minimum, "different from current" and
             // the current-password check all belong to the API
             boolean valid = requireFilled(currentLayout, current, R.string.password_error_current_required);
-            valid &= requireFilled(newLayout, next, R.string.password_error_new_required);
+            // A new password of only spaces counts as missing too, with the API's own wording
+            valid &= requireFilled(newLayout, next, R.string.password_error_new_required)
+                    && FieldChecks.requireNotOnlySpaces(newLayout, next);
             if (requireFilled(confirmLayout, confirm, R.string.register_error_confirm_required)) {
                 if (!confirm.equals(next)) {
                     confirmLayout.setError(getString(R.string.register_error_password_mismatch));
