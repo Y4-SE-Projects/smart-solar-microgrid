@@ -3,18 +3,12 @@
     <!-- Prosumer dashboard. The "Pending" / "Approved" overlines reuse reservation_status_* from strings_reservation.xml -->
     <string name="dashboard_header_subtitle">Prosumer dashboard</string>
     <string name="dashboard_overview_title">At a glance</string>
-    <string name="dashboard_quick_actions_title">Quick actions</string>
     <string name="dashboard_view_pending">View pending</string>
     <string name="dashboard_view_approved">View approved</string>
-    <string name="dashboard_pending_label">Pending Approval</string>
     <string name="dashboard_pending_caption">Awaiting station operator</string>
-    <string name="dashboard_approved_label">Approved Bookings</string>
     <string name="dashboard_approved_caption">Ready for transfer</string>
     <string name="dashboard_book_energy">Book Energy Slot</string>
     <string name="dashboard_book_energy_hint">Choose a station and available slot</string>
-    <string name="dashboard_find_stations_hint">Explore the map</string>
-    <string name="dashboard_bookings_hint">View your history</string>
-    <string name="dashboard_booking_history">Booking History</string>
     <string name="dashboard_syncing">Updating latest counts…</string>
     <string name="dashboard_syncing_cached">Updating latest counts… Last synced %1$s</string>
     <string name="dashboard_last_synced">Last updated %1$s</string>
@@ -37,11 +31,11 @@
     <string name="dashboard_member_since">Member since</string>
 
     <!-- Dashboard upcoming bookings -->
+    <string name="dashboard_activity_title">Your activity</string>
     <string name="dashboard_upcoming_title">Upcoming bookings</string>
     <string name="dashboard_see_all">See all</string>
     <string name="dashboard_upcoming_empty_title">No upcoming bookings</string>
     <string name="dashboard_upcoming_empty_body">Book an energy slot and it will show up here.</string>
-    <string name="dashboard_reservation_label">Reservation</string>
     <string name="dashboard_view_qr">View QR Pass</string>
     <string name="dashboard_view_details">View details</string>
 

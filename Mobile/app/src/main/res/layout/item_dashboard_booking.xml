@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Compact upcoming booking; details and QR access remain in the reservation detail screen. -->
+<!-- Compact upcoming booking. The whole card opens the reservation detail screen (QR pass once Approved);
+     slot and reservation IDs live there rather than on the home screen. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="8dp"
+    android:clickable="true"
+    android:focusable="true"
+    android:stateListAnimator="@animator/press_scale"
     app:cardBackgroundColor="@color/surface_container_lowest"
     app:cardCornerRadius="16dp"
-    app:cardElevation="1dp"
+    app:cardElevation="0dp"
     app:strokeColor="@color/border_slate"
     app:strokeWidth="1dp">
 
@@ -78,71 +82,6 @@
                 android:textColor="@color/on_surface_variant"
                 android:textSize="12sp"
                 tools:text="STN-001 · 14:00" />
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="10dp"
-            android:background="@color/border_slate" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:baselineAligned="false"
-            android:orientation="horizontal">
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/summary_slot_label"
-                    android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
-
-                <TextView
-                    android:id="@+id/bookingSlotText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:ellipsize="end"
-                    android:fontFamily="sans-serif-medium"
-                    android:maxLines="1"
-                    android:textColor="@color/on_surface"
-                    android:textSize="13sp"
-                    tools:text="SLOT-4882" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:layout_weight="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@string/dashboard_reservation_label"
-                    android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
-
-                <TextView
-                    android:id="@+id/bookingReferenceText"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:ellipsize="end"
-                    android:fontFamily="sans-serif-medium"
-                    android:maxLines="1"
-                    android:textColor="@color/on_surface"
-                    android:textSize="13sp"
-                    tools:text="RES-00000042" />
-            </LinearLayout>
         </LinearLayout>
 
         <com.google.android.material.button.MaterialButton

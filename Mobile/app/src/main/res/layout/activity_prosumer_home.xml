@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Prosumer dashboard. Counts may show an account-scoped last-known API response while refreshing. -->
+<!-- Prosumer home, ordered by what a Prosumer needs first: who they are and what's next (banner), the two live
+     counts, the main action, upcoming bookings, then past activity. Stations and Bookings live in the bottom
+     navigation, so they aren't repeated here. Counts may show an account-scoped last-known API response while
+     refreshing. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -63,12 +66,16 @@
             app:iconTint="@color/primary" />
     </LinearLayout>
 
+    <!-- Invisible at the top of the page; fades in once content scrolls under the header -->
     <View
+        android:id="@+id/headerDivider"
         android:layout_width="match_parent"
         android:layout_height="1dp"
+        android:alpha="0"
         android:background="@color/border_slate" />
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/homeScroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -84,17 +91,16 @@
             android:paddingEnd="16dp"
             android:paddingBottom="24dp">
 
-            <!-- Welcome banner: identity, account details and next booking, on the same dark panel as the QR scanner.
-                 Clipped to its rounded outline in code so the faint sun doesn't spill past the corners -->
+            <!-- Welcome banner: identity and the next booking. Clipped to its rounded outline in code so the
+                 faint sun doesn't spill past the corners -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/welcomeBanner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="@color/primary"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/border_slate"
-                app:strokeWidth="1dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <ImageView
                     android:layout_width="120dp"
@@ -170,6 +176,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:ellipsize="end"
+                                android:letterSpacing="-0.01"
                                 android:maxLines="2"
                                 android:textColor="@color/on_primary"
                                 android:textSize="22sp"
@@ -188,40 +195,19 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/dashboard_member_since"
-                            android:textColor="@color/banner_text_muted"
-                            android:textSize="13sp" />
-
-                        <TextView
-                            android:id="@+id/memberSinceText"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
-                            android:layout_weight="1"
-                            android:fontFamily="sans-serif-medium"
-                            android:text="@string/metric_empty"
-                            android:textColor="@color/on_primary"
-                            android:textSize="13sp"
-                            tools:text="September 2026" />
-                    </LinearLayout>
-
-                    <!-- Filled in once the bookings load -->
+                    <!-- The next booking; tapping it opens that booking (or booking, when there is none).
+                         Filled in once the bookings load -->
                     <LinearLayout
                         android:id="@+id/nextTransferRow"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="16dp"
                         android:background="@drawable/bg_avatar_tile"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground"
                         android:gravity="center_vertical"
+                        android:minHeight="56dp"
                         android:orientation="horizontal"
                         android:padding="12dp"
                         android:visibility="gone">
@@ -261,23 +247,30 @@
                                 android:textSize="12sp"
                                 tools:text="Colombo North Hub" />
                         </LinearLayout>
+
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:layout_marginStart="8dp"
+                            android:importantForAccessibility="no"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="@color/mint_surface" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- At a glance: the two live values from dashboard-counts -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="24dp"
                 android:text="@string/dashboard_overview_title"
-                android:textAppearance="@style/TextAppearance.SmartSolar.Title"
-                android:textSize="16sp" />
+                android:textAppearance="@style/TextAppearance.SmartSolar.Headline" />
 
-            <!-- Live counts from dashboard-counts, shown as two separate values -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="10dp"
                 android:baselineAligned="false"
                 android:orientation="horizontal">
 
@@ -289,9 +282,10 @@
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
+                    android:stateListAnimator="@animator/press_scale"
                     app:cardBackgroundColor="@color/surface_container_lowest"
                     app:cardCornerRadius="16dp"
-                    app:cardElevation="1dp"
+                    app:cardElevation="0dp"
                     app:strokeColor="@color/border_slate"
                     app:strokeWidth="1dp">
 
@@ -301,70 +295,52 @@
                         android:orientation="vertical"
                         android:padding="14dp">
 
-                        <!-- Separate ImageView keeps the icon at 20dp; a compound drawable would draw at 24dp -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            tools:ignore="UseCompoundDrawables">
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_hourglass"
+                                app:tint="@color/on_surface_variant" />
 
                             <TextView
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
                                 android:layout_weight="1"
                                 android:text="@string/reservation_status_pending"
                                 android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
 
                             <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:importantForAccessibility="no"
-                                android:src="@drawable/ic_hourglass"
-                                app:tint="@color/on_surface_variant" />
+                                android:src="@drawable/ic_chevron_right"
+                                app:tint="@color/outline" />
                         </LinearLayout>
 
                         <TextView
                             android:id="@+id/pendingCountText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="8dp"
                             android:text="@string/metric_empty"
                             android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
-                            android:textColor="@color/on_surface"
-                            android:textSize="24sp" />
+                            android:textColor="@color/on_surface" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
                             android:minLines="2"
                             android:text="@string/dashboard_pending_caption"
                             android:textColor="@color/on_surface_variant"
                             android:textSize="12sp" />
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="sans-serif-medium"
-                                android:text="@string/dashboard_view_pending"
-                                android:textColor="@color/secondary"
-                                android:textSize="12sp" />
-
-                            <ImageView
-                                android:layout_width="18dp"
-                                android:layout_height="18dp"
-                                android:importantForAccessibility="no"
-                                android:src="@drawable/ic_arrow_forward"
-                                app:tint="@color/secondary" />
-                        </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
@@ -376,9 +352,10 @@
                     android:layout_weight="1"
                     android:clickable="true"
                     android:focusable="true"
+                    android:stateListAnimator="@animator/press_scale"
                     app:cardBackgroundColor="@color/surface_container_lowest"
                     app:cardCornerRadius="16dp"
-                    app:cardElevation="1dp"
+                    app:cardElevation="0dp"
                     app:strokeColor="@color/border_slate"
                     app:strokeWidth="1dp">
 
@@ -388,71 +365,53 @@
                         android:orientation="vertical"
                         android:padding="14dp">
 
-                        <!-- Separate ImageView keeps the icon at 20dp; a compound drawable would draw at 24dp -->
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            tools:ignore="UseCompoundDrawables">
+                            android:orientation="horizontal">
+
+                            <ImageView
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
+                                android:importantForAccessibility="no"
+                                android:src="@drawable/ic_check_circle"
+                                app:tint="@color/secondary" />
 
                             <TextView
                                 android:layout_width="0dp"
                                 android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
                                 android:layout_weight="1"
                                 android:text="@string/reservation_status_approved"
                                 android:textAppearance="@style/TextAppearance.SmartSolar.Overline"
                                 android:textColor="@color/secondary" />
 
                             <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:importantForAccessibility="no"
-                                android:src="@drawable/ic_check_circle"
-                                app:tint="@color/secondary" />
+                                android:src="@drawable/ic_chevron_right"
+                                app:tint="@color/outline" />
                         </LinearLayout>
 
                         <TextView
                             android:id="@+id/approvedCountText"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
+                            android:layout_marginTop="8dp"
                             android:text="@string/metric_empty"
                             android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
-                            android:textColor="@color/secondary"
-                            android:textSize="24sp" />
+                            android:textColor="@color/secondary" />
 
                         <TextView
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
                             android:minLines="2"
                             android:text="@string/dashboard_approved_caption"
-                            android:textColor="@color/secondary"
+                            android:textColor="@color/on_surface_variant"
                             android:textSize="12sp" />
-
-                        <LinearLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="8dp"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
-
-                            <TextView
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:fontFamily="sans-serif-medium"
-                                android:text="@string/dashboard_view_approved"
-                                android:textColor="@color/secondary"
-                                android:textSize="12sp" />
-
-                            <ImageView
-                                android:layout_width="18dp"
-                                android:layout_height="18dp"
-                                android:importantForAccessibility="no"
-                                android:src="@drawable/ic_arrow_forward"
-                                app:tint="@color/secondary" />
-                        </LinearLayout>
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
             </LinearLayout>
@@ -498,27 +457,20 @@
                     android:textColor="@color/on_error_container" />
             </LinearLayout>
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                android:text="@string/dashboard_quick_actions_title"
-                android:textAppearance="@style/TextAppearance.SmartSolar.Title"
-                android:textSize="16sp" />
-
-            <!-- Direct booking works without location permission or a nearby-map result -->
+            <!-- The one main action. Direct booking works without location permission or a nearby-map
+                 result; the map path stays one tap away in the bottom navigation (Stations) -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/directReservationButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="16dp"
                 android:clickable="true"
                 android:focusable="true"
+                android:stateListAnimator="@animator/press_scale"
                 app:cardBackgroundColor="@color/primary"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeColor="@color/border_slate"
-                app:strokeWidth="1dp">
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -577,136 +529,11 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:baselineAligned="false"
-                android:orientation="horizontal">
-
-                <!-- Keeps the Member 02 map and station-details booking path -->
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/createReservationButton"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:clickable="true"
-                    android:focusable="true"
-                    app:cardBackgroundColor="@color/surface_container_lowest"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="@color/border_slate"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:minHeight="68dp"
-                        android:orientation="horizontal"
-                        android:padding="10dp">
-
-                        <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:background="@drawable/bg_icon_tile"
-                            android:importantForAccessibility="no"
-                            android:padding="7dp"
-                            android:src="@drawable/ic_near_me"
-                            app:tint="@color/secondary" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="sans-serif-medium"
-                                android:text="@string/prosumer_nav_stations"
-                                android:textColor="@color/on_surface"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:maxLines="2"
-                                android:text="@string/dashboard_find_stations_hint"
-                                android:textColor="@color/on_surface_variant"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/viewReservationsButton"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginStart="6dp"
-                    android:layout_weight="1"
-                    android:clickable="true"
-                    android:focusable="true"
-                    app:cardBackgroundColor="@color/surface_container_lowest"
-                    app:cardCornerRadius="16dp"
-                    app:cardElevation="1dp"
-                    app:strokeColor="@color/border_slate"
-                    app:strokeWidth="1dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:minHeight="68dp"
-                        android:orientation="horizontal"
-                        android:padding="10dp">
-
-                        <ImageView
-                            android:layout_width="32dp"
-                            android:layout_height="32dp"
-                            android:background="@drawable/bg_icon_tile"
-                            android:importantForAccessibility="no"
-                            android:padding="7dp"
-                            android:src="@drawable/ic_calendar"
-                            app:tint="@color/secondary" />
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="sans-serif-medium"
-                                android:text="@string/prosumer_nav_bookings"
-                                android:textColor="@color/on_surface"
-                                android:textSize="14sp" />
-
-                            <TextView
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:layout_marginTop="2dp"
-                                android:maxLines="2"
-                                android:text="@string/dashboard_bookings_hint"
-                                android:textColor="@color/on_surface_variant"
-                                android:textSize="11sp" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
             <!-- Upcoming bookings: the soonest Pending/Approved reservations, filled in code from item_dashboard_booking -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="24dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -715,8 +542,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:text="@string/dashboard_upcoming_title"
-                    android:textAppearance="@style/TextAppearance.SmartSolar.Title"
-                    android:textSize="16sp" />
+                    android:textAppearance="@style/TextAppearance.SmartSolar.Headline" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/seeAllBookingsButton"
@@ -736,111 +562,11 @@
                     app:iconTint="@color/secondary" />
             </LinearLayout>
 
-            <!-- Activity strip: totals counted from the Prosumer's booking history -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/activityCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:visibility="gone"
-                app:cardBackgroundColor="@color/surface_container_lowest"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="1dp"
-                app:strokeColor="@color/border_slate"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:baselineAligned="false"
-                        android:divider="@drawable/divider_slate"
-                        android:orientation="horizontal"
-                        android:showDividers="middle">
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center_horizontal"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/completedCountText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/metric_empty"
-                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
-                                android:textColor="@color/secondary"
-                                android:textSize="22sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/reservation_status_completed"
-                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center_horizontal"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/cancelledCountText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/metric_empty"
-                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
-                                android:textColor="@color/on_surface"
-                                android:textSize="22sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/reservation_status_cancelled"
-                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
-                        </LinearLayout>
-
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:gravity="center_horizontal"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/declinedCountText"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/metric_empty"
-                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
-                                android:textColor="@color/alert_danger"
-                                android:textSize="22sp" />
-
-                            <TextView
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="@string/reservation_status_declined"
-                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
-                        </LinearLayout>
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
             <LinearLayout
                 android:id="@+id/bookingsLoadingText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="4dp"
                 android:background="@drawable/bg_icon_tile"
                 android:gravity="center_vertical"
                 android:minHeight="56dp"
@@ -913,11 +639,11 @@
                 android:id="@+id/bookingsEmptyCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
+                android:layout_marginTop="4dp"
                 android:visibility="gone"
                 app:cardBackgroundColor="@color/surface_container_lowest"
                 app:cardCornerRadius="16dp"
-                app:cardElevation="1dp"
+                app:cardElevation="0dp"
                 app:strokeColor="@color/border_slate"
                 app:strokeWidth="1dp">
 
@@ -930,6 +656,7 @@
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:baselineAligned="false"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
@@ -998,22 +725,131 @@
                 android:layout_height="wrap_content"
                 android:orientation="vertical" />
 
+            <!-- Your activity: totals of finished bookings from the history, kept apart from what's upcoming.
+                 Hidden until the history has loaded -->
+            <LinearLayout
+                android:id="@+id/activitySection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/dashboard_activity_title"
+                    android:textAppearance="@style/TextAppearance.SmartSolar.Headline" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    app:cardBackgroundColor="@color/surface_container_lowest"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/border_slate"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:baselineAligned="false"
+                        android:divider="@drawable/divider_slate"
+                        android:orientation="horizontal"
+                        android:paddingTop="14dp"
+                        android:paddingBottom="14dp"
+                        android:showDividers="middle">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/completedCountText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_empty"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
+                                android:textColor="@color/secondary"
+                                android:textSize="22sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/reservation_status_completed"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/cancelledCountText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_empty"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
+                                android:textColor="@color/on_surface"
+                                android:textSize="22sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/reservation_status_cancelled"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                        </LinearLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:gravity="center_horizontal"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/declinedCountText"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/metric_empty"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Metric"
+                                android:textColor="@color/alert_danger"
+                                android:textSize="22sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/reservation_status_declined"
+                                android:textAppearance="@style/TextAppearance.SmartSolar.Overline" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Non-blocking sync state stays at the bottom of Home content, above navigation. -->
+    <!-- Sync state at the bottom of the page, above the navigation, as on the other Prosumer screens -->
     <TextView
         android:id="@+id/homeSyncStatusText"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/surface_container_lowest"
+        android:accessibilityLiveRegion="polite"
+        android:background="@color/mint_tint"
         android:paddingStart="16dp"
         android:paddingTop="5dp"
         android:paddingEnd="16dp"
         android:paddingBottom="5dp"
         android:textColor="@color/on_surface_variant"
         android:textSize="12sp"
-        android:visibility="gone" />
+        android:visibility="gone"
+        tools:text="Last updated 2 Oct 2026, 10:42" />
 
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/homeCountsSyncProgress"

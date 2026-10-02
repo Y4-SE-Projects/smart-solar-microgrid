@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tappable cards shrink slightly the moment a finger lands and settle back on release, so a press is felt
+     before the screen changes. Animating from the current scale keeps a quick tap-release smooth, and the
+     system "Remove animations" setting turns it off. -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_pressed="true">
+        <set>
+            <objectAnimator
+                android:duration="100"
+                android:interpolator="@android:interpolator/decelerate_quad"
+                android:propertyName="scaleX"
+                android:valueTo="0.97"
+                android:valueType="floatType" />
+            <objectAnimator
+                android:duration="100"
+                android:interpolator="@android:interpolator/decelerate_quad"
+                android:propertyName="scaleY"
+                android:valueTo="0.97"
+                android:valueType="floatType" />
+        </set>
+    </item>
+    <item>
+        <set>
+            <objectAnimator
+                android:duration="180"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="scaleX"
+                android:valueTo="1"
+                android:valueType="floatType" />
+            <objectAnimator
+                android:duration="180"
+                android:interpolator="@android:interpolator/fast_out_slow_in"
+                android:propertyName="scaleY"
+                android:valueTo="1"
+                android:valueType="floatType" />
+        </set>
+    </item>
+</selector>
