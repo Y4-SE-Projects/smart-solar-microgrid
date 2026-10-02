@@ -12,7 +12,9 @@ import androidx.room.Transaction;
 import com.example.smart_solar_mobile.models.ReservationData;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Dao
 public abstract class ReservationCacheDao {
@@ -28,17 +30,49 @@ public abstract class ReservationCacheDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     protected abstract void insertAll(List<ReservationCacheEntity> rows);
 
+    @Query("UPDATE reservation_cache SET stationName = :name "
+            + "WHERE prosumerNic = :nic AND stationId = :stationId")
+    protected abstract void updateStationName(String nic, String stationId, String name);
+
+    @Transaction
+    public void updateStationNamesForProsumer(String nic, Map<String, String> names) {
+        // A later station response enriches only this Prosumer's existing display rows.
+        for (Map.Entry<String, String> entry : names.entrySet()) {
+            if (entry.getKey() != null && entry.getValue() != null
+                    && !entry.getValue().trim().isEmpty()) {
+                updateStationName(nic, entry.getKey(), entry.getValue());
+            }
+        }
+    }
+
     @Transaction
     public void replaceForProsumer(String nic, List<ReservationData> reservations, long syncedAt) {
         // A successful complete history response replaces only this account's rows.
         Long existingSync = latestSyncForProsumer(nic);
         if (existingSync != null && existingSync > syncedAt) return;
+        Map<String, String> existingNames = new HashMap<>();
+        Map<String, String> existingStationNames = new HashMap<>();
+        for (ReservationCacheEntity cached : getForProsumer(nic)) {
+            if (cached.stationName != null && !cached.stationName.trim().isEmpty()) {
+                existingNames.put(cached.reservationId, cached.stationName);
+                if (cached.stationId != null) {
+                    existingStationNames.put(cached.stationId, cached.stationName);
+                }
+            }
+        }
         List<ReservationCacheEntity> rows = new ArrayList<>();
         for (ReservationData reservation : reservations) {
             if (reservation != null && nic.equals(reservation.prosumerNic)
                     && reservation.reservationId != null
                     && !reservation.reservationId.trim().isEmpty()) {
-                rows.add(new ReservationCacheEntity(nic, reservation, syncedAt));
+                ReservationCacheEntity row = new ReservationCacheEntity(nic, reservation, syncedAt);
+                if (row.stationName == null || row.stationName.trim().isEmpty()) {
+                    row.stationName = existingNames.get(row.reservationId);
+                    if (row.stationName == null) {
+                        row.stationName = existingStationNames.get(row.stationId);
+                    }
+                }
+                rows.add(row);
             }
         }
         deleteForProsumer(nic);
