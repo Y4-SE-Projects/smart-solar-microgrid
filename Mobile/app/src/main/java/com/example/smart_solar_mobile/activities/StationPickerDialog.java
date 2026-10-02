@@ -10,6 +10,7 @@ import android.text.TextWatcher;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.annotation.LayoutRes;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -36,8 +37,23 @@ public final class StationPickerDialog {
     public static void show(Context context, List<SolarStation> stations, String selectedStationId,
                             OnStationSelected listener) {
         // Opens the picker with every station listed and the current one ticked
+        showWithLayouts(context, stations, selectedStationId, listener,
+                R.layout.bottom_sheet_station_picker, R.layout.item_station_option);
+    }
+
+    public static void showOperator(Context context, List<SolarStation> stations, String selectedStationId,
+                                    OnStationSelected listener) {
+        // Keeps the shared picker behavior while using compact operator-only presentation.
+        showWithLayouts(context, stations, selectedStationId, listener,
+                R.layout.bottom_sheet_operator_station_picker, R.layout.item_operator_station_option);
+    }
+
+    private static void showWithLayouts(Context context, List<SolarStation> stations, String selectedStationId,
+                                        OnStationSelected listener, @LayoutRes int sheetLayout,
+                                        @LayoutRes int itemLayout) {
+        // Search and selection remain identical for both visual variants.
         BottomSheetDialog dialog = new BottomSheetDialog(context);
-        dialog.setContentView(R.layout.bottom_sheet_station_picker);
+        dialog.setContentView(sheetLayout);
 
         RecyclerView list = dialog.findViewById(R.id.stationPickerList);
         TextView emptyText = dialog.findViewById(R.id.stationPickerEmpty);
@@ -46,7 +62,7 @@ public final class StationPickerDialog {
         StationAdapter adapter = new StationAdapter(stations, selectedStationId, station -> {
             dialog.dismiss();
             listener.onSelected(station);
-        });
+        }, itemLayout);
         list.setLayoutManager(new LinearLayoutManager(context));
         list.setAdapter(adapter);
 

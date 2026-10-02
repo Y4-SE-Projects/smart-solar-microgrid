@@ -3,15 +3,18 @@
 
 package com.example.smart_solar_mobile.activities;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -23,6 +26,7 @@ import com.example.smart_solar_mobile.db.ReservationCacheEntity;
 import com.example.smart_solar_mobile.db.SessionManager;
 import com.example.smart_solar_mobile.models.ReservationData;
 import com.example.smart_solar_mobile.models.Roles;
+import com.example.smart_solar_mobile.models.SolarStation;
 import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
@@ -35,7 +39,9 @@ import com.google.android.material.chip.ChipGroup;
 import java.text.DateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -49,6 +55,7 @@ public class ReservationHistoryActivity extends AppCompatActivity {
 
     private String prosumerNic;
     private Call<ApiResponse<List<ReservationData>>> historyCall;
+    private Call<ApiResponse<List<SolarStation>>> stationsCall;
     private final ExecutorService cacheExecutor = Executors.newSingleThreadExecutor();
     private ReservationCacheDao reservationCacheDao;
     private ConnectivityRetryObserver connectivityRetryObserver;
@@ -58,6 +65,9 @@ public class ReservationHistoryActivity extends AppCompatActivity {
     private boolean freshThisActivation;
     private boolean syncing;
     private String lastSyncError;
+    private final Map<String, String> stationNames = new HashMap<>();
+    private final Map<String, String> cachedStationNames = new HashMap<>();
+    private List<ReservationData> liveReservations;
 
     private ReservationAdapter adapter;
     private ChipGroup statusFilterGroup;
@@ -69,6 +79,8 @@ public class ReservationHistoryActivity extends AppCompatActivity {
     private MaterialButton retryHistoryButton;
     private View syncBanner;
     private View syncProgress;
+    private ImageView syncIcon;
+    private ImageView stateIcon;
     private TextView syncText;
     private MaterialButton syncRetryButton;
 
@@ -90,6 +102,8 @@ public class ReservationHistoryActivity extends AppCompatActivity {
         statusFilterGroup = findViewById(R.id.statusFilterGroup);
         syncBanner = findViewById(R.id.historySyncBanner);
         syncProgress = findViewById(R.id.historySyncProgress);
+        syncIcon = findViewById(R.id.historySyncIcon);
+        stateIcon = findViewById(R.id.historyStateIcon);
         syncText = findViewById(R.id.historySyncText);
         syncRetryButton = findViewById(R.id.historySyncRetryButton);
 
@@ -127,7 +141,12 @@ public class ReservationHistoryActivity extends AppCompatActivity {
         final long currentGeneration = ++generation;
         if (historyCall != null) historyCall.cancel();
         historyCall = null;
+        if (stationsCall != null) stationsCall.cancel();
+        stationsCall = null;
         prosumerNic = null;
+        liveReservations = null;
+        stationNames.clear();
+        cachedStationNames.clear();
         hasDisplayData = false;
         freshThisActivation = false;
         syncing = false;
@@ -159,7 +178,12 @@ public class ReservationHistoryActivity extends AppCompatActivity {
         generation++;
         if (historyCall != null) historyCall.cancel();
         historyCall = null;
+        if (stationsCall != null) stationsCall.cancel();
+        stationsCall = null;
         prosumerNic = null;
+        liveReservations = null;
+        stationNames.clear();
+        cachedStationNames.clear();
         hasDisplayData = false;
         adapter.setReservations(new ArrayList<>());
         historyList.setVisibility(View.GONE);
@@ -169,6 +193,7 @@ public class ReservationHistoryActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         if (historyCall != null) historyCall.cancel();
+        if (stationsCall != null) stationsCall.cancel();
         cacheExecutor.shutdown();
         super.onDestroy();
     }
@@ -184,12 +209,27 @@ public class ReservationHistoryActivity extends AppCompatActivity {
             }
             runOnUiThread(() -> {
                 if (currentGeneration != generation || isFinishing() || isDestroyed()
-                        || !nic.equals(prosumerNic) || freshThisActivation || rows.isEmpty()) return;
+                        || !nic.equals(prosumerNic)) return;
                 List<ReservationData> cached = new ArrayList<>();
                 for (ReservationCacheEntity row : rows) {
-                    if (nic.equals(row.prosumerNic)) cached.add(row.toReservationData());
+                    if (nic.equals(row.prosumerNic)) {
+                        cached.add(row.toReservationData());
+                        if (row.stationId != null && row.stationName != null
+                                && !row.stationName.trim().isEmpty()) {
+                            cachedStationNames.put(row.stationId, row.stationName);
+                        }
+                    }
+                }
+                if (freshThisActivation) {
+                    if (liveReservations != null) {
+                        applyStationNames(liveReservations);
+                        adapter.setReservations(liveReservations);
+                        applyFilter();
+                    }
+                    return;
                 }
                 if (cached.isEmpty()) return;
+                applyStationNames(cached);
                 lastSyncedAt = rows.get(0).lastSyncedAt;
                 hasDisplayData = true;
                 adapter.setReservations(cached);
@@ -202,6 +242,7 @@ public class ReservationHistoryActivity extends AppCompatActivity {
         // API refresh begins immediately while cached records remain readable.
         if (prosumerNic == null) return;
         if (historyCall != null) historyCall.cancel();
+        liveReservations = null;
         final String nic = prosumerNic;
         final long currentGeneration = generation;
         syncing = true;
@@ -221,6 +262,7 @@ public class ReservationHistoryActivity extends AppCompatActivity {
                         // An explicit server denial is not an offline cache fallback.
                         freshThisActivation = true;
                         hasDisplayData = false;
+                        liveReservations = null;
                         adapter.setReservations(new ArrayList<>());
                         historyList.setVisibility(View.GONE);
                     }
@@ -232,12 +274,15 @@ public class ReservationHistoryActivity extends AppCompatActivity {
                 hasDisplayData = true;
                 lastSyncError = null;
                 lastSyncedAt = System.currentTimeMillis();
-                adapter.setReservations(body.data);
+                liveReservations = body.data;
+                applyStationNames(liveReservations);
+                adapter.setReservations(liveReservations);
                 applyFilter();
                 final long syncedAt = lastSyncedAt;
+                final List<ReservationData> cacheRows = snapshotForCache(liveReservations);
                 cacheExecutor.execute(() -> {
                     try {
-                        reservationCacheDao.replaceForProsumer(nic, body.data, syncedAt);
+                        reservationCacheDao.replaceForProsumer(nic, cacheRows, syncedAt);
                     } catch (RuntimeException ignored) {
                         // A local cache failure cannot invalidate the live API response.
                     }
@@ -252,6 +297,87 @@ public class ReservationHistoryActivity extends AppCompatActivity {
                 }
             }
         });
+        loadStationNames(nic, currentGeneration);
+    }
+
+    private void loadStationNames(String nic, long currentGeneration) {
+        // Resolve all station references with one existing API request per History refresh.
+        if (stationsCall != null) stationsCall.cancel();
+        stationsCall = NetworkManager.getInstance().getApiService().getStations();
+        final Call<ApiResponse<List<SolarStation>>> call = stationsCall;
+        call.enqueue(new Callback<ApiResponse<List<SolarStation>>>() {
+            @Override
+            public void onResponse(@NonNull Call<ApiResponse<List<SolarStation>>> request,
+                                   @NonNull Response<ApiResponse<List<SolarStation>>> response) {
+                if (obsoleteStations(call, nic, currentGeneration)) return;
+                ApiResponse<List<SolarStation>> body = response.body();
+                if (!response.isSuccessful() || body == null || body.data == null) return;
+                stationNames.clear();
+                for (SolarStation station : body.data) {
+                    if (station != null && station.stationId != null && station.name != null
+                            && !station.name.trim().isEmpty()) {
+                        stationNames.put(station.stationId, station.name.trim());
+                    }
+                }
+                if (liveReservations == null) return;
+                applyStationNames(liveReservations);
+                adapter.setReservations(liveReservations);
+                applyFilter();
+                Map<String, String> resolvedNames = new HashMap<>(stationNames);
+                cacheExecutor.execute(() -> {
+                    try {
+                        reservationCacheDao.updateStationNamesForProsumer(nic, resolvedNames);
+                    } catch (RuntimeException ignored) {
+                        // Station labels remain visible even if local cache enrichment fails.
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<ApiResponse<List<SolarStation>>> request,
+                                  @NonNull Throwable error) {
+                // History remains usable with cached names or station IDs.
+            }
+        });
+    }
+
+    private void applyStationNames(List<ReservationData> reservations) {
+        // Display enrichment never replaces stationId in any reservation or API request.
+        for (ReservationData reservation : reservations) {
+            if (reservation == null) continue;
+            String resolved = stationNames.get(reservation.stationId);
+            String cached = cachedStationNames.get(reservation.stationId);
+            if (resolved != null && !resolved.trim().isEmpty()) {
+                reservation.stationName = resolved;
+            } else if (cached != null && !cached.trim().isEmpty()) {
+                reservation.stationName = cached;
+            }
+        }
+    }
+
+    private List<ReservationData> snapshotForCache(List<ReservationData> reservations) {
+        // The background Room write reads a stable display snapshot while UI names may refresh.
+        List<ReservationData> snapshot = new ArrayList<>();
+        for (ReservationData reservation : reservations) {
+            if (reservation == null) continue;
+            ReservationData row = new ReservationData();
+            row.reservationId = reservation.reservationId;
+            row.prosumerNic = reservation.prosumerNic;
+            row.stationId = reservation.stationId;
+            row.stationName = reservation.stationName;
+            row.slotId = reservation.slotId;
+            row.scheduledTime = reservation.scheduledTime;
+            row.status = reservation.status;
+            row.createdAt = reservation.createdAt;
+            row.updatedAt = reservation.updatedAt;
+            snapshot.add(row);
+        }
+        return snapshot;
+    }
+
+    private boolean obsoleteStations(Call<?> call, String nic, long currentGeneration) {
+        return isFinishing() || isDestroyed() || call != stationsCall || call.isCanceled()
+                || currentGeneration != generation || !nic.equals(prosumerNic);
     }
 
     private boolean obsolete(Call<?> call, String nic, long currentGeneration) {
@@ -299,6 +425,14 @@ public class ReservationHistoryActivity extends AppCompatActivity {
         }
         syncBanner.setVisibility(syncing || lastSyncError != null ? View.VISIBLE : View.GONE);
         syncRetryButton.setVisibility(lastSyncError != null ? View.VISIBLE : View.GONE);
+        syncBanner.setBackgroundResource(lastSyncError == null ? R.drawable.bg_card : R.drawable.bg_error_banner);
+        syncIcon.setImageResource(lastSyncError == null ? R.drawable.ic_refresh : R.drawable.ic_error);
+        int syncColor = lastSyncError == null ? R.color.secondary : R.color.on_error_container;
+        syncIcon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(this, syncColor)));
+        syncText.setTextColor(ContextCompat.getColor(this,
+                lastSyncError == null ? R.color.on_surface_variant : R.color.on_error_container));
+        syncRetryButton.setTextColor(ContextCompat.getColor(this,
+                lastSyncError == null ? R.color.secondary : R.color.on_error_container));
         if (syncing) {
             syncText.setText(R.string.history_syncing);
         } else if (lastSyncError != null) {
@@ -320,6 +454,9 @@ public class ReservationHistoryActivity extends AppCompatActivity {
     }
 
     private void showState(String title, String message, boolean retry) {
+        stateIcon.setImageResource(retry ? R.drawable.ic_error : R.drawable.ic_calendar);
+        stateIcon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(this,
+                retry ? R.color.alert_danger : R.color.secondary)));
         historyStateTitle.setText(title);
         historyStateMessage.setText(message);
         retryHistoryButton.setVisibility(retry ? View.VISIBLE : View.GONE);

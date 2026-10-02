@@ -74,6 +74,7 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
 
     private boolean matchesSearch(ReservationData reservation) {
         return contains(reservation.reservationId) || contains(reservation.stationId)
+                || contains(reservation.stationName)
                 || contains(reservation.slotId) || contains(reservation.status)
                 || contains(reservation.scheduledTime);
     }
@@ -102,7 +103,15 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
     public void onBindViewHolder(@NonNull ReservationViewHolder holder, int position) {
         ReservationData reservation = visibleReservations.get(position);
         holder.idText.setText(reservation.reservationId);
-        holder.metaText.setText(reservation.stationId);
+        String stationLabel = reservation.stationId;
+        if (reservation.stationName != null && !reservation.stationName.trim().isEmpty()) {
+            stationLabel = reservation.stationName.trim();
+        }
+        if (stationLabel == null || stationLabel.trim().isEmpty()) {
+            stationLabel = holder.itemView.getContext().getString(R.string.metric_empty);
+        }
+        holder.metaText.setText(stationLabel);
+        holder.slotText.setText(reservation.slotId);
 
         Date scheduled = TimeUtils.parseApiDate(reservation.scheduledTime);
         holder.timeText.setText(scheduled == null
@@ -115,6 +124,12 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
                 holder.statusChip.getContext(), ReservationStatusUi.chipTextColor(reservation.status)));
         holder.statusChip.setText(ReservationStatusUi.chipLabel(reservation.status));
 
+        holder.itemView.setContentDescription(holder.itemView.getContext().getString(
+                R.string.history_open_reservation,
+                reservation.reservationId == null ? holder.itemView.getContext().getString(R.string.metric_empty)
+                        : reservation.reservationId,
+                holder.statusChip.getText(), holder.timeText.getText(), stationLabel));
+
         holder.itemView.setOnClickListener(v -> listener.onClick(reservation));
     }
 
@@ -126,6 +141,7 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
     static class ReservationViewHolder extends RecyclerView.ViewHolder {
         final TextView idText;
         final TextView metaText;
+        final TextView slotText;
         final TextView timeText;
         final TextView statusChip;
 
@@ -133,6 +149,7 @@ public class ReservationAdapter extends RecyclerView.Adapter<ReservationAdapter.
             super(itemView);
             idText = itemView.findViewById(R.id.reservationIdText);
             metaText = itemView.findViewById(R.id.reservationMetaText);
+            slotText = itemView.findViewById(R.id.reservationSlotText);
             timeText = itemView.findViewById(R.id.reservationTimeText);
             statusChip = itemView.findViewById(R.id.reservationStatusChip);
         }

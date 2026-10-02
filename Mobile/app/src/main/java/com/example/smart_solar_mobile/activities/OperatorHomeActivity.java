@@ -63,6 +63,8 @@ public class OperatorHomeActivity extends AppCompatActivity {
     private TextView operatorRoleText;
     private View stationSwitcher;
     private View stationsErrorBanner;
+    private View stationsProgress;
+    private View stationsEmptyText;
     private TextView stationsErrorText;
     private View stationContent;
     private TextView deactivatedNotice;
@@ -81,6 +83,7 @@ public class OperatorHomeActivity extends AppCompatActivity {
     private TextView slotsErrorText;
     private TextView slotsEmptyText;
     private LinearLayout todaySlotsContainer;
+    private MaterialButton manageSlotsButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,7 +102,7 @@ public class OperatorHomeActivity extends AppCompatActivity {
         findViewById(R.id.stationsRetryButton).setOnClickListener(v -> loadStations());
         findViewById(R.id.slotsRetryButton).setOnClickListener(v -> loadTodaySlots());
         refreshSlotsButton.setOnClickListener(v -> loadTodaySlots());
-        findViewById(R.id.manageSlotsButton).setOnClickListener(v -> openManageSlots());
+        manageSlotsButton.setOnClickListener(v -> openManageSlots());
         findViewById(R.id.openScannerButton).setOnClickListener(v ->
                 startActivity(ScanQrActivity.intentFor(this, selectedStation)));
         findViewById(R.id.recentScansButton).setOnClickListener(v ->
@@ -158,6 +161,8 @@ public class OperatorHomeActivity extends AppCompatActivity {
         operatorRoleText = findViewById(R.id.operatorRoleText);
         stationSwitcher = findViewById(R.id.stationSwitcher);
         stationsErrorBanner = findViewById(R.id.stationsErrorBanner);
+        stationsProgress = findViewById(R.id.stationsProgress);
+        stationsEmptyText = findViewById(R.id.stationsEmptyText);
         stationsErrorText = findViewById(R.id.stationsErrorText);
         stationContent = findViewById(R.id.stationContent);
         deactivatedNotice = findViewById(R.id.deactivatedNotice);
@@ -176,6 +181,7 @@ public class OperatorHomeActivity extends AppCompatActivity {
         slotsErrorText = findViewById(R.id.slotsErrorText);
         slotsEmptyText = findViewById(R.id.slotsEmptyText);
         todaySlotsContainer = findViewById(R.id.todaySlotsContainer);
+        manageSlotsButton = findViewById(R.id.manageSlotsButton);
     }
 
     private void showOperator(SessionEntity session) {
@@ -188,6 +194,8 @@ public class OperatorHomeActivity extends AppCompatActivity {
     private void loadStations() {
         // Fetches every station (active and deactivated), matching the web slot page
         stationsErrorBanner.setVisibility(View.GONE);
+        stationsProgress.setVisibility(View.VISIBLE);
+        stationsEmptyText.setVisibility(View.GONE);
         setHeaderStation(getString(R.string.station_loading), false);
 
         if (stationsCall != null) {
@@ -223,13 +231,16 @@ public class OperatorHomeActivity extends AppCompatActivity {
 
     private void onStationsLoaded(List<SolarStation> loaded) {
         // Keeps the current or restored station if it still exists, otherwise starts on the first one like the web app
+        stationsProgress.setVisibility(View.GONE);
         stations.clear();
         stations.addAll(loaded);
 
         if (stations.isEmpty()) {
             selectedStation = null;
             setHeaderStation(getString(R.string.station_none), false);
+            manageSlotsButton.setEnabled(false);
             stationContent.setVisibility(View.GONE);
+            stationsEmptyText.setVisibility(View.VISIBLE);
             return;
         }
 
@@ -248,6 +259,7 @@ public class OperatorHomeActivity extends AppCompatActivity {
     private void showStationsError(String message) {
         // Shows why the station list couldn't load, with a Retry button
         stationsErrorText.setText(message);
+        stationsProgress.setVisibility(View.GONE);
         stationsErrorBanner.setVisibility(View.VISIBLE);
         if (selectedStation != null) {
             setHeaderStation(headerTextFor(selectedStation), true);
@@ -257,15 +269,14 @@ public class OperatorHomeActivity extends AppCompatActivity {
     }
 
     private void setHeaderStation(String text, boolean canSwitch) {
-        // Sets the line under the title; the chevron and tap-to-switch only appear when there are stations to pick from
+        // Shows station context in its card and enables its change control when choices exist.
         headerStationText.setText(text);
-        headerStationText.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, canSwitch ? R.drawable.ic_expand_more : 0, 0);
         stationSwitcher.setEnabled(canSwitch);
     }
 
     private String headerTextFor(SolarStation station) {
-        // Header line for a station, e.g. "STN-001 • Colombo North"
-        return getString(R.string.operator_header_station, station.stationId, station.name);
+        // Shows the selected station ID beneath its name.
+        return station.stationId;
     }
 
     private void openStationPicker() {
@@ -274,7 +285,7 @@ public class OperatorHomeActivity extends AppCompatActivity {
             return;
         }
         String selectedId = selectedStation == null ? null : selectedStation.stationId;
-        StationPickerDialog.show(this, stations, selectedId, this::selectStation);
+        StationPickerDialog.showOperator(this, stations, selectedId, this::selectStation);
     }
 
     private void openManageSlots() {
@@ -311,6 +322,8 @@ public class OperatorHomeActivity extends AppCompatActivity {
         operatorRoleText.setText(getString(R.string.operator_role_at_station, station.name));
 
         stationNameText.setText(station.name);
+        stationsEmptyText.setVisibility(View.GONE);
+        manageSlotsButton.setEnabled(true);
         stationStatusChip.setText(status);
         stationStatusChip.setBackgroundResource(station.isActive ? R.drawable.bg_chip_active : R.drawable.bg_chip_danger);
         stationStatusChip.setTextColor(ContextCompat.getColor(this,

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="operator_picker_subtitle">Choose the station you are working at</string>
+    <string name="operator_actions_title">OPERATIONS</string>
+    <string name="operator_station_title">STATION CONTEXT</string>
+    <string name="operator_slot_controls_title">SLOT CONTROL</string>
+    <string name="operator_quick_operations">QUICK OPERATIONS</string>
+    <string name="operator_today_operations">TODAY\'S OPERATIONS</string>
+    <string name="operator_choose_date">CHOOSE DATE</string>
+    <string name="operator_selected_date">SELECTED DAY</string>
+    <string name="operator_scan_guidance">Point the camera at the Prosumer transaction QR.</string>
+    <string name="operator_scan_verifying">Verifying with the server…</string>
+    <string name="operator_scan_history_section">SCAN HISTORY</string>
+    <string name="operator_scan_history_context">Verification activity</string>
+    <string name="operator_selected_station">Selected station</string>
+    <string name="operator_scan_unavailable_title">Verification unavailable</string>
+    <string name="operator_scan_unavailable_chip">Unavailable</string>
+</resources>

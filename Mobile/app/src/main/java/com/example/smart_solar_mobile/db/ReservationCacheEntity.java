@@ -14,6 +14,7 @@ public class ReservationCacheEntity {
     @NonNull public String prosumerNic = "";
     @NonNull public String reservationId = "";
     public String stationId;
+    public String stationName;
     public String slotId;
     public String scheduledTime;
     public String status;
@@ -31,6 +32,7 @@ public class ReservationCacheEntity {
         prosumerNic = nic;
         reservationId = source.reservationId;
         stationId = source.stationId;
+        stationName = source.stationName;
         slotId = source.slotId;
         scheduledTime = source.scheduledTime;
         status = source.status;
@@ -45,6 +47,7 @@ public class ReservationCacheEntity {
         data.prosumerNic = prosumerNic;
         data.reservationId = reservationId;
         data.stationId = stationId;
+        data.stationName = stationName;
         data.slotId = slotId;
         data.scheduledTime = scheduledTime;
         data.status = status;

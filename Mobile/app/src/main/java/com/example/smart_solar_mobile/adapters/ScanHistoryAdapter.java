@@ -77,6 +77,11 @@ public class ScanHistoryAdapter extends RecyclerView.Adapter<ScanHistoryAdapter.
 
         // The most recent attempt is first, since the server returns each operator's scans newest-first
         QrScanEntryResponse latest = group.attempts.get(0);
+        Date latestAt = TimeUtils.parseApiDate(latest.at);
+        holder.latestAtText.setText(latestAt == null
+                ? holder.itemView.getContext().getString(R.string.metric_empty)
+                : holder.itemView.getContext().getString(R.string.detail_datetime_value,
+                        TimeUtils.formatShortDate(latestAt), TimeUtils.formatTime(latestAt)));
         bindResultChip(holder.latestResultChip, latest.result);
 
         boolean success = "Success".equalsIgnoreCase(latest.result);
@@ -135,6 +140,7 @@ public class ScanHistoryAdapter extends RecyclerView.Adapter<ScanHistoryAdapter.
         final View headerRow;
         final ImageView statusIcon;
         final TextView reservationIdText;
+        final TextView latestAtText;
         final TextView attemptCountText;
         final TextView latestResultChip;
         final ImageView chevron;
@@ -146,6 +152,7 @@ public class ScanHistoryAdapter extends RecyclerView.Adapter<ScanHistoryAdapter.
             headerRow = itemView.findViewById(R.id.scanGroupHeaderRow);
             statusIcon = itemView.findViewById(R.id.groupStatusIcon);
             reservationIdText = itemView.findViewById(R.id.groupReservationIdText);
+            latestAtText = itemView.findViewById(R.id.groupLatestAtText);
             attemptCountText = itemView.findViewById(R.id.groupAttemptCountText);
             latestResultChip = itemView.findViewById(R.id.groupLatestResultChip);
             chevron = itemView.findViewById(R.id.groupChevron);

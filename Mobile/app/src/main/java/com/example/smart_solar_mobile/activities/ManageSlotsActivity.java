@@ -101,6 +101,9 @@ public class ManageSlotsActivity extends AppCompatActivity {
     private TextView monthStatusText;
     private TextInputEditText slotSearchInput;
     private TextView listTitleText;
+    private TextView stationNameValueText;
+    private TextView stationIdValueText;
+    private TextView selectedDateText;
     private TextView listCountText;
     private View slotsProgress;
     private View slotsErrorBanner;
@@ -247,6 +250,9 @@ public class ManageSlotsActivity extends AppCompatActivity {
         monthStatusText = findViewById(R.id.monthStatusText);
         slotSearchInput = findViewById(R.id.slotSearchInput);
         listTitleText = findViewById(R.id.listTitleText);
+        stationNameValueText = findViewById(R.id.stationNameValueText);
+        stationIdValueText = findViewById(R.id.stationIdValueText);
+        selectedDateText = findViewById(R.id.selectedDateText);
         listCountText = findViewById(R.id.listCountText);
         slotsProgress = findViewById(R.id.slotsProgress);
         slotsErrorBanner = findViewById(R.id.slotsErrorBanner);
@@ -311,8 +317,9 @@ public class ManageSlotsActivity extends AppCompatActivity {
     private void showStation() {
         // Shows the station in the header and the deactivated notice, and reports it back to the console
         headerStationText.setText(getString(R.string.operator_header_station, station.stationId, station.name));
+        stationNameValueText.setText(station.name);
+        stationIdValueText.setText(station.stationId);
         boolean canSwitch = !stations.isEmpty();
-        headerStationText.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, canSwitch ? R.drawable.ic_expand_more : 0, 0);
         stationSwitcher.setEnabled(canSwitch);
         deactivatedNotice.setText(getString(R.string.station_deactivated_slots_notice, station.stationId));
         deactivatedNotice.setVisibility(station.isActive ? View.GONE : View.VISIBLE);
@@ -322,7 +329,7 @@ public class ManageSlotsActivity extends AppCompatActivity {
     private void openStationPicker() {
         // Opens the same searchable picker as the console
         if (!stations.isEmpty()) {
-            StationPickerDialog.show(this, stations, station.stationId, this::switchStation);
+            StationPickerDialog.showOperator(this, stations, station.stationId, this::switchStation);
         }
     }
 
@@ -563,6 +570,7 @@ public class ManageSlotsActivity extends AppCompatActivity {
         }
 
         renderCalendar(searching ? rows : calendarSlots, searching, calendarKey, calendarMonthName, now);
+        selectedDateText.setText(TimeUtils.formatLongDate(selectedDay));
         slotSearchInput.setHint(getString(R.string.search_month_slots, calendarMonthName));
         actionErrorText.setText(actionError);
         actionErrorBanner.setVisibility(actionError != null ? View.VISIBLE : View.GONE);
@@ -652,7 +660,7 @@ public class ManageSlotsActivity extends AppCompatActivity {
         String timeLabel = getString(R.string.slot_time_range, TimeUtils.formatTime(start), TimeUtils.formatTime(end));
         timeText.setText(timeLabel);
         metaText.setText(getString(R.string.slot_meta,
-                TimeUtils.formatDuration(this, (end.getTime() - start.getTime()) / 60000), slot.slotId));
+                slot.slotId, TimeUtils.formatDuration(this, (end.getTime() - start.getTime()) / 60000)));
 
         // While a change is in flight the row shows the value it is changing to
         boolean pending = slotKey(slot).equals(pendingSlotKey);
@@ -669,6 +677,8 @@ public class ManageSlotsActivity extends AppCompatActivity {
         // Slots that have already finished are dimmed, as on the console
         if (end.before(now)) {
             textColumn.setAlpha(0.55f);
+            metaText.setAlpha(0.55f);
+            statusChip.setAlpha(0.55f);
         }
 
         if (searching) {

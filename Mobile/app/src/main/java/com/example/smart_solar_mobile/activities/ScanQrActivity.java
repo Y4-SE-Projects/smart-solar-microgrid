@@ -80,6 +80,8 @@ public class ScanQrActivity extends AppCompatActivity {
     private MaterialButton grantPermissionButton;
     private TextView scanSubtitleText;
     private TextView scanStatusChip;
+    private View scanWorkspace;
+    private View scanVerifyingView;
 
     private View resultCard;
     private ImageView resultIcon;
@@ -164,6 +166,8 @@ public class ScanQrActivity extends AppCompatActivity {
         grantPermissionButton = findViewById(R.id.grantPermissionButton);
         scanSubtitleText = findViewById(R.id.scanSubtitleText);
         scanStatusChip = findViewById(R.id.scanStatusChip);
+        scanWorkspace = findViewById(R.id.scanWorkspace);
+        scanVerifyingView = findViewById(R.id.scanVerifyingView);
 
         resultCard = findViewById(R.id.resultCard);
         resultIcon = findViewById(R.id.resultIcon);
@@ -202,6 +206,7 @@ public class ScanQrActivity extends AppCompatActivity {
 
     private void verifyQr(String qrCodeData) {
         showingResult = true;
+        scanVerifyingView.setVisibility(View.VISIBLE);
         if (verifyCall != null) verifyCall.cancel();
 
         verifyCall = NetworkManager.getInstance().getApiService().verifyQr(new VerifyQrRequest(qrCodeData));
@@ -216,6 +221,8 @@ public class ScanQrActivity extends AppCompatActivity {
                 ApiResponse<VerifyQrResponse> body = response.body();
                 if (response.isSuccessful() && body != null && body.success && body.data != null) {
                     showVerifiedResult(body.data);
+                } else if (response.isSuccessful() || response.code() >= 500) {
+                    showUnavailableResult(ApiErrorParser.getMessage(ScanQrActivity.this, response));
                 } else {
                     showRejectedResult(ApiErrorParser.getMessage(ScanQrActivity.this, response));
                 }
@@ -226,12 +233,14 @@ public class ScanQrActivity extends AppCompatActivity {
                 if (isFinishing() || isDestroyed() || call != verifyCall || call.isCanceled()) {
                     return;
                 }
-                showRejectedResult(getString(R.string.error_network));
+                showUnavailableResult(getString(R.string.error_network));
             }
         });
     }
 
     private void showVerifiedResult(VerifyQrResponse data) {
+        // The result border reflects the API verdict; verification behavior is unchanged.
+        resultCard.setBackgroundResource(R.drawable.bg_operator_result_success);
         resultIcon.setImageResource(R.drawable.ic_check);
         resultIcon.setColorFilter(getColor(R.color.secondary));
         resultTitleText.setText(data.alreadyProcessed
@@ -256,10 +265,14 @@ public class ScanQrActivity extends AppCompatActivity {
         resultStatusText.setText(data.status);
 
         setChip(true);
+        scanVerifyingView.setVisibility(View.GONE);
+        scanWorkspace.setVisibility(View.GONE);
         resultCard.setVisibility(View.VISIBLE);
     }
 
     private void showRejectedResult(String message) {
+        // A rejected server response keeps its reason prominent in the result card.
+        resultCard.setBackgroundResource(R.drawable.bg_operator_result_rejected);
         resultIcon.setImageResource(R.drawable.ic_error);
         resultIcon.setColorFilter(getColor(R.color.alert_danger));
         resultTitleText.setText(R.string.scan_result_rejected_title);
@@ -267,10 +280,35 @@ public class ScanQrActivity extends AppCompatActivity {
         resultChipText.setTextColor(getColor(R.color.alert_danger));
         resultChipText.setText(R.string.scan_rejected_chip);
         resultMessageText.setText(message);
+        resultMessageText.setTextColor(getColor(R.color.on_error_container));
         resultMessageText.setVisibility(View.VISIBLE);
         resultDetails.setVisibility(View.GONE);
 
         setChip(false);
+        scanVerifyingView.setVisibility(View.GONE);
+        scanWorkspace.setVisibility(View.GONE);
+        resultCard.setVisibility(View.VISIBLE);
+    }
+
+    private void showUnavailableResult(String message) {
+        // A missing API verdict is presented as unavailable, never as a rejected QR.
+        resultCard.setBackgroundResource(R.drawable.bg_operator_card);
+        resultIcon.setImageResource(R.drawable.ic_error);
+        resultIcon.setColorFilter(getColor(R.color.operator_information));
+        resultTitleText.setText(R.string.operator_scan_unavailable_title);
+        resultChipText.setBackgroundResource(R.drawable.bg_chip_neutral);
+        resultChipText.setTextColor(getColor(R.color.on_surface_variant));
+        resultChipText.setText(R.string.operator_scan_unavailable_chip);
+        resultMessageText.setText(message);
+        resultMessageText.setTextColor(getColor(R.color.on_surface_variant));
+        resultMessageText.setVisibility(View.VISIBLE);
+        resultDetails.setVisibility(View.GONE);
+
+        scanStatusChip.setBackgroundResource(R.drawable.bg_chip_neutral);
+        scanStatusChip.setTextColor(getColor(R.color.on_surface_variant));
+        scanStatusChip.setText(R.string.operator_scan_unavailable_chip);
+        scanVerifyingView.setVisibility(View.GONE);
+        scanWorkspace.setVisibility(View.GONE);
         resultCard.setVisibility(View.VISIBLE);
     }
 
@@ -283,6 +321,8 @@ public class ScanQrActivity extends AppCompatActivity {
     private void resumeScanning() {
         showingResult = false;
         resultCard.setVisibility(View.GONE);
+        scanVerifyingView.setVisibility(View.GONE);
+        scanWorkspace.setVisibility(View.VISIBLE);
         setReadyChip();
         if (cameraPermissionGranted) {
             barcodeScanner.decodeSingle(barcodeCallback);

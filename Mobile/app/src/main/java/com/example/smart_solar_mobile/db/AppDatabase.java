@@ -13,7 +13,7 @@ import androidx.room.migration.Migration;
 import androidx.sqlite.db.SupportSQLiteDatabase;
 
 @Database(entities = {SessionEntity.class, DashboardCacheEntity.class,
-        ReservationCacheEntity.class}, version = 3, exportSchema = false)
+        ReservationCacheEntity.class}, version = 4, exportSchema = false)
 public abstract class AppDatabase extends RoomDatabase {
     private static volatile AppDatabase instance;
     private static final Migration MIGRATION_1_2 = new Migration(1, 2) {
@@ -37,6 +37,13 @@ public abstract class AppDatabase extends RoomDatabase {
                     + "PRIMARY KEY(prosumerNic, reservationId))");
         }
     };
+    private static final Migration MIGRATION_3_4 = new Migration(3, 4) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            // Existing reservation rows keep their IDs and gain a nullable display name.
+            database.execSQL("ALTER TABLE reservation_cache ADD COLUMN stationName TEXT");
+        }
+    };
 
     public abstract SessionDao sessionDao();
     public abstract DashboardCacheDao dashboardCacheDao();
@@ -47,9 +54,9 @@ public abstract class AppDatabase extends RoomDatabase {
         if (instance == null) {
             synchronized (AppDatabase.class) {
                 if (instance == null) {
-                    // Apply both additive migrations without discarding saved sessions or counts.
+                    // Apply additive migrations without discarding sessions or existing cache rows.
                     instance = Room.databaseBuilder(context.getApplicationContext(), AppDatabase.class, "smart_solar.db")
-                            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                             .build();
                 }
             }

@@ -69,8 +69,14 @@
     <string name="profile_subtitle">Your details and account settings</string>
     <string name="profile_loading">Loading your profile…</string>
     <string name="profile_load_error">Your profile could not be loaded</string>
+    <string name="profile_identity_caption">YOUR ACCOUNT</string>
+    <string name="profile_role">Solar Prosumer</string>
+    <string name="profile_nic_read_only">NIC cannot be changed</string>
     <string name="profile_nic_locked">Your NIC is your account ID and can\'t be changed.</string>
-    <string name="profile_details_title">Personal details</string>
+    <string name="profile_details_title">PERSONAL INFORMATION</string>
+    <string name="profile_edit_details_title">Edit your details</string>
+    <string name="profile_edit_details_hint">Update your name and contact details below.</string>
+    <string name="profile_account_management_title">ACCOUNT MANAGEMENT</string>
     <string name="profile_save">Save Changes</string>
     <string name="profile_saving">Saving…</string>
     <string name="profile_saved">Profile updated.</string>

@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Compact operator station row; IDs match the shared StationAdapter contract. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="8dp"
+    android:background="@drawable/bg_operator_station_row"
+    android:foreground="?attr/selectableItemBackground"
+    android:gravity="center_vertical"
+    android:minHeight="64dp"
+    android:orientation="horizontal"
+    android:paddingStart="12dp"
+    android:paddingTop="10dp"
+    android:paddingEnd="12dp"
+    android:paddingBottom="10dp">
+
+    <ImageView
+        android:layout_width="28dp"
+        android:layout_height="28dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_ev_station"
+        app:tint="@color/secondary" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="10dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/optionNameText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:textColor="@color/on_surface"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/optionMetaText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:textColor="@color/on_surface_variant"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/optionActiveChip"
+        style="@style/Widget.SmartSolar.StatusChip"
+        android:layout_marginStart="6dp"
+        android:background="@drawable/bg_chip_active"
+        android:text="@string/station_status_active"
+        android:textColor="@color/primary_container"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/optionDeactivatedChip"
+        style="@style/Widget.SmartSolar.StatusChip"
+        android:layout_marginStart="6dp"
+        android:background="@drawable/bg_chip_danger"
+        android:text="@string/station_status_deactivated"
+        android:textColor="@color/alert_danger"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/optionSelectedIcon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="6dp"
+        android:contentDescription="@string/operator_selected_station"
+        android:src="@drawable/ic_check"
+        android:visibility="invisible"
+        app:tint="@color/secondary" />
+</LinearLayout>

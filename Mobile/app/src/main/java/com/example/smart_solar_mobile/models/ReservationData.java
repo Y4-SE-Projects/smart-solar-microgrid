@@ -7,6 +7,8 @@ public class ReservationData {
     public String reservationId;
     public String prosumerNic;
     public String stationId;
+    // Display-only station reference; stationId remains the API identity for all actions.
+    public String stationName;
     public String slotId;
     public String scheduledTime;
     public String status;
