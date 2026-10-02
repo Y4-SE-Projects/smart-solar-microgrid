@@ -5,6 +5,7 @@ package com.example.smart_solar_mobile.activities;
 
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -37,6 +38,7 @@ public class RecentScansActivity extends AppCompatActivity {
     private android.widget.TextView subtitleText;
     private View scansLoadingView;
     private View scansStateCard;
+    private ImageView scansStateIcon;
     private android.widget.TextView scansStateTitle;
     private android.widget.TextView scansStateMessage;
     private MaterialButton retryScansButton;
@@ -51,6 +53,7 @@ public class RecentScansActivity extends AppCompatActivity {
         scansList = findViewById(R.id.scansList);
         scansLoadingView = findViewById(R.id.scansLoadingView);
         scansStateCard = findViewById(R.id.scansStateCard);
+        scansStateIcon = findViewById(R.id.scansStateIcon);
         scansStateTitle = findViewById(R.id.scansStateTitle);
         scansStateMessage = findViewById(R.id.scansStateMessage);
         retryScansButton = findViewById(R.id.retryScansButton);
@@ -86,6 +89,7 @@ public class RecentScansActivity extends AppCompatActivity {
         scansList.setVisibility(View.GONE);
         scansStateCard.setVisibility(View.GONE);
         scansLoadingView.setVisibility(View.VISIBLE);
+        subtitleText.setText("");
 
         scansCall = NetworkManager.getInstance().getApiService().getRecentScans();
         final Call<ApiResponse<List<QrScanEntryResponse>>> call = scansCall;
@@ -128,6 +132,11 @@ public class RecentScansActivity extends AppCompatActivity {
     }
 
     private void showState(String title, String message, boolean retry) {
+        // The existing retry flag distinguishes a failed request from an empty live result.
+        scansStateCard.setBackgroundResource(retry
+                ? R.drawable.bg_operator_result_rejected : R.drawable.bg_operator_card);
+        scansStateIcon.setImageResource(retry ? R.drawable.ic_error : R.drawable.ic_schedule);
+        scansStateIcon.setColorFilter(getColor(retry ? R.color.alert_danger : R.color.secondary));
         scansStateTitle.setText(title);
         scansStateMessage.setText(message);
         retryScansButton.setVisibility(retry ? View.VISIBLE : View.GONE);
