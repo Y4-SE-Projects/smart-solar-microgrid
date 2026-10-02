@@ -65,7 +65,7 @@ import retrofit2.Response;
 public class StationMapActivity extends AppCompatActivity {
     private static final String TAG = "StationMap";
     private static final int ALL_STATIONS = 0;
-    private static final int[] RADIUS_OPTIONS_KM = {5, 10, 25, 50, ALL_STATIONS};
+    private static final int[] RADIUS_OPTIONS_KM = {5, 10, 20, 30, 50, ALL_STATIONS};
     private static final int DEFAULT_RADIUS_KM = 10;
     private static final String STATE_RADIUS_KM = "radius_km";
     private static final String[] LOCATION_PERMISSIONS = {
@@ -83,16 +83,20 @@ public class StationMapActivity extends AppCompatActivity {
     private Call<ApiResponse<List<SolarStation>>> nearbyCall;
     // Set once the Maps JavaScript API has loaded inside the WebView
     private boolean mapReady;
+    private boolean mapLoadFailed;
+    private boolean statusLoading;
+    private boolean showingStationResults;
 
     private final ActivityResultLauncher<String[]> permissionLauncher = registerForActivityResult(
             new ActivityResultContracts.RequestMultiplePermissions(), result -> onPermissionResult());
 
     private WebView mapWebView;
-    private View radiusScroll;
+    private View radiusFilterPanel;
     private View bottomOverlay;
     private ChipGroup radiusChips;
-    private View statusProgress;
+    private View mapSyncProgress;
     private TextView statusText;
+    private TextView statusHint;
     private TextView statusActionButton;
 
     @Override
@@ -105,12 +109,21 @@ public class StationMapActivity extends AppCompatActivity {
                 .setup(this, ProsumerBottomNavigation.Destination.STATIONS);
 
         mapWebView = findViewById(R.id.mapWebView);
-        radiusScroll = findViewById(R.id.radiusScroll);
+        radiusFilterPanel = findViewById(R.id.radiusFilterPanel);
         radiusChips = findViewById(R.id.radiusChips);
         bottomOverlay = findViewById(R.id.bottomOverlay);
-        statusProgress = findViewById(R.id.statusProgress);
+        mapSyncProgress = findViewById(R.id.mapSyncProgress);
         statusText = findViewById(R.id.statusText);
+        statusHint = findViewById(R.id.statusHint);
         statusActionButton = findViewById(R.id.statusActionButton);
+        showStatus(getString(R.string.station_map_preparing), true, 0, null);
+        // Refit when a longer status or expanded error action changes the map's visible area.
+        View.OnLayoutChangeListener updateMapViewport = (view, left, top, right, bottom,
+                oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (bottom - top != oldBottom - oldTop) drawSearchArea();
+        };
+        radiusFilterPanel.addOnLayoutChangeListener(updateMapViewport);
+        bottomOverlay.addOnLayoutChangeListener(updateMapViewport);
 
         if (savedInstanceState != null) {
             radiusKm = savedInstanceState.getInt(STATE_RADIUS_KM, DEFAULT_RADIUS_KM);
@@ -237,8 +250,11 @@ public class StationMapActivity extends AppCompatActivity {
             // The Maps script loaded, so anything already found can be drawn
             runOnUiThread(() -> {
                 mapReady = true;
+                mapLoadFailed = false;
+                updateLoadingIndicator();
                 drawSearchArea();
                 drawStations();
+                if (showingStationResults) statusHint.setVisibility(View.VISIBLE);
             });
         }
 
@@ -258,8 +274,12 @@ public class StationMapActivity extends AppCompatActivity {
         @JavascriptInterface
         public void onMapError(String reason) {
             // The Maps script failed to load ("load") or Google rejected the key ("auth")
-            runOnUiThread(() -> showStatus(getString("auth".equals(reason) ? R.string.map_error_auth : R.string.map_error_load),
-                    false, 0, null));
+            runOnUiThread(() -> {
+                mapLoadFailed = true;
+                mapReady = false;
+                showStatus(getString("auth".equals(reason) ? R.string.map_error_auth : R.string.map_error_load),
+                        false, 0, null);
+            });
         }
     }
 
@@ -271,7 +291,8 @@ public class StationMapActivity extends AppCompatActivity {
         float density = getResources().getDisplayMetrics().density;
         String script = String.format(Locale.US, "HelioMap.showSearch(%f, %f, %d, %d, %d);",
                 userLocation.getLatitude(), userLocation.getLongitude(), radiusKm * 1000,
-                Math.round(radiusScroll.getHeight() / density) + 8, Math.round(bottomOverlay.getHeight() / density) + 8);
+                Math.round(radiusFilterPanel.getHeight() / density) + 8,
+                Math.round(bottomOverlay.getHeight() / density) + 8);
         mapWebView.evaluateJavascript(script, null);
     }
 
@@ -413,7 +434,7 @@ public class StationMapActivity extends AppCompatActivity {
 
     private void searchStations() {
         // Asks for all active stations or those within the selected radius
-        if (userLocation == null) {
+        if (userLocation == null || mapLoadFailed) {
             return;
         }
         drawSearchArea();
@@ -439,7 +460,7 @@ public class StationMapActivity extends AppCompatActivity {
                 ApiResponse<List<SolarStation>> body = response.body();
                 if (response.isSuccessful() && body != null && body.data != null) {
                     showStations(body.data, requestedRadiusKm);
-                } else {
+                } else if (!mapLoadFailed) {
                     showStatus(ApiErrorParser.getMessage(StationMapActivity.this, response), false,
                             R.string.retry, v -> searchStations());
                 }
@@ -451,7 +472,9 @@ public class StationMapActivity extends AppCompatActivity {
                 if (isFinishing() || isDestroyed() || call.isCanceled() || call != nearbyCall) {
                     return;
                 }
-                showStatus(getString(R.string.error_network), false, R.string.retry, v -> searchStations());
+                if (!mapLoadFailed) {
+                    showStatus(getString(R.string.error_network), false, R.string.retry, v -> searchStations());
+                }
             }
         });
     }
@@ -461,6 +484,7 @@ public class StationMapActivity extends AppCompatActivity {
         stations.clear();
         stations.addAll(found);
         drawStations();
+        if (mapLoadFailed) return;
 
         String message;
         if (searchedRadiusKm == ALL_STATIONS) {
@@ -473,6 +497,8 @@ public class StationMapActivity extends AppCompatActivity {
                     : getResources().getQuantityString(R.plurals.stations_within, found.size(), found.size(), searchedRadiusKm);
         }
         showStatus(message, false, 0, null);
+        showingStationResults = !found.isEmpty();
+        if (showingStationResults && mapReady) statusHint.setVisibility(View.VISIBLE);
     }
 
     private void openStation(SolarStation station) {
@@ -497,9 +523,12 @@ public class StationMapActivity extends AppCompatActivity {
     // ---- Status card ----
 
     private void showStatus(String message, boolean loading, @StringRes int actionText, View.OnClickListener action) {
-        // Updates the card at the bottom of the map: a message, the line loader, and an optional action button
+        // Keeps the message on the map and the line loader directly above Prosumer navigation.
+        showingStationResults = false;
         statusText.setText(message);
-        statusProgress.setVisibility(loading ? View.VISIBLE : View.GONE);
+        statusHint.setVisibility(View.GONE);
+        statusLoading = loading;
+        updateLoadingIndicator();
         if (actionText != 0 && action != null) {
             statusActionButton.setText(actionText);
             statusActionButton.setOnClickListener(action);
@@ -507,5 +536,11 @@ public class StationMapActivity extends AppCompatActivity {
         } else {
             statusActionButton.setVisibility(View.GONE);
         }
+    }
+
+    private void updateLoadingIndicator() {
+        // A station response can arrive before Google Maps finishes loading.
+        mapSyncProgress.setVisibility(statusLoading || (!mapReady && !mapLoadFailed)
+                ? View.VISIBLE : View.GONE);
     }
 }
