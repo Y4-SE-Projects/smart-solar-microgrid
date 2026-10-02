@@ -19,6 +19,7 @@ import com.example.smart_solar_mobile.models.RegisterRequest;
 import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
+import com.example.smart_solar_mobile.utils.FieldChecks;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
@@ -111,7 +112,9 @@ public class RegisterActivity extends AppCompatActivity {
         valid &= requireFilled(fullNameLayout, fullName, R.string.register_error_full_name_required);
         valid &= requireFilled(emailLayout, email, R.string.register_error_email_required);
         valid &= requireFilled(phoneLayout, phone, R.string.register_error_phone_required);
-        valid &= requireFilled(passwordLayout, password, R.string.login_error_password_required);
+        // A password of only spaces counts as missing too, with the API's own wording
+        valid &= requireFilled(passwordLayout, password, R.string.login_error_password_required)
+                && FieldChecks.requireNotOnlySpaces(passwordLayout, password);
         if (requireFilled(confirmPasswordLayout, confirmPassword, R.string.register_error_confirm_required)) {
             if (!confirmPassword.equals(password)) {
                 confirmPasswordLayout.setError(getString(R.string.register_error_password_mismatch));
