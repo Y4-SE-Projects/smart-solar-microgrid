@@ -52,8 +52,14 @@
     <string name="history_empty_title">No reservations yet</string>
     <string name="history_empty_body">Reservations you create will appear here.</string>
     <string name="history_empty_filtered_title">No matching reservations</string>
-    <string name="history_empty_filtered_body">Try a different filter.</string>
+    <string name="history_empty_filtered_body">Try a different status or search term.</string>
     <string name="history_item_meta">%1$s · %2$s</string>
+    <string name="history_filter_label">FILTER BY STATUS</string>
+    <string name="history_reference_label">RESERVATION</string>
+    <string name="history_scheduled_label">SCHEDULED FOR</string>
+    <string name="history_station_label">STATION</string>
+    <string name="history_slot_label">SLOT</string>
+    <string name="history_open_reservation">Open reservation %1$s, %2$s, scheduled %3$s at %4$s</string>
     <string name="history_syncing">Updating reservations…</string>
     <string name="history_stale">Could not refresh. Showing previously synced bookings from %1$s.</string>
     <string name="history_stale_no_time">Could not refresh. Showing previously synced bookings.</string>
