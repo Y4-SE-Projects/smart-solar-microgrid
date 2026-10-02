@@ -113,6 +113,12 @@
         <item name="android:textSize">13sp</item>
     </style>
 
+    <!-- Compact, scrollable status filters for My Reservations. -->
+    <style name="Widget.SmartSolar.HistoryFilterChip" parent="Widget.SmartSolar.RadiusChip">
+        <item name="chipCornerRadius">12dp</item>
+        <item name="chipMinHeight">40dp</item>
+    </style>
+
     <!-- Full-width primary action button -->
     <style name="Widget.SmartSolar.PrimaryButton" parent="Widget.Material3.Button">
         <item name="backgroundTint">@color/primary_button_background</item>
