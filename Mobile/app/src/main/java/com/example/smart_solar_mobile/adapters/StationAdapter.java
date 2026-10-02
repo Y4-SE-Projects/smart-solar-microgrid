@@ -12,6 +12,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.LayoutRes;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.smart_solar_mobile.R;
@@ -32,12 +33,20 @@ public class StationAdapter extends RecyclerView.Adapter<StationAdapter.StationV
     private final List<SolarStation> visibleStations = new ArrayList<>();
     private final String selectedStationId;
     private final OnStationClick listener;
+    private final int itemLayoutRes;
 
     public StationAdapter(List<SolarStation> stations, String selectedStationId, OnStationClick listener) {
         // Starts with every station visible
+        this(stations, selectedStationId, listener, R.layout.item_station_option);
+    }
+
+    public StationAdapter(List<SolarStation> stations, String selectedStationId, OnStationClick listener,
+                          @LayoutRes int itemLayoutRes) {
+        // Uses the same selection and search behavior with a caller-specific row layout.
         this.allStations = new ArrayList<>(stations);
         this.selectedStationId = selectedStationId;
         this.listener = listener;
+        this.itemLayoutRes = itemLayoutRes;
         visibleStations.addAll(allStations);
     }
 
@@ -67,7 +76,7 @@ public class StationAdapter extends RecyclerView.Adapter<StationAdapter.StationV
     @Override
     public StationViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         // Inflates one station row
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_station_option, parent, false);
+        View view = LayoutInflater.from(parent.getContext()).inflate(itemLayoutRes, parent, false);
         return new StationViewHolder(view);
     }
 
@@ -79,6 +88,9 @@ public class StationAdapter extends RecyclerView.Adapter<StationAdapter.StationV
         holder.metaText.setText(holder.itemView.getContext()
                 .getString(R.string.station_meta, station.stationId, station.schedule));
         holder.deactivatedChip.setVisibility(station.isActive ? View.GONE : View.VISIBLE);
+        if (holder.activeChip != null) {
+            holder.activeChip.setVisibility(station.isActive ? View.VISIBLE : View.GONE);
+        }
         boolean selected = station.stationId.equals(selectedStationId);
         holder.selectedIcon.setVisibility(selected ? View.VISIBLE : View.INVISIBLE);
         holder.itemView.setSelected(selected);
@@ -95,6 +107,7 @@ public class StationAdapter extends RecyclerView.Adapter<StationAdapter.StationV
         final TextView nameText;
         final TextView metaText;
         final TextView deactivatedChip;
+        final TextView activeChip;
         final ImageView selectedIcon;
 
         StationViewHolder(View itemView) {
@@ -103,6 +116,7 @@ public class StationAdapter extends RecyclerView.Adapter<StationAdapter.StationV
             nameText = itemView.findViewById(R.id.optionNameText);
             metaText = itemView.findViewById(R.id.optionMetaText);
             deactivatedChip = itemView.findViewById(R.id.optionDeactivatedChip);
+            activeChip = itemView.findViewById(R.id.optionActiveChip);
             selectedIcon = itemView.findViewById(R.id.optionSelectedIcon);
         }
     }
