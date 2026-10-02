@@ -57,7 +57,7 @@ public class ProsumerBottomNavigation extends LinearLayout {
         // Inflates the single Prosumer navigation layout and binds its four destinations.
         setOrientation(VERTICAL);
         setBackgroundColor(ContextCompat.getColor(getContext(), R.color.surface_container_lowest));
-        setElevation(4f * getResources().getDisplayMetrics().density);
+        setElevation(2f * getResources().getDisplayMetrics().density);
         LayoutInflater.from(getContext()).inflate(R.layout.view_prosumer_bottom_navigation, this, true);
         bind(Destination.HOME, R.id.prosumerNavHome,
                 R.id.prosumerNavHomeIcon, R.id.prosumerNavHomeLabel);

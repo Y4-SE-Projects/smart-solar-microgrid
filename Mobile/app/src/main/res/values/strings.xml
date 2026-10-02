@@ -107,6 +107,9 @@
     <string name="reserve_slot">Reserve a slot</string>
     <string name="nearby_stations">Nearby stations</string>
     <string name="station_map_subtitle">Active stations</string>
+    <string name="station_map_search_radius">Search radius</string>
+    <string name="station_map_tap_pin">Tap a map pin to view station details</string>
+    <string name="station_map_preparing">Preparing station map…</string>
     <string name="radius_km">%1$d km</string>
     <string name="radius_all">All</string>
     <string name="my_location">My location</string>

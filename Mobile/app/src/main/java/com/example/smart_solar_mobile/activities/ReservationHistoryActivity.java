@@ -100,8 +100,11 @@ public class ReservationHistoryActivity extends AppCompatActivity {
         findViewById(R.id.backButton).setOnClickListener(v -> finish());
         retryHistoryButton.setOnClickListener(v -> loadHistory());
         syncRetryButton.setOnClickListener(v -> loadHistory());
-        if ("Pending".equalsIgnoreCase(getIntent().getStringExtra(EXTRA_INITIAL_STATUS_FILTER))) {
+        String initialStatus = getIntent().getStringExtra(EXTRA_INITIAL_STATUS_FILTER);
+        if ("Pending".equalsIgnoreCase(initialStatus)) {
             statusFilterGroup.check(R.id.filterPendingChip);
+        } else if ("Approved".equalsIgnoreCase(initialStatus)) {
+            statusFilterGroup.check(R.id.filterApprovedChip);
         }
         statusFilterGroup.setOnCheckedStateChangeListener((group, checkedIds) -> applyFilter());
         ((EditText) findViewById(R.id.historySearchInput)).addTextChangedListener(new TextWatcher() {

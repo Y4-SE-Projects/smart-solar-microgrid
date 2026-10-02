@@ -17,6 +17,9 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat.AccessibilityActionCompat;
+import androidx.core.widget.NestedScrollView;
 
 import com.example.smart_solar_mobile.R;
 import com.example.smart_solar_mobile.db.AppDatabase;
@@ -74,7 +77,6 @@ public class ProsumerHomeActivity extends AppCompatActivity {
     private TextView nextTransferText;
     private TextView nextStationText;
     private TextView accountStatusChip;
-    private TextView memberSinceText;
     private TextView pendingCountText;
     private TextView approvedCountText;
     private TextView countsErrorText;
@@ -86,7 +88,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
     private TextView bookingsErrorText;
     private View bookingsEmptyCard;
     private LinearLayout upcomingList;
-    private View activityCard;
+    private View activitySection;
     private TextView completedCountText;
     private TextView cancelledCountText;
     private TextView declinedCountText;
@@ -142,6 +144,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
 
         // Clips the faint sun to the banner's rounded corners (the XML attribute needs API 31)
         findViewById(R.id.welcomeBanner).setClipToOutline(true);
+        setUpHeaderDivider();
 
         findViewById(R.id.signOutButton).setOnClickListener(v -> {
             homeGeneration++;
@@ -150,16 +153,25 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         });
         findViewById(R.id.countsRetryButton).setOnClickListener(v -> loadCounts());
         findViewById(R.id.bookingsRetryButton).setOnClickListener(v -> loadBookings());
-        findViewById(R.id.pendingDashboardCard).setOnClickListener(v ->
+        View pendingCard = findViewById(R.id.pendingDashboardCard);
+        pendingCard.setOnClickListener(v ->
                 startActivity(new Intent(this, ReservationHistoryActivity.class)
                         .putExtra(ReservationHistoryActivity.EXTRA_INITIAL_STATUS_FILTER, STATUS_PENDING)));
+        View approvedCard = findViewById(R.id.approvedDashboardCard);
+        approvedCard.setOnClickListener(v ->
+                startActivity(new Intent(this, ReservationHistoryActivity.class)
+                        .putExtra(ReservationHistoryActivity.EXTRA_INITIAL_STATUS_FILTER, STATUS_APPROVED)));
+        // Screen readers announce what tapping a count card does ("double-tap to view pending")
+        ViewCompat.replaceAccessibilityAction(pendingCard, AccessibilityActionCompat.ACTION_CLICK,
+                getString(R.string.dashboard_view_pending), null);
+        ViewCompat.replaceAccessibilityAction(approvedCard, AccessibilityActionCompat.ACTION_CLICK,
+                getString(R.string.dashboard_view_approved), null);
         // Direct booking works without location permission or a nearby-map result
         findViewById(R.id.directReservationButton).setOnClickListener(v ->
                 startActivity(new Intent(this, CreateReservationActivity.class)));
-        // Keeps the Member 02 nearby-map path and its preselected-station handoff
-        findViewById(R.id.createReservationButton).setOnClickListener(v ->
-                startActivity(new Intent(this, StationMapActivity.class)));
-        findViewById(R.id.viewReservationsButton).setOnClickListener(v -> openHistory());
+        findViewById(R.id.bookFromEmptyButton).setOnClickListener(v ->
+                startActivity(new Intent(this, CreateReservationActivity.class)));
+        // The nearby-map path (Member 02) stays in the bottom navigation's Stations tab
         findViewById(R.id.seeAllBookingsButton).setOnClickListener(v -> openHistory());
     }
 
@@ -221,12 +233,10 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         bookingsEmptyCard.setVisibility(View.GONE);
         upcomingList.removeAllViews();
         nextTransferRow.setVisibility(View.GONE);
-        activityCard.setVisibility(View.GONE);
+        activitySection.setVisibility(View.GONE);
         accountStatusChip.setVisibility(View.GONE);
-        memberSinceText.setText(R.string.metric_empty);
         ((TextView) findViewById(R.id.bannerNameText)).setText("");
         ((TextView) findViewById(R.id.avatarText)).setText("");
-        ((TextView) findViewById(R.id.nameText)).setText("");
         ((TextView) findViewById(R.id.nicText)).setText("");
     }
 
@@ -236,7 +246,6 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                 ? session.identifier : session.fullName.trim();
         ((TextView) findViewById(R.id.bannerNameText)).setText(name);
         ((TextView) findViewById(R.id.avatarText)).setText(NameUtils.initialsOf(name));
-        ((TextView) findViewById(R.id.nameText)).setText(name);
         ((TextView) findViewById(R.id.nicText)).setText(getString(R.string.home_nic, session.identifier));
     }
 
@@ -270,7 +279,6 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         nextTransferText = findViewById(R.id.nextTransferText);
         nextStationText = findViewById(R.id.nextStationText);
         accountStatusChip = findViewById(R.id.accountStatusChip);
-        memberSinceText = findViewById(R.id.memberSinceText);
         pendingCountText = findViewById(R.id.pendingCountText);
         approvedCountText = findViewById(R.id.approvedCountText);
         countsErrorText = findViewById(R.id.countsErrorText);
@@ -282,10 +290,19 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         bookingsErrorText = findViewById(R.id.bookingsErrorText);
         bookingsEmptyCard = findViewById(R.id.bookingsEmptyCard);
         upcomingList = findViewById(R.id.upcomingList);
-        activityCard = findViewById(R.id.activityCard);
+        activitySection = findViewById(R.id.activitySection);
         completedCountText = findViewById(R.id.completedCountText);
         cancelledCountText = findViewById(R.id.cancelledCountText);
         declinedCountText = findViewById(R.id.declinedCountText);
+    }
+
+    private void setUpHeaderDivider() {
+        // Fades the header's bottom line in as content scrolls beneath it, and keeps it hidden at the top
+        View divider = findViewById(R.id.headerDivider);
+        float fadeDistance = 8 * getResources().getDisplayMetrics().density;
+        ((NestedScrollView) findViewById(R.id.homeScroll)).setOnScrollChangeListener(
+                (NestedScrollView.OnScrollChangeListener) (view, scrollX, scrollY, oldScrollX, oldScrollY) ->
+                        divider.setAlpha(Math.min(1f, scrollY / fadeDistance)));
     }
 
     private void openHistory() {
@@ -443,10 +460,10 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                 .format(new Date(lastSyncedAt));
     }
 
-    // ---------------------------------------------------------------- Account card
+    // ---------------------------------------------------------------- Profile information
 
     private void loadProfile() {
-        // Reads the account status and creation date; the card still works from the session if this fails
+        // Reads the account status; the banner still works from the session if this fails
         cancel(profileCall);
         profileCall = NetworkManager.getInstance().getApiService().getProfile(prosumerNic);
         final Call<ApiResponse<UserProfile>> call = profileCall;
@@ -454,7 +471,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call<ApiResponse<UserProfile>> request,
                                    @NonNull Response<ApiResponse<UserProfile>> response) {
-                // Shows the "Active Prosumer" chip and the member-since month from the live profile
+                // Shows the "Active Prosumer" chip from the live profile
                 if (isStale(call, profileCall)) {
                     return;
                 }
@@ -464,15 +481,11 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                 }
                 accountStatusChip.setVisibility(UserProfile.STATUS_ACTIVE.equals(body.data.status)
                         ? View.VISIBLE : View.GONE);
-                Date createdAt = TimeUtils.parseApiDate(body.data.createdAt);
-                if (createdAt != null) {
-                    memberSinceText.setText(TimeUtils.formatMonthYear(createdAt));
-                }
             }
 
             @Override
             public void onFailure(@NonNull Call<ApiResponse<UserProfile>> request, @NonNull Throwable t) {
-                // Leaves the chip hidden and member-since as a dash; the counts banner already reports connection problems
+                // Leaves the chip hidden; the counts banner already reports connection problems
             }
         });
     }
@@ -565,7 +578,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
                         upcomingList.removeAllViews();
                         bookingsEmptyCard.setVisibility(View.GONE);
                         nextTransferRow.setVisibility(View.GONE);
-                        activityCard.setVisibility(View.GONE);
+                        activitySection.setVisibility(View.GONE);
                     }
                     showBookingsError(ApiErrorParser.getMessage(ProsumerHomeActivity.this, response));
                 }
@@ -629,7 +642,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
     }
 
     private void bindBookingCard(View card, ReservationData reservation, Date scheduled) {
-        // Fills one upcoming-booking card; its button opens the existing detail screen (QR pass once Approved)
+        // Fills one upcoming-booking card; the card and its button open the detail screen (QR pass once Approved)
         TextView statusChip = card.findViewById(R.id.bookingStatusChip);
         statusChip.setBackgroundResource(ReservationStatusUi.chipBackground(reservation.status));
         statusChip.setTextColor(ContextCompat.getColor(this, ReservationStatusUi.chipTextColor(reservation.status)));
@@ -639,8 +652,6 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         ((TextView) card.findViewById(R.id.bookingStationText)).setText(stationNameOf(reservation.stationId));
         ((TextView) card.findViewById(R.id.bookingMetaText)).setText(getString(R.string.history_item_meta,
                 reservation.stationId, TimeUtils.formatTime(scheduled)));
-        ((TextView) card.findViewById(R.id.bookingSlotText)).setText(reservation.slotId);
-        ((TextView) card.findViewById(R.id.bookingReferenceText)).setText(reservation.reservationId);
 
         MaterialButton action = card.findViewById(R.id.bookingActionButton);
         boolean approved = STATUS_APPROVED.equalsIgnoreCase(reservation.status)
@@ -648,10 +659,11 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         action.setText(approved ? R.string.dashboard_view_qr : R.string.dashboard_view_details);
         action.setIconResource(approved ? R.drawable.ic_qr_code : R.drawable.ic_arrow_forward);
         action.setOnClickListener(v -> ReservationDetailActivity.start(this, reservation));
+        card.setOnClickListener(v -> ReservationDetailActivity.start(this, reservation));
     }
 
     private void renderNextTransfer(List<ReservationData> upcoming, Map<ReservationData, Date> times) {
-        // Banner line: the soonest Approved booking, else the soonest Pending one, else a prompt to book
+        // Banner line: the soonest Approved booking, else the soonest Pending one, else a prompt to book; tapping it opens that booking
         ReservationData next = null;
         for (ReservationData reservation : upcoming) {
             if (STATUS_APPROVED.equalsIgnoreCase(reservation.status)) {
@@ -667,7 +679,15 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         if (next == null) {
             nextTransferText.setText(R.string.dashboard_no_upcoming);
             nextStationText.setVisibility(View.GONE);
+            nextTransferRow.setOnClickListener(v ->
+                    startActivity(new Intent(this, CreateReservationActivity.class)));
+            ViewCompat.replaceAccessibilityAction(nextTransferRow, AccessibilityActionCompat.ACTION_CLICK,
+                    getString(R.string.dashboard_book_energy), null);
         } else {
+            final ReservationData booking = next;
+            nextTransferRow.setOnClickListener(v -> ReservationDetailActivity.start(this, booking));
+            ViewCompat.replaceAccessibilityAction(nextTransferRow, AccessibilityActionCompat.ACTION_CLICK,
+                    getString(R.string.dashboard_view_details), null);
             Date scheduled = times.get(next);
             String when = getString(R.string.history_item_meta, dayLabel(scheduled), TimeUtils.formatTime(scheduled));
             nextTransferText.setText(getString(approved
@@ -695,7 +715,7 @@ public class ProsumerHomeActivity extends AppCompatActivity {
         completedCountText.setText(formatCount(completed));
         cancelledCountText.setText(formatCount(cancelled));
         declinedCountText.setText(formatCount(declined));
-        activityCard.setVisibility(View.VISIBLE);
+        activitySection.setVisibility(View.VISIBLE);
     }
 
     // ---------------------------------------------------------------- Helpers

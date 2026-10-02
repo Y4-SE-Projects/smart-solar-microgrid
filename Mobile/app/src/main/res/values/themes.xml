@@ -68,6 +68,16 @@
         <item name="android:textSize">28sp</item>
         <item name="android:textStyle">bold</item>
         <item name="android:fontFeatureSettings">tnum</item>
+        <!-- Large numbers read better slightly tighter -->
+        <item name="android:letterSpacing">-0.02</item>
+    </style>
+
+    <!-- Section heading on dashboards, e.g. "At a glance" -->
+    <style name="TextAppearance.SmartSolar.Headline" parent="">
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/on_surface</item>
+        <item name="android:letterSpacing">-0.01</item>
     </style>
 
     <!-- Section heading inside a screen -->
