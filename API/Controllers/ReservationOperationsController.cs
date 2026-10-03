@@ -1,4 +1,4 @@
-/*
+﻿/*
 * File: ReservationOperationsController.cs
 * Purpose: Handles reservation lifecycle and operational HTTP requests.
 */
@@ -123,7 +123,7 @@ namespace API.Controllers
                 return BadRequest(new
                 {
                     success = false,
-                    message = ex.Message
+                    message = ClientMessage(ex)
                 });
             }
             catch (KeyNotFoundException ex)
@@ -248,7 +248,7 @@ namespace API.Controllers
                 return BadRequest(new
                 {
                     success = false,
-                    message = ex.Message
+                    message = ClientMessage(ex)
                 });
             }
             catch (KeyNotFoundException ex)
@@ -396,7 +396,7 @@ namespace API.Controllers
                 return BadRequest(new
                 {
                     success = false,
-                    message = ex.Message
+                    message = ClientMessage(ex)
                 });
             }
             catch (Exception)
@@ -655,7 +655,7 @@ namespace API.Controllers
                 return BadRequest(new
                 {
                     success = false,
-                    message = ex.Message
+                    message = ClientMessage(ex)
                 });
             }
             catch (InvalidOperationException ex)
@@ -676,6 +676,16 @@ namespace API.Controllers
                         message = "Reservation status update failed."
                     });
             }
+        }
+
+        // ArgumentException appends "(Parameter 'x')" on a second line whenever a parameter name
+        // is supplied. That tail is for the logs, not for the console, so only the sentence the
+        // validation actually wrote travels back to the client.
+        private static string ClientMessage(ArgumentException ex)
+        {
+            return ex.ParamName == null
+                ? ex.Message
+                : ex.Message.Split('\n')[0].TrimEnd();
         }
 
         // Accepts old (9 digits + V/X) and new (12 digits) NIC formats
