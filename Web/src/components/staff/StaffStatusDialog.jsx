@@ -5,7 +5,6 @@
  *              member       - the staff account being switched
  *              mode         - 'deactivate' or 'reactivate'
  *              isSubmitting - true while the request is in flight
- *              error        - message from a failed attempt
  *              onConfirm / onCancel
  *
  * Author: IT23218512
@@ -18,7 +17,6 @@ export default function StaffStatusDialog({
   member,
   mode,
   isSubmitting,
-  error,
   onConfirm,
   onCancel,
 }) {
@@ -32,7 +30,6 @@ export default function StaffStatusDialog({
       icon={isDeactivating ? 'block' : 'lock_open'}
       confirmLabel={isDeactivating ? 'Confirm & Disable' : 'Confirm & Restore'}
       isSubmitting={isSubmitting}
-      error={error}
       onConfirm={onConfirm}
       onCancel={onCancel}
     >

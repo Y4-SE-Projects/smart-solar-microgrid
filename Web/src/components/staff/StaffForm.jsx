@@ -6,7 +6,6 @@
  *              mode         - 'create' (default) or 'edit'
  *              member       - the staff account being edited; ignored when creating
  *              isSubmitting - true while the request is in flight
- *              error        - message from a failed attempt
  *              onSubmit     - called with the register or update payload
  *              onCancel     - closes the form
  *
@@ -162,7 +161,6 @@ export default function StaffForm({
   mode = 'create',
   member = null,
   isSubmitting,
-  error,
   onSubmit,
   onCancel,
 }) {
@@ -438,16 +436,6 @@ export default function StaffForm({
               </div>
             )}
           </div>
-
-          {/* Kept outside the scrolling area so a rejection from the API is visible no matter where the form is scrolled to. */}
-          {error && (
-            <div className="px-6 pb-4 shrink-0">
-              <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-error-container text-on-error-container text-body-sm">
-                <span className="material-symbols-outlined text-[18px] mt-0.5">error</span>
-                <span>{error}</span>
-              </div>
-            </div>
-          )}
 
           <div className="p-5 border-t border-border-slate bg-surface-container-lowest flex items-center justify-end gap-2.5 shrink-0">
             <button

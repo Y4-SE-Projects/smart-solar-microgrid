@@ -5,7 +5,6 @@
  *          Props:
  *              member       - the staff account whose password is being reset
  *              isSubmitting - true while the request is in flight
- *              error        - message from a failed attempt
  *              onConfirm    - called with the new password
  *              onCancel
  *
@@ -20,7 +19,6 @@ import { MAXIMUM_PASSWORD_BYTES, MINIMUM_PASSWORD_LENGTH, newPasswordError } fro
 export default function StaffPasswordDialog({
   member,
   isSubmitting,
-  error,
   onConfirm,
   onCancel,
 }) {
@@ -72,7 +70,6 @@ export default function StaffPasswordDialog({
       icon="key"
       confirmLabel="Reset Password"
       isSubmitting={isSubmitting}
-      error={error}
       onConfirm={handleConfirm}
       onCancel={onCancel}
     >
