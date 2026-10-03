@@ -2,6 +2,7 @@
 // Purpose: Shared Backoffice + Grid Operator page for a station's bookable slots, one day at a time.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { Roles } from '../constants/roles';
 import { fetchStations } from '../services/stationsApi';
@@ -122,7 +123,6 @@ export default function SlotSchedulesPage() {
   const [formModal, setFormModal] = useState(null); // null | { mode: 'create' } | { mode: 'edit', slot }
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [pendingSlotId, setPendingSlotId] = useState(null);
-  const [actionError, setActionError] = useState(null); // { slotId, message } | null
 
   const selectedStation = stations.find((s) => s.stationId === selectedStationId) ?? null;
   const canChangeSlots = isBackoffice && Boolean(selectedStation?.isActive);
@@ -227,7 +227,7 @@ export default function SlotSchedulesPage() {
 
   function selectStation(stationId) {
     if (stationId === selectedStationId) return;
-    setActionError(null);
+    toast.success(`Station ${stationId} selected.`);
     setSelectedStationId(stationId);
   }
 
@@ -247,7 +247,6 @@ export default function SlotSchedulesPage() {
     setCalendarMonth(date);
     setSlotQuery('');
     if (isSameDay(date, selectedDate)) return;
-    setActionError(null);
     setSelectedDate(startOfDay(date));
   }
 
@@ -258,15 +257,16 @@ export default function SlotSchedulesPage() {
   }
 
   // Runs a mutating action (availability toggle / delete), tracks per-row loading, and
-  // surfaces the server's own error message on failure rather than pre-guessing one.
-  async function runAction(slotId, action) {
+  // reports the outcome through a toast — the server's own message on failure, rather
+  // than pre-guessing one.
+  async function runAction(slotId, action, successMessage) {
     setPendingSlotId(slotId);
-    setActionError(null);
     try {
       await action();
+      toast.success(successMessage);
       await refreshMonths([calendarMonthKey, selectedMonthKey]);
     } catch (error) {
-      setActionError({ slotId, message: error.response?.data?.message || 'The request failed.' });
+      toast.error(`${slotId}: ${error.response?.data?.message || 'The request failed.'}`);
     } finally {
       setPendingSlotId(null);
     }
@@ -276,13 +276,23 @@ export default function SlotSchedulesPage() {
   // page to the first day of the range so the new slots are on screen behind the dialog.
   async function handleGenerate(payload) {
     const response = await generateRecurringSlots(selectedStationId, payload);
+    const result = response.data.data;
+    const createdCount = result.created.length;
+    if (createdCount > 0) {
+      const skipped = result.skipped.length > 0 ? `; ${plural(result.skipped.length, 'day')} skipped` : '';
+      toast.success(`${plural(createdCount, 'slot')} created${skipped}.`);
+    } else {
+      toast('No new slots were created.');
+    }
     await showDay(startOfDay(new Date(payload.rangeStart)));
-    return response.data.data;
+    return result;
   }
 
   // Follows the slot to its new day if the edit moved it
   async function handleEdit(payload) {
-    await updateSlot(formModal.slot.slotId, payload);
+    const slotId = formModal.slot.slotId;
+    await updateSlot(slotId, payload);
+    toast.success(`Slot ${slotId} updated.`);
     await showDay(startOfDay(new Date(payload.startTime)));
     setFormModal(null);
   }
@@ -290,7 +300,7 @@ export default function SlotSchedulesPage() {
   async function handleDeleteConfirm() {
     const slotId = deleteTarget.slotId;
     setDeleteTarget(null);
-    await runAction(slotId, () => deleteSlot(slotId));
+    await runAction(slotId, () => deleteSlot(slotId), `Slot ${slotId} deleted.`);
   }
 
   const stationOptions = stations.map((s) => ({
@@ -364,32 +374,6 @@ export default function SlotSchedulesPage() {
             {selectedStation.stationId} is deactivated. Its existing slots are listed below, but slots can't be added or
             edited until it's reactivated.
           </span>
-        </div>
-      )}
-
-      {actionError && (
-        <div
-          role="alert"
-          className="mb-6 flex items-center justify-between gap-3 rounded-2xl bg-error-container px-5 py-2 text-body-sm text-on-error-container"
-        >
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="material-symbols-outlined shrink-0 text-[18px]" aria-hidden="true">
-              error
-            </span>
-            <span>
-              <strong>{actionError.slotId}:</strong> {actionError.message}
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setActionError(null)}
-            aria-label="Dismiss"
-            className="flex size-7 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-error/10"
-          >
-            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">
-              close
-            </span>
-          </button>
         </div>
       )}
 
@@ -601,7 +585,11 @@ export default function SlotSchedulesPage() {
                             {isGridOperator && (
                               <button
                                 type="button"
-                                onClick={() => runAction(slot.slotId, () => setSlotAvailability(slot.slotId, !slot.isAvailable))}
+                                onClick={() => runAction(
+                                  slot.slotId,
+                                  () => setSlotAvailability(slot.slotId, !slot.isAvailable),
+                                  `Slot ${slot.slotId} marked ${slot.isAvailable ? 'unavailable' : 'available'}.`
+                                )}
                                 disabled={pendingSlotId === slot.slotId}
                                 className={`flex size-8 shrink-0 items-center justify-center rounded-full transition-colors disabled:opacity-60 ${
                                   slot.isAvailable ? 'text-secondary hover:text-alert-danger' : 'text-outline-variant hover:text-secondary'

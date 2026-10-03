@@ -6,6 +6,7 @@
 //          slot with the station's local operating hours.
 
 import { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import Modal from '../ui/Modal';
 import Calendar from '../ui/Calendar';
 import TimeRangePicker from '../ui/TimeRangePicker';
@@ -37,7 +38,6 @@ export default function SlotFormModal({ slot, station, onClose, onSubmit }) {
 
   const [day, setDay] = useState(original.day);
   const [times, setTimes] = useState({ start: original.start, end: original.end });
-  const [generalError, setGeneralError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const stationLabel = station ? `${station.stationId} · ${station.name}` : undefined;
@@ -45,7 +45,6 @@ export default function SlotFormModal({ slot, station, onClose, onSubmit }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setGeneralError('');
     setIsSubmitting(true);
 
     const start = atMinutes(day, times.start);
@@ -58,7 +57,7 @@ export default function SlotFormModal({ slot, station, onClose, onSubmit }) {
         utcOffsetMinutes: utcOffsetMinutes(start),
       });
     } catch (error) {
-      setGeneralError(error.response?.data?.message || 'Could not save the slot. Please try again.');
+      toast.error(error.response?.data?.message || 'Could not save the slot. Please try again.');
       setIsSubmitting(false);
     }
   }
@@ -104,18 +103,6 @@ export default function SlotFormModal({ slot, station, onClose, onSubmit }) {
             Open {schedule.openTime} to {schedule.closeTime}. The slot ID stays {slot.slotId}.
           </p>
         </section>
-
-        {generalError && (
-          <div
-            role="alert"
-            className="flex items-start gap-2 rounded-xl bg-error-container px-space-md py-space-sm text-body-sm text-on-error-container"
-          >
-            <span className="material-symbols-outlined mt-0.5 text-[18px]" aria-hidden="true">
-              error
-            </span>
-            <span>{generalError}</span>
-          </div>
-        )}
 
         <div className="flex items-center justify-end gap-2">
           <button type="button" onClick={onClose} className={SECONDARY_BUTTON}>

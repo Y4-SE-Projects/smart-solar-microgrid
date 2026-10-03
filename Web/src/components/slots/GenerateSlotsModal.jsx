@@ -7,6 +7,7 @@
 //          The endpoint can also filter by weekday; all 7 are sent so every day in range counts.
 
 import { useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import Modal from '../ui/Modal';
 import Calendar from '../ui/Calendar';
 import TimeRangePicker from '../ui/TimeRangePicker';
@@ -36,7 +37,6 @@ export default function GenerateSlotsModal({ station, onClose, onSubmit }) {
 
   const [range, setRange] = useState(undefined);
   const [times, setTimes] = useState(() => defaultWindow(schedule));
-  const [generalError, setGeneralError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState(null); // { created, skipped } once the API responds
 
@@ -57,7 +57,6 @@ export default function GenerateSlotsModal({ station, onClose, onSubmit }) {
   async function handleSubmit(event) {
     event.preventDefault();
     if (!from) return;
-    setGeneralError('');
     setIsSubmitting(true);
 
     try {
@@ -71,7 +70,7 @@ export default function GenerateSlotsModal({ station, onClose, onSubmit }) {
       });
       setResult(response);
     } catch (error) {
-      setGeneralError(error.response?.data?.message || 'Could not create the slots. Please try again.');
+      toast.error(error.response?.data?.message || 'Could not create the slots. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -184,18 +183,6 @@ export default function GenerateSlotsModal({ station, onClose, onSubmit }) {
             Open {schedule.openTime} to {schedule.closeTime}. Days where this overlaps an existing slot are skipped.
           </p>
         </section>
-
-        {generalError && (
-          <div
-            role="alert"
-            className="flex items-start gap-2 rounded-xl bg-error-container px-space-md py-space-sm text-body-sm text-on-error-container"
-          >
-            <span className="material-symbols-outlined mt-0.5 text-[18px]" aria-hidden="true">
-              error
-            </span>
-            <span>{generalError}</span>
-          </div>
-        )}
 
         <div className="flex items-center justify-end gap-2">
           <button type="button" onClick={onClose} className={SECONDARY_BUTTON}>
