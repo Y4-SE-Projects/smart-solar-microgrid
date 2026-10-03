@@ -3,6 +3,7 @@
 
 
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import apiClient from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -17,17 +18,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(() =>
-    location.state?.reason === 'ROLE_NOT_SUPPORTED'
-      ? 'That account cannot access the web console. Sign in with a Backoffice or Grid Operator account.'
-      : ''
-  );
+  // Only the pre-submit checks below live here; anything the server decides is reported by a
+  // toast instead, so a rejection never shows up twice.
+  const [errorMessage, setErrorMessage] = useState('');
 
   // ProtectedRoute sends a session here when its stored role has no console screens. 
   // Clearing it happens here rather than in the guard, which has to stay free of side effects.
   useEffect(() => {
     if (location.state?.reason === 'ROLE_NOT_SUPPORTED') {
       logout();
+      toast.error(
+        'That account cannot access the web console. Sign in with a Backoffice or Grid Operator account.'
+      );
     }
   }, [location.state, logout]);
 
@@ -65,7 +67,7 @@ export default function LoginPage() {
       // Valid credentials, but the wrong surface for this role. 
       // (The API already refuses a Prosumer signing in with X-Client-Type: Web, so this is the second line of defence.
       if (!home) {
-        setErrorMessage(
+        toast.error(
           data.role === Roles.Prosumer
             ? 'Prosumer accounts sign in through the HelioGrid mobile app, not the web console.'
             : 'This account role is not supported on the web console.'
@@ -76,8 +78,9 @@ export default function LoginPage() {
       login(data);
       navigate(home, { replace: true });
     } catch (error) {
-      const apiMessage = error.response?.data?.message;
-      setErrorMessage(apiMessage || 'Something went wrong while signing in. Please try again.');
+      toast.error(
+        error.response?.data?.message || 'Something went wrong while signing in. Please try again.'
+      );
     } finally {
       setIsSubmitting(false);
     }
