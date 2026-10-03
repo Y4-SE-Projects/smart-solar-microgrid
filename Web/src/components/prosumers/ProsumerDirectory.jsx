@@ -21,7 +21,7 @@ import { formatDate } from '../../utils/formatters';
 
 const ROWS_PER_PAGE = 10;
 
-export default function ProsumerDirectory({ prosumers, isLoading, loadError, onReactivate }) {
+export default function ProsumerDirectory({ prosumers, isLoading, loadError, onRetry, onReactivate }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -110,8 +110,15 @@ export default function ProsumerDirectory({ prosumers, isLoading, loadError, onR
               </tr>
             ) : loadError ? (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-on-surface-variant">
-                  Could not load prosumer accounts. Use Retry above.
+                <td colSpan={6} className="px-5 py-10 text-center">
+                  <p className="mb-3 text-alert-danger">{loadError}</p>
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="rounded-full bg-surface-container-high px-4 py-1.5 text-label-md font-semibold text-on-surface"
+                  >
+                    Retry
+                  </button>
                 </td>
               </tr>
             ) : pageRows.length === 0 ? (

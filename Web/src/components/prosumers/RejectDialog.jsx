@@ -6,7 +6,6 @@
  *          Props:
  *              prosumer     - the account whose request is being declined
  *              isSubmitting - true while the request is in flight
- *              error        - message from a failed attempt
  *              onConfirm    - called with the reason text
  *              onCancel
  *
@@ -21,7 +20,7 @@ import { formatDate, pluralize } from '../../utils/formatters';
 // The field stops accepting input at the limit, rather than letting the user type past it and then refusing the submission.
 const MAXIMUM_REASON_LENGTH = 500;
 
-export default function RejectDialog({ prosumer, isSubmitting, error, onConfirm, onCancel }) {
+export default function RejectDialog({ prosumer, isSubmitting, onConfirm, onCancel }) {
   const [reason, setReason] = useState('');
 
   // Clear the field when a different account is selected, so a reason typed for one prosumer can't be submitted against another.
@@ -40,7 +39,6 @@ export default function RejectDialog({ prosumer, isSubmitting, error, onConfirm,
       icon="do_not_disturb_on"
       confirmLabel="Confirm & Decline"
       isSubmitting={isSubmitting}
-      error={error}
       onConfirm={() => onConfirm(reason.trim())}
       onCancel={onCancel}
     >

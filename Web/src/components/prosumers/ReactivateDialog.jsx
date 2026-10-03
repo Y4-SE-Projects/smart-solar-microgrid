@@ -4,7 +4,6 @@
  *          Props:
  *              prosumer     - the account to reactivate
  *              isSubmitting - true while the request is in flight
- *              error        - message from a failed attempt
  *              onConfirm / onCancel
  *
  * Author: IT23218512
@@ -13,7 +12,7 @@
 import ConfirmDialog from '../common/ConfirmDialog';
 import { formatDate, pluralize } from '../../utils/formatters';
 
-export default function ReactivateDialog({ prosumer, isSubmitting, error, onConfirm, onCancel }) {
+export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, onCancel }) {
   if (!prosumer) return null;
 
   const hasElapsed = prosumer.daysElapsed !== null && prosumer.daysElapsed !== undefined;
@@ -26,7 +25,6 @@ export default function ReactivateDialog({ prosumer, isSubmitting, error, onConf
       icon="verified"
       confirmLabel="Confirm & Reactivate"
       isSubmitting={isSubmitting}
-      error={error}
       onConfirm={onConfirm}
       onCancel={onCancel}
     >

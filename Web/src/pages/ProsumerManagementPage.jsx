@@ -7,6 +7,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import {
   getProsumers,
   getReactivationRequests,
@@ -16,7 +17,6 @@ import {
 import { isThisMonth } from '../utils/formatters';
 import { AccountStatus, resolveAccountStatus } from '../constants/accountStatus';
 import MetricCard from '../components/common/MetricCard';
-import AlertBanner from '../components/common/AlertBanner';
 import ReactivationQueue from '../components/prosumers/ReactivationQueue';
 import ProsumerDirectory from '../components/prosumers/ProsumerDirectory';
 import ReactivateDialog from '../components/prosumers/ReactivateDialog';
@@ -32,8 +32,6 @@ export default function ProsumerManagementPage() {
   // Holding both together means only one dialog can ever be open, and cancelling clears the pair.
   const [action, setAction] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [actionError, setActionError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
 
   // Loads both lists together, on mount and again after a successful action.
   const loadAccounts = useCallback(async () => {
@@ -48,9 +46,9 @@ export default function ProsumerManagementPage() {
       setPending(pendingAccounts);
     } catch (error) {
       // A 401 is already handled globally by the Axios interceptor, which clears the session and redirects to login; anything else lands here.
-      setLoadError(
-        error.response?.data?.message || 'Could not load prosumer accounts. Please try again.'
-      );
+      // A failed load is reported by the queue and the directory, each offering its own
+      // Retry, so it stays out of the toasts that carry action outcomes.
+      setLoadError(error.response?.data?.message || 'Could not load prosumer accounts. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -88,17 +86,15 @@ export default function ProsumerManagementPage() {
   // Send it, report the outcome, reload both lists; so the queue, the directory row and the metrics move together.
   async function runAction(request, describeSuccess) {
     setIsSubmitting(true);
-    setActionError('');
     try {
-      const result = await request();
-      setSuccessMessage(result?.message || describeSuccess());
+      await request();
+      toast.success(describeSuccess());
       setAction(null);
       await loadAccounts();
     } catch (error) {
       // The dialog stays open on failure so the action can be retried without finding the account again.
-      setActionError(
-        error.response?.data?.message || 'Could not complete this action. Please try again.'
-      );
+      // The toast carries the reason, so the dialog itself says nothing about it.
+      toast.error(error.response?.data?.message || 'Could not complete this action. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -123,18 +119,15 @@ export default function ProsumerManagementPage() {
   }
 
   function handleSelectProsumer(prosumer) {
-    setActionError('');
     setAction({ prosumer, mode: 'reactivate' });
   }
 
   function handleRejectProsumer(prosumer) {
-    setActionError('');
     setAction({ prosumer, mode: 'reject' });
   }
 
   function handleCancelAction() {
     setAction(null);
-    setActionError('');
   }
 
   return (
@@ -145,19 +138,6 @@ export default function ProsumerManagementPage() {
           Review account activity and reactivation requests.
         </p>
       </div>
-
-      <AlertBanner
-        variant="success"
-        message={successMessage}
-        onDismiss={() => setSuccessMessage('')}
-      />
-
-      <AlertBanner
-        variant="error"
-        message={loadError}
-        actionLabel="Retry"
-        onAction={loadAccounts}
-      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         <MetricCard
@@ -190,6 +170,7 @@ export default function ProsumerManagementPage() {
         pending={pending}
         isLoading={isLoading}
         loadError={loadError}
+        onRetry={loadAccounts}
         onReactivate={handleSelectProsumer}
         onReject={handleRejectProsumer}
       />
@@ -200,6 +181,7 @@ export default function ProsumerManagementPage() {
           prosumers={prosumers}
           isLoading={isLoading}
           loadError={loadError}
+          onRetry={loadAccounts}
           onReactivate={handleSelectProsumer}
         />
       </section>
@@ -207,7 +189,6 @@ export default function ProsumerManagementPage() {
       <ReactivateDialog
         prosumer={action?.mode === 'reactivate' ? action.prosumer : null}
         isSubmitting={isSubmitting}
-        error={actionError}
         onConfirm={handleConfirmReactivate}
         onCancel={handleCancelAction}
       />
@@ -215,7 +196,6 @@ export default function ProsumerManagementPage() {
       <RejectDialog
         prosumer={action?.mode === 'reject' ? action.prosumer : null}
         isSubmitting={isSubmitting}
-        error={actionError}
         onConfirm={handleConfirmReject}
         onCancel={handleCancelAction}
       />
