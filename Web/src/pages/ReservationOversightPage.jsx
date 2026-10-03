@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchReservations } from '../services/reservationApi';
 import ManualReservationModal from '../components/reservations/ManualReservationModal';
 import ReservationPolicyBanner from '../components/reservations/ReservationPolicyBanner';
+import ReservationOversightCards from '../components/reservations/ReservationOversightCards';
 import ReservationToolbar from '../components/reservations/ReservationToolbar';
 import ReservationFilterPanel from '../components/reservations/ReservationFilterPanel';
 import ReservationTable from '../components/reservations/ReservationTable';
@@ -35,6 +36,11 @@ export default function ReservationOversightPage() {
     const [listState, setListState] = useState({
         reservations: null,
         totalCount: null,
+        isLoading: true,
+        error: '',
+    });
+    const [summaryState, setSummaryState] = useState({
+        counts: null,
         isLoading: true,
         error: '',
     });
@@ -106,9 +112,68 @@ export default function ReservationOversightPage() {
         reloadKey,
     ]);
 
-    // Shows the loading state and reloads the current page ( used by Refresh, Retry, and after create/edit/cancel ).
+    // Reads unfiltered totals from the existing list endpoint when the workspace query refreshes.
+    useEffect(() => {
+        let cancelled = false;
+        const query = { page: 1, pageSize: 1 };
+        const dateFrom = new Date().toISOString();
+        setSummaryState({ counts: null, isLoading: true, error: '' });
+
+        Promise.all([
+            fetchReservations(query),
+            fetchReservations({ ...query, status: 'Pending' }),
+            fetchReservations({ ...query, status: 'Approved' }),
+            fetchReservations({ ...query, status: 'Completed' }),
+            fetchReservations({ ...query, status: 'Pending', dateFrom }),
+            fetchReservations({ ...query, status: 'Approved', dateFrom }),
+        ])
+            .then((results) => {
+                if (cancelled) return;
+                if (results.some((result) => !Number.isSafeInteger(result?.totalCount) || result.totalCount < 0)) {
+                    throw new Error('Reservation totals are unavailable.');
+                }
+
+                const [all, pending, approved, completed, futurePending, futureApproved] = results;
+                setSummaryState({
+                    counts: {
+                        total: all.totalCount,
+                        pending: pending.totalCount,
+                        approved: approved.totalCount,
+                        completed: completed.totalCount,
+                        futurePending: futurePending.totalCount,
+                        futureApproved: futureApproved.totalCount,
+                    },
+                    isLoading: false,
+                    error: '',
+                });
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setSummaryState({
+                    counts: null,
+                    isLoading: false,
+                    error: 'Reservation summary is unavailable. Use Refresh reservations to try again.',
+                });
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        filters.page,
+        filters.pageSize,
+        debouncedSearch,
+        filters.status,
+        filters.stationId,
+        filters.dateFrom,
+        filters.dateTo,
+        reloadKey,
+    ]);
+
+    // Shows loading states and reloads the list and summary after Refresh, Retry, or a reservation action.
     const refreshReservations = useCallback(() => {
         setListState((current) => ({ ...current, isLoading: true, error: '' }));
+        setSummaryState({ counts: null, isLoading: true, error: '' });
         setReloadKey((value) => value + 1);
     }, []);
 
@@ -194,6 +259,12 @@ export default function ReservationOversightPage() {
                     )}
                 </div>
             )}
+
+            <ReservationOversightCards
+                counts={summaryState.counts}
+                isLoading={summaryState.isLoading}
+                error={summaryState.error}
+            />
 
             <h2 id="reservation-list-heading" className="mb-3 text-headline-sm font-semibold text-on-surface">
                 Reservation list

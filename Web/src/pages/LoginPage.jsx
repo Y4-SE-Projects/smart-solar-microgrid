@@ -153,7 +153,7 @@ export default function LoginPage() {
                     autoCapitalize="none"
                     spellCheck={false}
                     placeholder="e.g. admin.jsmith"
-                    className="w-full h-11 pl-10 pr-space-md bg-canvas-bg text-on-surface text-body-md rounded-xl focus:outline-none focus:bg-surface-container-lowest focus:shadow-[0_0_0_2px_#006c4a] transition-all"
+                    className="h-11 w-full rounded-xl border border-border-slate bg-canvas-bg pl-4 pr-12 text-sm text-on-surface placeholder:text-outline focus:border-secondary focus:bg-white focus:outline-2 focus:outline-offset-2 focus:outline-secondary/45"
                   />
                 </div>
               </div>
