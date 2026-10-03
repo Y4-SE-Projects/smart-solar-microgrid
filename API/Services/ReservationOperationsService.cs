@@ -1,4 +1,4 @@
-/*
+﻿/*
 * File: ReservationOperationsService.cs
 * Purpose: Handles shared reservation queries, validation, and lifecycle operations.
 */
@@ -452,7 +452,7 @@ namespace API.Services
             if (scheduledTimeUtc > utcNow.AddDays(MaximumCreationWindowDays))
             {
                 throw new ArgumentException(
-                    "The updated reservation must be scheduled within the next 7 days.",
+                    "Pick a slot within the next 7 days.",
                     nameof(request.ScheduledTime));
             }
 

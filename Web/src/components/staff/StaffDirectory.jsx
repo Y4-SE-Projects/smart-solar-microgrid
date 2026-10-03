@@ -67,6 +67,7 @@ export default function StaffDirectory({
   staff,
   isLoading,
   loadError,
+  onRetry,
   currentUsername,
   onEdit,
   onResetPassword,
@@ -154,8 +155,15 @@ export default function StaffDirectory({
               </tr>
             ) : loadError ? (
               <tr>
-                <td colSpan={7} className="px-5 py-10 text-center text-on-surface-variant">
-                  Could not load staff accounts. Use Retry above.
+                <td colSpan={7} className="px-5 py-10 text-center">
+                  <p className="mb-3 text-alert-danger">{loadError}</p>
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="rounded-full bg-surface-container-high px-4 py-1.5 text-label-md font-semibold text-on-surface"
+                  >
+                    Retry
+                  </button>
                 </td>
               </tr>
             ) : pageRows.length === 0 ? (

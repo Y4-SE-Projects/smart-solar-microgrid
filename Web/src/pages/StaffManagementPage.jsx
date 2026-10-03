@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import toast from 'react-hot-toast';
 import {
   getStaff,
   registerUser,
@@ -17,7 +18,6 @@ import {
 import { Roles } from '../constants/roles';
 import { useAuth } from '../context/AuthContext';
 import MetricCard from '../components/common/MetricCard';
-import AlertBanner from '../components/common/AlertBanner';
 import StaffForm from '../components/staff/StaffForm';
 import StaffDirectory from '../components/staff/StaffDirectory';
 import StaffStatusDialog from '../components/staff/StaffStatusDialog';
@@ -36,8 +36,6 @@ export default function StaffManagementPage() {
   // Holding both together means only one dialog can be open at a time, and cancelling clears the pair.
   const [action, setAction] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [actionError, setActionError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
 
   const loadStaff = useCallback(async () => {
     setIsLoading(true);
@@ -46,9 +44,9 @@ export default function StaffManagementPage() {
       setStaff(await getStaff());
     } catch (error) {
       // A 401 is handled globally by the Axios interceptor, which clears the session and redirects to login; anything else lands here.
-      setLoadError(
-        error.response?.data?.message || 'Could not load staff accounts. Please try again.'
-      );
+      // A failed load is reported by the directory itself, which offers its own Retry, so it
+      // stays out of the toasts that carry action outcomes.
+      setLoadError(error.response?.data?.message || 'Could not load staff accounts. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -63,20 +61,18 @@ export default function StaffManagementPage() {
   const operatorCount = staff.filter((member) => member.role === Roles.GridOperator).length;
 
   // Every action follows the same shape.
-  // ( send it, report the outcome, reload the directory so the row and the metrics move together. )
-  // The dialog stays open on failure, so a rejected change can be corrected without retyping.
+  // ( send it, report the outcome in a toast, reload the directory so the row and the metrics move together. )
+  // The dialog stays open on failure, so a rejected change can be corrected without retyping —
+  // the toast carries the reason, so the dialog itself says nothing about it.
   async function runAction(request, describeSuccess) {
     setIsSubmitting(true);
-    setActionError('');
     try {
-      const result = await request();
-      setSuccessMessage(result?.message || describeSuccess());
+      await request();
+      toast.success(describeSuccess());
       setAction(null);
       await loadStaff();
     } catch (error) {
-      setActionError(
-        error.response?.data?.message || 'Could not complete this action. Please try again.'
-      );
+      toast.error(error.response?.data?.message || 'Could not complete this action. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -121,18 +117,15 @@ export default function StaffManagementPage() {
   }
 
   function openAction(mode, member = null) {
-    setActionError('');
     setAction({ member, mode });
   }
 
   function handleOpenCreate() {
-    setSuccessMessage('');
     openAction('create');
   }
 
   function handleCancelAction() {
     setAction(null);
-    setActionError('');
   }
 
   const isFormOpen = action?.mode === 'create' || action?.mode === 'edit';
@@ -163,14 +156,6 @@ export default function StaffManagementPage() {
           </button>
         )}
       </div>
-
-      <AlertBanner
-        variant="success"
-        message={successMessage}
-        onDismiss={() => setSuccessMessage('')}
-      />
-
-      <AlertBanner variant="error" message={loadError} actionLabel="Retry" onAction={loadStaff} />
 
       {/* Rules this screen operates under */}
       <div className="p-5 rounded-2xl bg-surface-container-low/70 border border-border-slate flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -224,6 +209,7 @@ export default function StaffManagementPage() {
           staff={staff}
           isLoading={isLoading}
           loadError={loadError}
+          onRetry={loadStaff}
           currentUsername={currentUsername}
           onEdit={(member) => openAction('edit', member)}
           onResetPassword={(member) => openAction('password', member)}
@@ -236,7 +222,6 @@ export default function StaffManagementPage() {
           mode={action.mode}
           member={action.member}
           isSubmitting={isSubmitting}
-          error={actionError}
           onSubmit={action.mode === 'edit' ? handleUpdateStaff : handleCreateStaff}
           onCancel={handleCancelAction}
         />
@@ -247,7 +232,6 @@ export default function StaffManagementPage() {
           member={action.member}
           mode={action.mode}
           isSubmitting={isSubmitting}
-          error={actionError}
           onConfirm={handleConfirmStatus}
           onCancel={handleCancelAction}
         />
@@ -256,7 +240,6 @@ export default function StaffManagementPage() {
       <StaffPasswordDialog
         member={action?.mode === 'password' ? action.member : null}
         isSubmitting={isSubmitting}
-        error={actionError}
         onConfirm={handleConfirmPassword}
         onCancel={handleCancelAction}
       />

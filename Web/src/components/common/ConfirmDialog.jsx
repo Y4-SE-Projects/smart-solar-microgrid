@@ -8,8 +8,10 @@
  *              icon         - icon name shown beside the heading
  *              confirmLabel - primary button text (default "Confirm")
  *              isSubmitting - disables both buttons and shows a spinner while the request is in flight, so the action can't be fired twice
- *              error        - message from a failed attempt; the dialog stays open so the user can retry without re-selecting the record
  *              onConfirm / onCancel
+ *
+ *          A failed attempt is reported by a toast from the calling page; the dialog just stays
+ *          open so the user can retry without re-selecting the record.
  *              children     - the record summary and any explanatory text
  * 
  * Author: IT23218512
@@ -20,7 +22,6 @@ export default function ConfirmDialog({
   icon = 'help',
   confirmLabel = 'Confirm',
   isSubmitting = false,
-  error = '',
   onConfirm,
   onCancel,
   children,
@@ -52,13 +53,6 @@ export default function ConfirmDialog({
         </div>
 
         {children}
-
-        {error && (
-          <div className="flex items-start gap-2 px-4 py-3 rounded-xl bg-error-container text-on-error-container text-body-sm">
-            <span className="material-symbols-outlined text-[18px] mt-0.5">error</span>
-            <span>{error}</span>
-          </div>
-        )}
 
         <div className="flex items-center justify-end gap-2.5 pt-2">
           <button

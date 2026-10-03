@@ -2,6 +2,7 @@
 // Purpose: Draft station and date filters for the operator reservation list.
 
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import Dropdown from '../ui/Dropdown';
 import { inputClass } from '../stations/formStyles';
 import { fetchStations } from '../../services/stationsApi';
@@ -95,7 +96,10 @@ export default function ReservationFilterPanel({
                         label="Station"
                         value={draft.stationId}
                         options={stationOptions}
-                        onChange={(value) => setDraft((current) => ({ ...current, stationId: value }))}
+                        onChange={(value) => {
+                            setDraft((current) => ({ ...current, stationId: value }));
+                            if (value && value !== draft.stationId) toast.success(`Station ${value} selected for filter.`);
+                        }}
                         placeholder="All stations"
                         disabled={isLoadingStations || Boolean(stationsError)}
                         searchable

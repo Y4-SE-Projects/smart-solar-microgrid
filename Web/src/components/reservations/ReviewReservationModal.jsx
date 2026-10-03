@@ -2,6 +2,7 @@
 // Purpose: GridOperator confirmation for approving or declining a pending reservation through the API.
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import Modal from '../ui/Modal';
 import ReservationStatusBadge from './ReservationStatusBadge';
 import { updateReservationStatus } from '../../services/reservationApi';
@@ -66,7 +67,6 @@ export default function ReviewReservationModal({
 }) {
     const config = ACTIONS[action];
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
 
     function handleClose() {
         if (!isSubmitting) onClose();
@@ -76,17 +76,17 @@ export default function ReviewReservationModal({
         if (isSubmitting) return;
 
         setIsSubmitting(true);
-        setErrorMessage('');
 
         let result;
         try {
             result = await updateReservationStatus(reservation.reservationId, action);
         } catch (error) {
-            setErrorMessage(error.response?.data?.message || config.errorFallback);
+            toast.error(error.response?.data?.message || config.errorFallback);
             setIsSubmitting(false);
             return;
         }
 
+        toast.success(`Reservation ${reservation.reservationId} ${action.toLowerCase()}.`);
         onCompleted(result);
     }
 
@@ -148,21 +148,6 @@ export default function ReviewReservationModal({
                         </SummaryItem>
                     </dl>
                 </section>
-
-                {errorMessage && (
-                    <div
-                        role="alert"
-                        className="flex items-start gap-2 rounded-xl bg-error-container px-space-md py-space-sm text-body-sm text-on-error-container"
-                    >
-                        <span
-                            aria-hidden="true"
-                            className="material-symbols-outlined mt-0.5 text-[18px]"
-                        >
-                            error
-                        </span>
-                        <span>{errorMessage}</span>
-                    </div>
-                )}
 
                 <div className="flex flex-col-reverse gap-2 border-t border-border-slate pt-4 sm:flex-row sm:justify-end">
                     <button

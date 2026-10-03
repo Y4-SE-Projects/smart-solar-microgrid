@@ -2,6 +2,7 @@
 // Purpose: Top-level routing. Wraps the app in AuthProvider (session state) and BrowserRouter, then defines every route.
 
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ProtectedRoute from './router/ProtectedRoute';
 import AppLayout from './components/layout/AppLayout';
@@ -31,6 +32,47 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <Toaster
+          position="top-center"
+          containerStyle={{ top: 20, zIndex: 120 }}
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#000',
+              color: '#fff',
+              border: '1px solid #222',
+              borderRadius: '12px',
+              boxShadow: '0 6px 18px rgba(0, 0, 0, 0.28)',
+              fontFamily: 'Inter, sans-serif',
+              fontSize: '14px',
+              lineHeight: 1.45,
+              padding: '12px 16px',
+              maxWidth: 'min(520px, calc(100vw - 32px))',
+            },
+            success: {
+              duration: 3500,
+              iconTheme: {
+                primary: 'var(--color-secondary-container)',
+                secondary: '#000',
+              },
+            },
+            // Errors carry the server's own wording, which runs much longer than a success
+            // line. They get a wider box and a smaller type size so the message stays on a
+            // couple of lines instead of becoming a tall wrapped block.
+            error: {
+              duration: 5000,
+              style: {
+                fontSize: '13px',
+                maxWidth: 'min(640px, calc(100vw - 32px))',
+                padding: '12px 18px',
+              },
+              iconTheme: {
+                primary: 'var(--color-error)',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
         <Routes>
           <Route path="/" element={<RootRoute />} />
           <Route path="/login" element={<LoginPage />} />

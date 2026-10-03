@@ -7,6 +7,8 @@
  *          Props:
  *              pending      - the accounts awaiting a Backoffice decision
  *              isLoading    - true while the lists are being fetched
+ *              loadError    - message from a failed fetch; the queue offers a retry in place of rows
+ *              onRetry      - re-runs the fetch behind the queue
  *              onReactivate - called with the account whose Reactivate button was clicked
  *              onReject     - called with the account whose Decline button was clicked
  *
@@ -18,7 +20,7 @@ import { getInitials, formatDate, pluralize } from '../../utils/formatters';
 
 const QUEUE_PAGE_SIZE = 3;
 
-export default function ReactivationQueue({ pending, isLoading, loadError, onReactivate, onReject }) {
+export default function ReactivationQueue({ pending, isLoading, loadError, onRetry, onReactivate, onReject }) {
   const [visibleCount, setVisibleCount] = useState(QUEUE_PAGE_SIZE);
 
   const pendingCount = pending.length;
@@ -51,7 +53,16 @@ export default function ReactivationQueue({ pending, isLoading, loadError, onRea
       {isLoading ? (
         <div className="p-8 text-center text-body-md text-on-surface-variant">Loading accounts…</div>
       ) : loadError ? (
-        <div className="p-8 text-center text-body-md text-on-surface-variant">Could not load requests. Use Retry above.</div>
+        <div className="p-8 text-center">
+          <p className="mb-3 text-body-md text-alert-danger">{loadError}</p>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="rounded-full bg-surface-container-high px-4 py-1.5 text-label-md font-semibold text-on-surface"
+          >
+            Retry
+          </button>
+        </div>
       ) : pendingCount === 0 ? (
         <div className="p-8 flex flex-col items-center gap-2 text-center">
           <span className="material-symbols-outlined text-[28px] text-secondary">task_alt</span>

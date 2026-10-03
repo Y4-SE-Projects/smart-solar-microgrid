@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { fetchReservations } from '../services/reservationApi';
 import ManualReservationModal from '../components/reservations/ManualReservationModal';
 import ReservationPolicyBanner from '../components/reservations/ReservationPolicyBanner';
+import ReservationOversightCards from '../components/reservations/ReservationOversightCards';
 import ReservationToolbar from '../components/reservations/ReservationToolbar';
 import ReservationFilterPanel from '../components/reservations/ReservationFilterPanel';
 import ReservationTable from '../components/reservations/ReservationTable';
@@ -30,11 +31,15 @@ export default function ReservationOversightPage() {
     const [selectedReservation, setSelectedReservation] = useState(null);
     const [selectedReservationForCancel, setSelectedReservationForCancel] = useState(null);
     const [reviewTarget, setReviewTarget] = useState(null); // { reservation, action: 'Approved' | 'Declined' }
-    const [actionResult, setActionResult] = useState(null);
 
     const [listState, setListState] = useState({
         reservations: null,
         totalCount: null,
+        isLoading: true,
+        error: '',
+    });
+    const [summaryState, setSummaryState] = useState({
+        counts: null,
         isLoading: true,
         error: '',
     });
@@ -106,9 +111,68 @@ export default function ReservationOversightPage() {
         reloadKey,
     ]);
 
-    // Shows the loading state and reloads the current page ( used by Refresh, Retry, and after create/edit/cancel ).
+    // Reads unfiltered totals from the existing list endpoint when the workspace query refreshes.
+    useEffect(() => {
+        let cancelled = false;
+        const query = { page: 1, pageSize: 1 };
+        const dateFrom = new Date().toISOString();
+        setSummaryState({ counts: null, isLoading: true, error: '' });
+
+        Promise.all([
+            fetchReservations(query),
+            fetchReservations({ ...query, status: 'Pending' }),
+            fetchReservations({ ...query, status: 'Approved' }),
+            fetchReservations({ ...query, status: 'Completed' }),
+            fetchReservations({ ...query, status: 'Pending', dateFrom }),
+            fetchReservations({ ...query, status: 'Approved', dateFrom }),
+        ])
+            .then((results) => {
+                if (cancelled) return;
+                if (results.some((result) => !Number.isSafeInteger(result?.totalCount) || result.totalCount < 0)) {
+                    throw new Error('Reservation totals are unavailable.');
+                }
+
+                const [all, pending, approved, completed, futurePending, futureApproved] = results;
+                setSummaryState({
+                    counts: {
+                        total: all.totalCount,
+                        pending: pending.totalCount,
+                        approved: approved.totalCount,
+                        completed: completed.totalCount,
+                        futurePending: futurePending.totalCount,
+                        futureApproved: futureApproved.totalCount,
+                    },
+                    isLoading: false,
+                    error: '',
+                });
+            })
+            .catch(() => {
+                if (cancelled) return;
+                setSummaryState({
+                    counts: null,
+                    isLoading: false,
+                    error: 'Reservation summary is unavailable. Use Refresh reservations to try again.',
+                });
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [
+        filters.page,
+        filters.pageSize,
+        debouncedSearch,
+        filters.status,
+        filters.stationId,
+        filters.dateFrom,
+        filters.dateTo,
+        reloadKey,
+    ]);
+
+    // Shows loading states and reloads the list and summary after Refresh, Retry, or a reservation action.
     const refreshReservations = useCallback(() => {
         setListState((current) => ({ ...current, isLoading: true, error: '' }));
+        setSummaryState({ counts: null, isLoading: true, error: '' });
         setReloadKey((value) => value + 1);
     }, []);
 
@@ -121,26 +185,24 @@ export default function ReservationOversightPage() {
         hasAdvancedFilters
     );
 
-    function handleCreated(result) {
-        setActionResult(result);
+    // Each modal reports its own outcome through a toast before calling back, so the page
+    // only has to close the dialog and pull the list and summary back in step.
+    function handleCreated() {
         setIsManualModalOpen(false);
         refreshReservations?.();
     }
 
-    function handleUpdated(result) {
-        setActionResult(result);
+    function handleUpdated() {
         setSelectedReservation(null);
         refreshReservations?.();
     }
 
-    function handleCancelled(result) {
-        setActionResult(result);
+    function handleCancelled() {
         setSelectedReservationForCancel(null);
         refreshReservations?.();
     }
 
-    function handleReviewed(result) {
-        setActionResult(result);
+    function handleReviewed() {
         setReviewTarget(null);
         refreshReservations?.();
     }
@@ -163,10 +225,7 @@ export default function ReservationOversightPage() {
 
                 <button
                     type="button"
-                    onClick={() => {
-                        setActionResult(null);
-                        setIsManualModalOpen(true);
-                    }}
+                    onClick={() => setIsManualModalOpen(true)}
                     className="flex shrink-0 items-center gap-2 self-start rounded-full bg-primary-container px-5 py-2.5 text-xs font-semibold text-on-primary shadow-sm transition-all hover:bg-primary md:self-auto"
                 >
                     <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
@@ -180,20 +239,11 @@ export default function ReservationOversightPage() {
                 <ReservationPolicyBanner />
             </div>
 
-            {actionResult && (
-                <div
-                    role="status"
-                    className="mb-6 rounded-2xl border border-border-slate bg-mint-surface px-5 py-3 text-body-sm text-primary"
-                >
-                    <p className="font-semibold">{actionResult.message}</p>
-                    {actionResult.data?.reservationId && (
-                        <p className="mt-1">
-                            Reservation {actionResult.data.reservationId} at station{' '}
-                            {actionResult.data.stationId}, slot {actionResult.data.slotId}.
-                        </p>
-                    )}
-                </div>
-            )}
+            <ReservationOversightCards
+                counts={summaryState.counts}
+                isLoading={summaryState.isLoading}
+                error={summaryState.error}
+            />
 
             <h2 id="reservation-list-heading" className="mb-3 text-headline-sm font-semibold text-on-surface">
                 Reservation list
@@ -241,22 +291,10 @@ export default function ReservationOversightPage() {
 
                 <ReservationTable
                     reservations={listState.reservations}
-                    onEdit={(reservation) => {
-                        setActionResult(null);
-                        setSelectedReservation(reservation);
-                    }}
-                    onCancel={(reservation) => {
-                        setActionResult(null);
-                        setSelectedReservationForCancel(reservation);
-                    }}
-                    onApprove={(reservation) => {
-                        setActionResult(null);
-                        setReviewTarget({ reservation, action: 'Approved' });
-                    }}
-                    onDecline={(reservation) => {
-                        setActionResult(null);
-                        setReviewTarget({ reservation, action: 'Declined' });
-                    }}
+                    onEdit={(reservation) => setSelectedReservation(reservation)}
+                    onCancel={(reservation) => setSelectedReservationForCancel(reservation)}
+                    onApprove={(reservation) => setReviewTarget({ reservation, action: 'Approved' })}
+                    onDecline={(reservation) => setReviewTarget({ reservation, action: 'Declined' })}
                     isLoading={listState.isLoading}
                     error={listState.error}
                     onRetry={refreshReservations}

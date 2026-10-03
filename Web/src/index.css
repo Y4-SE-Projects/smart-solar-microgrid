@@ -132,6 +132,46 @@
     margin: 0;
     padding: 0;
   }
+  html {
+    /* The landing page's display type is sized in vw and its pinned carriage travels
+       past the right edge mid-scroll, either of which can raise a horizontal scrollbar.
+       Clipping on the root element rather than on a wrapper matters: an overflow on an
+       ancestor of a pinned element breaks ScrollTrigger's position: fixed pinning. */
+    overflow-x: clip;
+
+    /* A thin, trackless scrollbar in place of the platform default, whose stepper arrows
+       and solid track read as chrome bolted onto the page. Chrome 121+, Firefox and Edge
+       take these two properties; when they are set, Blink ignores the ::-webkit-scrollbar
+       rules below, which are left for Safari. */
+    scrollbar-color: var(--color-outline-variant) transparent;
+  }
+
+  /* scrollbar-color inherits, scrollbar-width does not — so the width has to be stated
+     for every scroll container, not just the document. Harmless on elements that never
+     scroll. This covers the landing page's station carriage and the modals' scroll areas
+     as well as the page itself. */
+  *,
+  ::before,
+  ::after {
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-outline-variant);
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-outline);
+  }
   body {
     background-color: var(--color-canvas-bg);
     color: var(--color-on-surface);

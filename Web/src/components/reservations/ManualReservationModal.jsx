@@ -2,6 +2,7 @@
 // Purpose: GridOperator form for creating a reservation on behalf of a Prosumer.
 
 import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 import Modal from '../ui/Modal';
 import { inputClass } from '../stations/formStyles';
 import { fetchStations } from '../../services/stationsApi';
@@ -49,6 +50,7 @@ export default function ManualReservationModal({ onClose, onCreated }) {
 
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [generalError, setGeneralError] = useState('');
+    const [openedAt] = useState(() => Date.now());
 
     useEffect(() => {
         let cancelled = false;
@@ -107,7 +109,7 @@ export default function ManualReservationModal({ onClose, onCreated }) {
         };
     }, [selectedStationId, slotReloadKey]);
 
-    const now = Date.now();
+    const now = openedAt;
     const windowEnd = now + 7 * 24 * 60 * 60 * 1000;
     const availableSlots = slots.filter((slot) => {
         if (slot.isAvailable !== true || !slot.startTime) return false;
@@ -143,6 +145,7 @@ export default function ManualReservationModal({ onClose, onCreated }) {
     function handleStationChange(stationId) {
         if (stationId === selectedStationId) return;
         setSelectedStationId(stationId);
+        if (stationId) toast.success(`Station ${stationId} selected.`);
         setSelectedSlotId('');
         setSlots([]);
         setSlotsError('');
@@ -180,11 +183,14 @@ export default function ManualReservationModal({ onClose, onCreated }) {
                 scheduledTime: selectedSlot.startTime,
             });
 
+            toast.success(result?.data?.reservationId
+                ? `Reservation ${result.data.reservationId} created.`
+                : 'Reservation created.');
             onCreated(result);
         } catch (error) {
-            setGeneralError(
-                error.response?.data?.message || 'Could not create the reservation.'
-            );
+            // Server-side failures only reach the toast; generalError stays reserved for the
+            // field checks above, so the same message never appears twice.
+            toast.error(error.response?.data?.message || 'Could not create the reservation.');
             setIsSubmitting(false);
         }
     }
