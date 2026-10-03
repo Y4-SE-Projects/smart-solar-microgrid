@@ -2,6 +2,7 @@
 // Purpose: Backoffice screen for microgrid station management
 
 import { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import {
   fetchStations,
   createStation,
@@ -32,7 +33,6 @@ export default function StationsManagementPage() {
   const [formModal, setFormModal] = useState(null); // null | { mode: 'create' } | { mode: 'edit', station }
   const [deleteTarget, setDeleteTarget] = useState(null); // station pending delete confirmation
   const [pendingActionId, setPendingActionId] = useState(null); // stationId currently mid-request
-  const [actionError, setActionError] = useState(null); // { stationId, message } | null
 
   // Re-fetches the station list
   async function reload() {
@@ -102,15 +102,16 @@ export default function StationsManagementPage() {
   }, [stations, search, statusFilter, sortBy]);
 
   // Runs a mutating action (deactivate/reactivate/delete), tracks per-row loading, and
-  // surfaces the server's own error message on failure rather than pre-guessing one.
-  async function runAction(stationId, action) {
+  // reports the outcome through a toast — the server's own message on failure, rather
+  // than pre-guessing one.
+  async function runAction(stationId, action, successMessage) {
     setPendingActionId(stationId);
-    setActionError(null);
     try {
       await action();
+      toast.success(successMessage);
       await reload();
     } catch (error) {
-      setActionError({ stationId, message: error.response?.data?.message || 'The request failed.' });
+      toast.error(`${stationId}: ${error.response?.data?.message || 'The request failed.'}`);
     } finally {
       setPendingActionId(null);
     }
@@ -119,19 +120,22 @@ export default function StationsManagementPage() {
   async function handleCreate(payload) {
     await createStation(payload);
     setFormModal(null);
+    toast.success(`Station ${payload.stationId} registered.`);
     await reload();
   }
 
   async function handleEdit(payload) {
-    await updateStation(formModal.station.stationId, payload);
+    const stationId = formModal.station.stationId;
+    await updateStation(stationId, payload);
     setFormModal(null);
+    toast.success(`Station ${stationId} updated.`);
     await reload();
   }
 
   async function handleDeleteConfirm() {
     const stationId = deleteTarget.stationId;
     setDeleteTarget(null);
-    await runAction(stationId, () => deleteStation(stationId));
+    await runAction(stationId, () => deleteStation(stationId), `Station ${stationId} deleted.`);
   }
 
   return (
@@ -209,28 +213,6 @@ export default function StationsManagementPage() {
         </KpiCard>
 
       </section>
-
-      {actionError && (
-        <div
-          role="alert"
-          className="flex items-start justify-between px-5 py-1 mb-6 bg-error-container text-on-error-container rounded-xl text-body-sm"
-        >
-          <span className="flex items-start gap-2 flex-1 pt-2">
-            <span className="material-symbols-outlined text-[16px] shrink-0">error</span>
-            <span>
-              <strong>{actionError.stationId}:</strong> {actionError.message}
-            </span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setActionError(null)}
-            aria-label="Dismiss"
-            className="w-7 h-7 shrink-0 flex items-center justify-center rounded-md hover:bg-black/10 active:bg-black/20 transition-colors duration-150 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">close</span>
-          </button>
-        </div>
-      )}
 
       <h2 className="mb-3 text-headline-sm font-semibold text-on-surface">Station Directory</h2>
 
@@ -352,7 +334,8 @@ export default function StationsManagementPage() {
                             station.stationId,
                             station.isActive
                               ? () => deactivateStation(station.stationId)
-                              : () => reactivateStation(station.stationId)
+                              : () => reactivateStation(station.stationId),
+                            `Station ${station.stationId} ${station.isActive ? 'deactivated' : 'reactivated'}.`
                           )
                         }
                         onDelete={() => setDeleteTarget(station)}

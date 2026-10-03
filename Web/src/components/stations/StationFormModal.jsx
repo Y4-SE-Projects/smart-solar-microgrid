@@ -2,6 +2,7 @@
 // Purpose: Full-map create/edit workspace for a solar station.
 
 import { useEffect, useId, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 import LocationPickerMap from './LocationPickerMap';
 import ScheduleField from './ScheduleField';
 import { inputClass } from './formStyles';
@@ -28,7 +29,6 @@ export default function StationFormModal({ station, onClose, onSubmit }) {
   const formId = useId();
   const panelRef = useRef(null);
   const [form, setForm] = useState(() => toFormState(station));
-  const [generalError, setGeneralError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // The map fills the page content area, so keep the page beneath it still and return
@@ -58,7 +58,6 @@ export default function StationFormModal({ station, onClose, onSubmit }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setGeneralError('');
     setIsSubmitting(true);
 
     const payload = {
@@ -76,7 +75,7 @@ export default function StationFormModal({ station, onClose, onSubmit }) {
     try {
       await onSubmit(payload);
     } catch (error) {
-      setGeneralError(error.response?.data?.message || 'Something went wrong while saving the station.');
+      toast.error(error.response?.data?.message || 'Something went wrong while saving the station.');
       setIsSubmitting(false);
     }
   }
@@ -211,13 +210,6 @@ export default function StationFormModal({ station, onClose, onSubmit }) {
 
               <ScheduleField value={form.schedule} onChange={(next) => updateField('schedule', next)} />
             </div>
-
-            {generalError && (
-              <div role="alert" className="mx-5 mb-2 flex shrink-0 items-start gap-2 rounded-xl bg-error-container px-space-md py-space-sm text-body-sm text-on-error-container">
-                <span className="material-symbols-outlined mt-0.5 text-[18px]" aria-hidden="true">error</span>
-                <span>{generalError}</span>
-              </div>
-            )}
 
             <div className="flex shrink-0 items-center justify-end gap-2 border-t border-border-slate bg-surface-container-lowest px-5 py-4">
               <button
