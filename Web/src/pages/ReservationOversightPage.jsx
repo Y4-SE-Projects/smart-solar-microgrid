@@ -31,7 +31,6 @@ export default function ReservationOversightPage() {
     const [selectedReservation, setSelectedReservation] = useState(null);
     const [selectedReservationForCancel, setSelectedReservationForCancel] = useState(null);
     const [reviewTarget, setReviewTarget] = useState(null); // { reservation, action: 'Approved' | 'Declined' }
-    const [actionResult, setActionResult] = useState(null);
 
     const [listState, setListState] = useState({
         reservations: null,
@@ -186,26 +185,24 @@ export default function ReservationOversightPage() {
         hasAdvancedFilters
     );
 
-    function handleCreated(result) {
-        setActionResult(result);
+    // Each modal reports its own outcome through a toast before calling back, so the page
+    // only has to close the dialog and pull the list and summary back in step.
+    function handleCreated() {
         setIsManualModalOpen(false);
         refreshReservations?.();
     }
 
-    function handleUpdated(result) {
-        setActionResult(result);
+    function handleUpdated() {
         setSelectedReservation(null);
         refreshReservations?.();
     }
 
-    function handleCancelled(result) {
-        setActionResult(result);
+    function handleCancelled() {
         setSelectedReservationForCancel(null);
         refreshReservations?.();
     }
 
-    function handleReviewed(result) {
-        setActionResult(result);
+    function handleReviewed() {
         setReviewTarget(null);
         refreshReservations?.();
     }
@@ -228,10 +225,7 @@ export default function ReservationOversightPage() {
 
                 <button
                     type="button"
-                    onClick={() => {
-                        setActionResult(null);
-                        setIsManualModalOpen(true);
-                    }}
+                    onClick={() => setIsManualModalOpen(true)}
                     className="flex shrink-0 items-center gap-2 self-start rounded-full bg-primary-container px-5 py-2.5 text-xs font-semibold text-on-primary shadow-sm transition-all hover:bg-primary md:self-auto"
                 >
                     <span aria-hidden="true" className="material-symbols-outlined text-[18px]">
@@ -244,21 +238,6 @@ export default function ReservationOversightPage() {
             <div className="mb-6">
                 <ReservationPolicyBanner />
             </div>
-
-            {actionResult && (
-                <div
-                    role="status"
-                    className="mb-6 rounded-2xl border border-border-slate bg-mint-surface px-5 py-3 text-body-sm text-primary"
-                >
-                    <p className="font-semibold">{actionResult.message}</p>
-                    {actionResult.data?.reservationId && (
-                        <p className="mt-1">
-                            Reservation {actionResult.data.reservationId} at station{' '}
-                            {actionResult.data.stationId}, slot {actionResult.data.slotId}.
-                        </p>
-                    )}
-                </div>
-            )}
 
             <ReservationOversightCards
                 counts={summaryState.counts}
@@ -312,22 +291,10 @@ export default function ReservationOversightPage() {
 
                 <ReservationTable
                     reservations={listState.reservations}
-                    onEdit={(reservation) => {
-                        setActionResult(null);
-                        setSelectedReservation(reservation);
-                    }}
-                    onCancel={(reservation) => {
-                        setActionResult(null);
-                        setSelectedReservationForCancel(reservation);
-                    }}
-                    onApprove={(reservation) => {
-                        setActionResult(null);
-                        setReviewTarget({ reservation, action: 'Approved' });
-                    }}
-                    onDecline={(reservation) => {
-                        setActionResult(null);
-                        setReviewTarget({ reservation, action: 'Declined' });
-                    }}
+                    onEdit={(reservation) => setSelectedReservation(reservation)}
+                    onCancel={(reservation) => setSelectedReservationForCancel(reservation)}
+                    onApprove={(reservation) => setReviewTarget({ reservation, action: 'Approved' })}
+                    onDecline={(reservation) => setReviewTarget({ reservation, action: 'Declined' })}
                     isLoading={listState.isLoading}
                     error={listState.error}
                     onRetry={refreshReservations}

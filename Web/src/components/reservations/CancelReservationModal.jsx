@@ -2,6 +2,7 @@
 // Purpose: GridOperator confirmation for cancelling a reservation through the API.
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import Modal from '../ui/Modal';
 import ReservationStatusBadge from './ReservationStatusBadge';
 import { cancelReservation } from '../../services/reservationApi';
@@ -41,7 +42,6 @@ export default function CancelReservationModal({
     onCancelled,
 }) {
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
 
     function handleClose() {
         if (!isSubmitting) onClose();
@@ -51,20 +51,19 @@ export default function CancelReservationModal({
         if (isSubmitting) return;
 
         setIsSubmitting(true);
-        setErrorMessage('');
 
         let result;
         try {
             result = await cancelReservation(reservation.reservationId);
         } catch (error) {
-            setErrorMessage(
-                error.response?.data?.message ||
-                'Could not cancel the reservation. Please try again.'
+            toast.error(
+                error.response?.data?.message || 'Could not cancel the reservation. Please try again.'
             );
             setIsSubmitting(false);
             return;
         }
 
+        toast.success(`Reservation ${reservation.reservationId} cancelled.`);
         onCancelled(result);
     }
 
@@ -145,21 +144,6 @@ export default function CancelReservationModal({
                         Cancel at least 12 hours before the scheduled reservation time.
                     </p>
                 </section>
-
-                {errorMessage && (
-                    <div
-                        role="alert"
-                        className="flex items-start gap-2 rounded-xl bg-error-container px-space-md py-space-sm text-body-sm text-on-error-container"
-                    >
-                        <span
-                            aria-hidden="true"
-                            className="material-symbols-outlined mt-0.5 text-[18px]"
-                        >
-                            error
-                        </span>
-                        <span>{errorMessage}</span>
-                    </div>
-                )}
 
                 <div className="flex flex-col-reverse gap-2 border-t border-border-slate pt-4 sm:flex-row sm:justify-end">
                     <button
