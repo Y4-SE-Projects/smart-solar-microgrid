@@ -27,7 +27,10 @@ export default function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-canvas-bg">
+    <div
+      className="min-h-screen bg-canvas-bg"
+      style={{ '--app-sidebar-width': isSidebarCollapsed ? '5rem' : '16rem' }}
+    >
       <Sidebar
         isCollapsed={isSidebarCollapsed}
         onToggleCollapsed={() => setIsSidebarCollapsed((prev) => !prev)}
