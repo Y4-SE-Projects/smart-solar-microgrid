@@ -15,7 +15,9 @@
 
 import { useState } from 'react';
 import ConfirmDialog from './ConfirmDialog';
-import { MAXIMUM_PASSWORD_BYTES, MINIMUM_PASSWORD_LENGTH, newPasswordError } from '../../utils/passwordRules';
+import PasswordChecklist from './PasswordChecklist';
+import { MAXIMUM_PASSWORD_BYTES, allowedInput, newPasswordError } from '../../utils/accountRules';
+import { filteredValue } from '../../utils/inputFilter';
 
 export default function PasswordResetDialog({
   account,
@@ -36,7 +38,8 @@ export default function PasswordResetDialog({
 
   if (!account) return null;
 
-  // The same rule and wording the API enforces. ( at least 8 characters, not only spaces, at most 72 bytes )
+  // The same rule and wording the API enforces.
+  // ( 8–72 characters, no spaces, with an uppercase letter, a lowercase letter, a number and a special character )
   // The server stays authoritative. This only saves a round trip and puts the message next to the field that caused it.
   const errors = {};
   const passwordMessage = newPasswordError(password);
@@ -88,11 +91,11 @@ export default function PasswordResetDialog({
               id="reset-password"
               type={showPassword ? 'text' : 'password'}
               value={password}
-              onChange={(event) => setPassword(event.target.value)}
+              onChange={(event) => setPassword(filteredValue(event, allowedInput.password))}
               onBlur={() => markTouched('password')}
               aria-invalid={Boolean(errorFor('password'))}
-              aria-describedby={errorFor('password') ? 'reset-password-error' : undefined}
-              placeholder={`At least ${MINIMUM_PASSWORD_LENGTH} characters`}
+              aria-describedby="reset-password-checklist"
+              placeholder="Create a strong password"
               autoComplete="new-password"
               maxLength={MAXIMUM_PASSWORD_BYTES}
               className={`w-full h-9 pl-3 pr-10 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border ${inputBorder('password')} focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all`}
@@ -108,11 +111,12 @@ export default function PasswordResetDialog({
               </span>
             </button>
           </div>
-          {errorFor('password') && (
-            <span id="reset-password-error" className="text-body-sm text-alert-danger">
-              {errorFor('password')}
-            </span>
-          )}
+          {/* Shown from the first keystroke, in place of an error message; it says exactly what is still missing. */}
+          <PasswordChecklist
+            id="reset-password-checklist"
+            password={password}
+            showUnmet={Boolean(errorFor('password'))}
+          />
         </div>
 
         <div className="flex flex-col gap-1">
@@ -126,7 +130,7 @@ export default function PasswordResetDialog({
             id="reset-confirm-password"
             type="password"
             value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
+            onChange={(event) => setConfirmPassword(filteredValue(event, allowedInput.password))}
             onBlur={() => markTouched('confirmPassword')}
             aria-invalid={Boolean(errorFor('confirmPassword'))}
             aria-describedby={errorFor('confirmPassword') ? 'reset-confirm-password-error' : undefined}
