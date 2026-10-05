@@ -127,6 +127,10 @@ namespace API.DTOs
         public string? DeactivationReason { get; set; }
         public DateTime? DeactivatedAt { get; set; }
 
+        // Who deactivated the account: "Prosumer" ( themselves ) or "Backoffice". 
+        // Tells the web whose words DeactivationReason are.
+        public string? DeactivatedBy { get; set; }
+
         // Computed server-side from DeactivatedAt
         // The client doesn't need to do its own date math (or worry about timezones).
         public int? DaysElapsed { get; set; }

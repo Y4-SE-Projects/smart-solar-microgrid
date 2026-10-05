@@ -209,12 +209,24 @@ namespace API.Controllers
             {
                 if (user.Role == Roles.Prosumer)
                 {
+                    // Accounts deactivated before DeactivatedBy existed were all self-deactivations.
+                    var deactivatedBy = user.DeactivatedBy ?? Roles.Prosumer;
+
                     return Unauthorized(new
                     {
                         success = false,
                         code = "ACCOUNT_DEACTIVATED",
                         reactivationRequested = user.ReactivationRequestedAt.HasValue,
+
+                        // True whenever the last request was declined, even without a reason, so the app can always say so.
+                        reactivationDeclined = user.ReactivationRejectedAt.HasValue,
                         rejectionReason = user.ReactivationRejectionReason,
+
+                        // Who switched the account off. 
+                        // The reason is only sent when Backoffice gave it because a Prosumer who deactivated themselves gains nothing from seeing their own reason again.
+                        deactivatedBy,
+                        deactivationReason = deactivatedBy == Roles.Backoffice ? user.DeactivationReason : null,
+
                         message = "This account has been deactivated."
                     });
                 }
@@ -359,7 +371,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = $"Reason must be at most {MaximumReasonLength} characters." });
             }
 
-            await _userService.DeactivateAsync(nic, NormalizeReason(request?.Reason));
+            await _userService.DeactivateAsync(nic, NormalizeReason(request?.Reason), Roles.Prosumer);
 
             return Ok(new { success = true, message = "Account deactivated. A Backoffice user must reactivate it." });
         }
@@ -486,7 +498,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = $"Reason must be at most {MaximumReasonLength} characters." });
             }
 
-            await _userService.DeactivateAsync(user.Nic!, NormalizeReason(request?.Reason));
+            await _userService.DeactivateAsync(user.Nic!, NormalizeReason(request?.Reason), Roles.Backoffice);
 
             return Ok(new { success = true, message = "Prosumer account deactivated." });
         }
@@ -726,6 +738,8 @@ namespace API.Controllers
                 Status = ResolveStatus(user),
                 DeactivationReason = user.DeactivationReason,
                 DeactivatedAt = user.DeactivatedAt,
+                // Null while active; accounts deactivated before this field existed were all self-deactivations.
+                DeactivatedBy = user.IsActive ? null : user.DeactivatedBy ?? Roles.Prosumer,
                 DaysElapsed = user.DeactivatedAt.HasValue
                     ? (int)(DateTime.UtcNow - user.DeactivatedAt.Value).TotalDays
                     : null,

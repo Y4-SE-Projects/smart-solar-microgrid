@@ -45,7 +45,7 @@ namespace API.Models
         [BsonElement("isActive")]
         public bool IsActive { get; set; } = true;
 
-        // Optional reason the Prosumer gave when requesting deactivation.
+        // Optional reason given when the account was deactivated, by whoever DeactivatedBy names.
         // Null when never deactivated, and cleared back to null on reactivation.
         [BsonElement("deactivationReason")]
         public string? DeactivationReason { get; set; }
@@ -54,6 +54,11 @@ namespace API.Models
         // Null when active.
         [BsonElement("deactivatedAt")]
         public DateTime? DeactivatedAt { get; set; }
+
+        // Who deactivated the account: Roles.Prosumer ( the account holder, from the mobile app ) or Roles.Backoffice.
+        // Lets the web label the reason correctly, and lets a Prosumer be told when Backoffice switched them off.
+        [BsonElement("deactivatedBy")]
+        public string? DeactivatedBy { get; set; }
 
         // Set when a deactivated Prosumer asks to have the account restored.
         // Separates a plain deactivated account from one sitting in the Backoffice queue.

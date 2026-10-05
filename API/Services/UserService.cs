@@ -123,14 +123,16 @@ namespace API.Services
         }
 
         // Flips IsActive to false. Called when a Prosumer deactivates their own account, and when Backoffice deactivates one.
+        // deactivatedBy records which of the two it was ( Roles.Prosumer or Roles.Backoffice ).
         // Any reactivation request or rejection left from a previous cycle is cleared.
         // Else, a re-deactivated account would re-appear in the Backoffice queue.
-        public async Task DeactivateAsync(string nic, string? reason)
+        public async Task DeactivateAsync(string nic, string? reason, string deactivatedBy)
         {
             var update = Builders<User>.Update
                 .Set(u => u.IsActive, false)
                 .Set(u => u.DeactivationReason, reason)
                 .Set(u => u.DeactivatedAt, DateTime.UtcNow)
+                .Set(u => u.DeactivatedBy, deactivatedBy)
                 .Set(u => u.ReactivationRequestedAt, (DateTime?)null)
                 .Set(u => u.ReactivationRejectedAt, (DateTime?)null)
                 .Set(u => u.ReactivationRejectionReason, (string?)null);
@@ -146,6 +148,7 @@ namespace API.Services
                 .Set(u => u.IsActive, true)
                 .Set(u => u.DeactivationReason, (string?)null)
                 .Set(u => u.DeactivatedAt, (DateTime?)null)
+                .Set(u => u.DeactivatedBy, (string?)null)
                 .Set(u => u.ReactivationRequestedAt, (DateTime?)null)
                 .Set(u => u.ReactivationRejectedAt, (DateTime?)null)
                 .Set(u => u.ReactivationRejectionReason, (string?)null);
