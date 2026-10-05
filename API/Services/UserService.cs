@@ -122,7 +122,7 @@ namespace API.Services
             await _users.UpdateOneAsync(u => u.Nic == nic, update);
         }
 
-        // Flips IsActive to false. Called when a Prosumer deactivates their own account.
+        // Flips IsActive to false. Called when a Prosumer deactivates their own account, and when Backoffice deactivates one.
         // Any reactivation request or rejection left from a previous cycle is cleared.
         // Else, a re-deactivated account would re-appear in the Backoffice queue.
         public async Task DeactivateAsync(string nic, string? reason)
