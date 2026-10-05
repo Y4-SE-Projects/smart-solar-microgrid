@@ -22,7 +22,7 @@ export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, on
   return (
     <ConfirmDialog
       title="Reactivate Prosumer Account"
-      icon="verified"
+      icon="settings_backup_restore"
       confirmLabel="Confirm & Reactivate"
       isSubmitting={isSubmitting}
       onConfirm={onConfirm}
@@ -59,9 +59,8 @@ export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, on
       </div>
 
       <p className="text-body-sm text-on-surface-variant leading-relaxed">
-        Reactivating restores this account immediately: the prosumer will be able to sign in from
-        the mobile app and create reservations again. Only a Backoffice user can perform this
-        action.
+        Reactivating restores this account immediately. The prosumer will be able to sign in from the mobile app 
+        and create reservations again. Only a Backoffice user can perform this action.
       </p>
     </ConfirmDialog>
   );

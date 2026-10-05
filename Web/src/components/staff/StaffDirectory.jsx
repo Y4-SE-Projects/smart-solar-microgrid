@@ -14,6 +14,7 @@
  */
 
 import { useState, useMemo } from 'react';
+import RowAction from '../common/RowAction';
 import SearchInput from '../common/SearchInput';
 import FilterPills from '../common/FilterPills';
 import Pagination from '../common/Pagination';
@@ -40,26 +41,6 @@ function RoleChip({ role }) {
       </span>
       <span>{formatRole(role)}</span>
     </span>
-  );
-}
-
-// Compact icon action. Disabled buttons keep their tooltip, which is where the reason lives.
-function RowAction({ icon, label, onClick, disabled = false, danger = false }) {
-  return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      onClick={onClick}
-      disabled={disabled}
-      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-        danger
-          ? 'text-on-surface-variant hover:text-alert-danger hover:bg-error-container disabled:hover:bg-transparent disabled:hover:text-on-surface-variant'
-          : 'text-on-surface-variant hover:text-primary hover:bg-surface-container disabled:hover:bg-transparent disabled:hover:text-on-surface-variant'
-      }`}
-    >
-      <span className="material-symbols-outlined text-[18px]">{icon}</span>
-    </button>
   );
 }
 
@@ -245,7 +226,7 @@ export default function StaffDirectory({
                           />
                         ) : (
                           <RowAction
-                            icon="lock_open"
+                            icon="settings_backup_restore"
                             label="Restore access"
                             onClick={() => onToggleStatus(member, 'reactivate')}
                           />

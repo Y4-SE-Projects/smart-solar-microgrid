@@ -18,6 +18,7 @@ import {
 import { Roles } from '../constants/roles';
 import { useAuth } from '../context/AuthContext';
 import MetricCard from '../components/common/MetricCard';
+import PolicyBanner from '../components/common/PolicyBanner';
 import StaffForm from '../components/staff/StaffForm';
 import StaffDirectory from '../components/staff/StaffDirectory';
 import StaffStatusDialog from '../components/staff/StaffStatusDialog';
@@ -44,8 +45,7 @@ export default function StaffManagementPage() {
       setStaff(await getStaff());
     } catch (error) {
       // A 401 is handled globally by the Axios interceptor, which clears the session and redirects to login; anything else lands here.
-      // A failed load is reported by the directory itself, which offers its own Retry, so it
-      // stays out of the toasts that carry action outcomes.
+      // A failed load is reported by the directory itself, which offers its own Retry, so it stays out of the toasts that carry action outcomes.
       setLoadError(error.response?.data?.message || 'Could not load staff accounts. Please try again.');
     } finally {
       setIsLoading(false);
@@ -62,8 +62,7 @@ export default function StaffManagementPage() {
 
   // Every action follows the same shape.
   // ( send it, report the outcome in a toast, reload the directory so the row and the metrics move together. )
-  // The dialog stays open on failure, so a rejected change can be corrected without retyping —
-  // the toast carries the reason, so the dialog itself says nothing about it.
+  // The dialog stays open on failure, so a rejected change can be corrected without retyping.
   async function runAction(request, describeSuccess) {
     setIsSubmitting(true);
     try {
@@ -158,23 +157,11 @@ export default function StaffManagementPage() {
       </div>
 
       {/* Rules this screen operates under */}
-      <div className="p-5 rounded-2xl bg-surface-container-low/70 border border-border-slate flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-start sm:items-center gap-3.5">
-          <div className="w-9 h-9 rounded-full bg-surface-container-highest text-primary flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-[20px] text-secondary">gavel</span>
-          </div>
-          <div className="flex flex-col">
-            <span className="text-title-md text-primary font-semibold">Account Policy</span>
-            <p className="text-body-sm text-on-surface-variant mt-0.5">
-              Only a signed-in Backoffice user can create or administer Backoffice and Grid
-              Operator accounts, and usernames must be unique. You cannot disable your own
-              account, and the last active Backoffice account cannot be disabled at all.
-              Prosumers are not managed here — they register themselves from the mobile app using
-              their NIC.
-            </p>
-          </div>
-        </div>
-      </div>
+      <PolicyBanner title="Account Policy">
+        Only a signed-in Backoffice user can create or administer Backoffice and Grid Operator accounts, and 
+        usernames must be unique. Cannot disable signed-in account, and the last active Backoffice account 
+        cannot be disabled at all. 
+      </PolicyBanner>
 
       {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

@@ -12,21 +12,13 @@
  * Author: IT23218512
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ConfirmDialog from '../common/ConfirmDialog';
+import ReasonField from '../common/ReasonField';
 import { formatDate, pluralize } from '../../utils/formatters';
-
-// Matches the API's limit on a declined request's reason.
-// The field stops accepting input at the limit, rather than letting the user type past it and then refusing the submission.
-const MAXIMUM_REASON_LENGTH = 500;
 
 export default function RejectDialog({ prosumer, isSubmitting, onConfirm, onCancel }) {
   const [reason, setReason] = useState('');
-
-  // Clear the field when a different account is selected, so a reason typed for one prosumer can't be submitted against another.
-  useEffect(() => {
-    setReason('');
-  }, [prosumer?.nic]);
 
   if (!prosumer) return null;
 
@@ -60,34 +52,19 @@ export default function RejectDialog({ prosumer, isSubmitting, onConfirm, onCanc
         </div>
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-label-md font-medium text-on-surface" htmlFor="reject-reason">
-          Reason for declining <span className="text-outline font-normal">(optional)</span>
-        </label>
-        <textarea
-          id="reject-reason"
-          rows={3}
-          value={reason}
-          onChange={(event) => setReason(event.target.value)}
-          maxLength={MAXIMUM_REASON_LENGTH}
-          aria-describedby="reject-reason-count"
-          placeholder="e.g. Duplicate account on the same NIC"
-          className="px-3 py-2 rounded bg-surface-container-lowest text-body-md text-on-surface placeholder:text-outline border border-border-slate focus:outline-none focus:border-secondary focus:ring-1 focus:ring-secondary transition-all resize-none"
-        />
-        <span
-          id="reject-reason-count"
-          className={`self-end text-body-sm tabular-nums ${
-            reason.length >= MAXIMUM_REASON_LENGTH ? 'text-alert-danger' : 'text-outline'
-          }`}
-        >
-          {reason.length} / {MAXIMUM_REASON_LENGTH}
-        </span>
-      </div>
+      {/* Shared reason box: stops at the API's 500-character limit and shows a live count. */}
+      <ReasonField
+        id="reject-reason"
+        label="Reason for declining"
+        value={reason}
+        onChange={setReason}
+        placeholder="e.g. Duplicate account on the same NIC"
+      />
 
       <p className="text-body-sm text-on-surface-variant leading-relaxed">
-        The account stays deactivated and leaves the queue. Whatever is written above is shown to
-        the prosumer the next time they try to sign in, so it is the only explanation they get —
-        leaving it blank tells them nothing. They can request reactivation again afterwards.
+        The account stays deactivated and leaves the queue. The reason written above is shown to the prosumer 
+        the next time they try to sign in. It is the only explanation they get — leaving it blank tells them 
+        nothing. They can request reactivation again afterwards.
       </p>
     </ConfirmDialog>
   );
