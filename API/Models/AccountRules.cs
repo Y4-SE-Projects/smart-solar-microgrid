@@ -56,8 +56,8 @@ namespace API.Models
         // The limit is in UTF-8 bytes, so symbols and non-English letters ( 2–4 bytes each ) reach it sooner than 72 characters.
         public const int MaximumPasswordBytes = 72;
 
-        // Checks a password that is about to be set: registration, change password and staff reset.
-        // Never use this on a password being checked ( login, current password ): an existing longer password still signs in on its first 72 bytes.
+        // Checks a password that is about to be set: registration, change password and the Backoffice resets.
+        // Never use this on a password being checked ( login, current password ): older passwords made before these rules must still sign in.
         public static string? ValidateNewPassword(string? password)
         {
             if (string.IsNullOrEmpty(password) || password.Length < MinimumPasswordLength)
@@ -65,9 +65,9 @@ namespace API.Models
                 return $"Password must be at least {MinimumPasswordLength} characters.";
             }
 
-            if (string.IsNullOrWhiteSpace(password))
+            if (password.Any(char.IsWhiteSpace))
             {
-                return "Password can't be only spaces.";
+                return "Password can't contain spaces.";
             }
 
             if (Encoding.UTF8.GetByteCount(password) > MaximumPasswordBytes)
@@ -75,11 +75,49 @@ namespace API.Models
                 return $"Password is too long. Use at most {MaximumPasswordBytes} characters (fewer if it includes symbols or non-English letters).";
             }
 
+            // Lists every missing kind of character in one message, so the user can fix them all at once.
+            var missing = new List<string>();
+            if (!password.Any(c => c >= 'A' && c <= 'Z'))
+            {
+                missing.Add("an uppercase letter");
+            }
+            if (!password.Any(c => c >= 'a' && c <= 'z'))
+            {
+                missing.Add("a lowercase letter");
+            }
+            if (!password.Any(c => c >= '0' && c <= '9'))
+            {
+                missing.Add("a number");
+            }
+            if (!password.Any(IsSpecialCharacter))
+            {
+                missing.Add("a special character");
+            }
+
+            if (missing.Count > 0)
+            {
+                var list = missing.Count == 1
+                    ? missing[0]
+                    : string.Join(", ", missing.Take(missing.Count - 1)) + " and " + missing[^1];
+                return $"Password must include {list}.";
+            }
+
             return null;
         }
 
-        // Longest full name the API accepts. Names are shown in web tables and on mobile cards, so an unbounded one would break those layouts.
+        // A special character is anything other than an English letter, a digit or a space, e.g. ! @ # $ % _ -.
+        // The web and mobile password checklists use the same definition.
+        private static bool IsSpecialCharacter(char c)
+        {
+            return !(c >= 'A' && c <= 'Z') && !(c >= 'a' && c <= 'z') && !(c >= '0' && c <= '9') && !char.IsWhiteSpace(c);
+        }
+
+        // Shortest and longest full name the API accepts. Names are shown in web tables and on mobile cards, so an unbounded one would break those layouts.
+        public const int MinimumFullNameLength = 2;
         public const int MaximumFullNameLength = 100;
+
+        // English letters and spaces only: no digits, symbols, dots, apostrophes or hyphens.
+        private static readonly Regex FullNamePattern = new(@"^[A-Za-z ]+$", RegexOptions.NonBacktracking);
 
         // Checks a required full name.
         public static string? ValidateFullName(string? fullName)
@@ -89,26 +127,34 @@ namespace API.Models
                 return "Full name is required.";
             }
 
-            if (fullName.Trim().Length > MaximumFullNameLength)
+            var trimmed = fullName.Trim();
+
+            if (trimmed.Length > MaximumFullNameLength)
             {
                 return $"Full name must be at most {MaximumFullNameLength} characters.";
+            }
+
+            if (!FullNamePattern.IsMatch(trimmed))
+            {
+                return "Full name can only contain letters and spaces.";
+            }
+
+            if (trimmed.Length < MinimumFullNameLength)
+            {
+                return $"Full name must be at least {MinimumFullNameLength} letters.";
             }
 
             return null;
         }
 
-        // Fewest and most digits a phone number may have: covers local numbers ( 0771234567 ) and international ones ( +94 77 123 4567 ).
-        public const int MinimumPhoneDigits = 9;
-        public const int MaximumPhoneDigits = 15;
+        // Longest phone number the API accepts: "+947" and 8 more digits.
+        public const int MaximumPhoneLength = 12;
 
-        // Longest phone number including spaces, hyphens and "+". Room for 15 digits with separators, without allowing padding.
-        public const int MaximumPhoneLength = 20;
-
-        // An optional "+", then digits, with spaces or hyphens allowed between them ( the Android phone keyboard offers hyphens ).
+        // A Sri Lankan mobile number, written locally ( 0771234567 ) or internationally ( +94771234567 ), with no spaces or hyphens.
         // [0-9] rather than \d, which in .NET also matches non-English digits.
-        private static readonly Regex PhonePattern = new(@"^\+?[0-9][0-9 -]*$", RegexOptions.NonBacktracking);
+        private static readonly Regex PhonePattern = new(@"^(07[0-9]{8}|\+947[0-9]{8})$", RegexOptions.NonBacktracking);
 
-        // Checks a required phone number: overall length, then allowed characters, then how many digits it has.
+        // Checks a required phone number.
         public static string? ValidatePhone(string? phone)
         {
             if (string.IsNullOrWhiteSpace(phone))
@@ -116,17 +162,9 @@ namespace API.Models
                 return "Phone number is required.";
             }
 
-            var trimmed = phone.Trim();
-
-            if (trimmed.Length > MaximumPhoneLength)
+            if (!PhonePattern.IsMatch(phone.Trim()))
             {
-                return $"Phone number must be at most {MaximumPhoneLength} characters.";
-            }
-            var digitCount = trimmed.Count(c => c >= '0' && c <= '9');
-
-            if (!PhonePattern.IsMatch(trimmed) || digitCount < MinimumPhoneDigits || digitCount > MaximumPhoneDigits)
-            {
-                return $"Enter a valid phone number: {MinimumPhoneDigits} to {MaximumPhoneDigits} digits, optionally starting with +.";
+                return "Enter a valid Sri Lankan mobile number: 07XXXXXXXX or +947XXXXXXXX, with no spaces.";
             }
 
             return null;

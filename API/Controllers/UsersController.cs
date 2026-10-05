@@ -44,7 +44,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "Role must be Backoffice, GridOperator, or Prosumer." });
             }
 
-            // At least 8 characters, not only spaces, at most 72 bytes (see AccountRules.ValidateNewPassword).
+            // 8–72 characters, no spaces, with an uppercase letter, a lowercase letter, a number and a special character.
             var passwordError = AccountRules.ValidateNewPassword(request.Password);
             if (passwordError != null)
             {
