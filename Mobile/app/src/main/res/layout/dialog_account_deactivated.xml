@@ -20,7 +20,34 @@
             android:textColor="@color/on_surface_variant"
             android:textSize="14sp" />
 
-        <!-- Why Backoffice declined the last request; only shown when there is a reason -->
+        <!-- Shown when Backoffice deactivated the account, with its reason or "No reason was given." -->
+        <LinearLayout
+            android:id="@+id/backofficeBox"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_chip_danger"
+            android:orientation="vertical"
+            android:padding="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/deactivated_by_backoffice_label"
+                android:textAppearance="@style/TextAppearance.SmartSolar.Overline"
+                android:textColor="@color/alert_danger" />
+
+            <TextView
+                android:id="@+id/backofficeReasonText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/on_surface"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Shown whenever Backoffice declined the last request, with its reason or "No reason was given." -->
         <LinearLayout
             android:id="@+id/declinedBox"
             android:layout_width="match_parent"

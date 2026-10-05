@@ -112,6 +112,8 @@
     <string name="deactivated_title">Account deactivated</string>
     <string name="deactivated_body">This account has been deactivated, so you can\'t sign in. You can ask a Backoffice officer to reactivate it.</string>
     <string name="deactivated_declined_label">Your last request was declined</string>
+    <string name="deactivated_by_backoffice_label">Deactivated by Backoffice</string>
+    <string name="deactivated_no_reason">No reason was given.</string>
     <string name="deactivated_request">Request Reactivation</string>
     <string name="deactivated_requesting">Sending…</string>
     <string name="deactivated_not_now">Not now</string>
