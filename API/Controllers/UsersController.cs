@@ -516,7 +516,7 @@ namespace API.Controllers
                 return NotFound(new { success = false, message = "Prosumer account not found." });
             }
 
-            // Same rule as every other new password: at least 8 characters, not only spaces, at most 72 bytes.
+            // Same rule as every other new password: 8–72 characters, no spaces, with an uppercase letter, a lowercase letter, a number and a special character.
             var newPasswordError = AccountRules.ValidateNewPassword(request.NewPassword);
             if (newPasswordError != null)
             {

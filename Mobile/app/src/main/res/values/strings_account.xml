@@ -89,7 +89,6 @@
     <string name="profile_identity_caption">YOUR ACCOUNT</string>
     <string name="profile_role">Solar Prosumer</string>
     <string name="profile_nic_read_only">NIC cannot be changed</string>
-    <string name="profile_nic_locked">Your NIC is your account ID and can\'t be changed.</string>
     <string name="profile_details_title">PERSONAL INFORMATION</string>
     <string name="profile_edit_details_title">Edit your details</string>
     <string name="profile_edit_details_hint">Update your name and contact details below.</string>
