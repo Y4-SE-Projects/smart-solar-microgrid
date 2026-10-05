@@ -6,7 +6,9 @@
  *          Props:
  *              prosumers    - every Prosumer account, whatever its state
  *              isLoading    - true while the lists are being fetched
- *              onReactivate - called with the account whose Reactivate button was clicked
+ *              onReactivate    - called with the account whose Reactivate button was clicked
+ *              onResetPassword - called with the account whose Reset password button was clicked
+ *              onDeactivate    - called with the account whose Deactivate button was clicked
  *
  * Author: IT23218512
  */
@@ -15,13 +17,22 @@ import { useState, useMemo } from 'react';
 import SearchInput from '../common/SearchInput';
 import FilterPills from '../common/FilterPills';
 import Pagination from '../common/Pagination';
+import RowAction from '../common/RowAction';
 import StatusChip from '../common/StatusChip';
 import { AccountStatus, resolveAccountStatus } from '../../constants/accountStatus';
 import { formatDate } from '../../utils/formatters';
 
 const ROWS_PER_PAGE = 10;
 
-export default function ProsumerDirectory({ prosumers, isLoading, loadError, onRetry, onReactivate }) {
+export default function ProsumerDirectory({
+  prosumers,
+  isLoading,
+  loadError,
+  onRetry,
+  onReactivate,
+  onResetPassword,
+  onDeactivate,
+}) {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
@@ -155,19 +166,29 @@ export default function ProsumerDirectory({ prosumers, isLoading, loadError, onR
                       <StatusChip status={prosumer.resolvedStatus} />
                     </td>
                     <td className="whitespace-nowrap px-5 py-4 text-right">
-                      {/* Reactivation is the only write action Backoffice holds over a prosumer account, so active rows have none. 
-                          Declining a request is deliberately not offered here That belongs to the queue, where requests are worked. */}
-                      {isActive ? (
-                        <span className="text-outline">—</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => onReactivate(prosumer)}
-                          className="rounded-full bg-mint-surface px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-secondary-container focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary"
-                        >
-                          Reactivate
-                        </button>
-                      )}
+                      {/* Active rows: reset password or deactivate. Deactivated rows: reactivate, and reset password so access can be
+                          restored together with a reactivation. Declining a request is deliberately not offered here; that belongs to the queue. */}
+                      <div className="inline-flex items-center justify-end gap-1">
+                        <RowAction
+                          icon="key"
+                          label="Reset password"
+                          onClick={() => onResetPassword(prosumer)}
+                        />
+                        {isActive ? (
+                          <RowAction
+                            icon="block"
+                            label="Deactivate account"
+                            onClick={() => onDeactivate(prosumer)}
+                            danger
+                          />
+                        ) : (
+                          <RowAction
+                            icon="settings_backup_restore"
+                            label="Reactivate account"
+                            onClick={() => onReactivate(prosumer)}
+                          />
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

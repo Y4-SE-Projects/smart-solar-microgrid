@@ -249,10 +249,17 @@ public class LoginActivity extends AppCompatActivity {
         View content = LayoutInflater.from(this).inflate(R.layout.dialog_account_deactivated, null);
         ((TextView) content.findViewById(R.id.dialogBodyText))
                 .setText(pending ? R.string.pending_body : R.string.deactivated_body);
-        // The decline reason only matters while no new request is waiting
-        if (!pending && error.rejectionReason != null && !error.rejectionReason.trim().isEmpty()) {
-            ((TextView) content.findViewById(R.id.declinedReasonText)).setText(error.rejectionReason.trim());
-            content.findViewById(R.id.declinedBox).setVisibility(View.VISIBLE);
+        // Both boxes only matter while no new request is waiting; the pending dialog just says it is under review
+        if (!pending) {
+            // Red box: Backoffice switched the account off, so say so and give its reason
+            if (error.isDeactivatedByBackoffice()) {
+                showReasonBox(content, R.id.backofficeBox, R.id.backofficeReasonText, error.deactivationReason);
+            }
+            // Amber box: the last request was declined, shown even when Backoffice gave no reason
+            boolean hasRejectionReason = error.rejectionReason != null && !error.rejectionReason.trim().isEmpty();
+            if (error.reactivationDeclined || hasRejectionReason) {
+                showReasonBox(content, R.id.declinedBox, R.id.declinedReasonText, error.rejectionReason);
+            }
         }
 
         int actionText = pending ? R.string.pending_cancel_request : R.string.deactivated_request;
@@ -268,6 +275,14 @@ public class LoginActivity extends AppCompatActivity {
             sendReactivationChange(dialog, content, nic, password, pending, actionText);
         }));
         dialog.show();
+    }
+
+    private void showReasonBox(View content, int boxId, int textId, String reason) {
+        // Shows one of the popup's reason boxes, with the reason or "No reason was given." when there isn't one
+        boolean hasReason = reason != null && !reason.trim().isEmpty();
+        ((TextView) content.findViewById(textId))
+                .setText(hasReason ? reason.trim() : getString(R.string.deactivated_no_reason));
+        content.findViewById(boxId).setVisibility(View.VISIBLE);
     }
 
     private void sendReactivationChange(AlertDialog dialog, View content, String nic, String password,

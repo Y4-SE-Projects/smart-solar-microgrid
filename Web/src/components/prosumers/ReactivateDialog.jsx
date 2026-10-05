@@ -10,7 +10,7 @@
  */
 
 import ConfirmDialog from '../common/ConfirmDialog';
-import { formatDate, pluralize } from '../../utils/formatters';
+import { formatDate, formatReasonSource, pluralize } from '../../utils/formatters';
 
 export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, onCancel }) {
   if (!prosumer) return null;
@@ -22,7 +22,7 @@ export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, on
   return (
     <ConfirmDialog
       title="Reactivate Prosumer Account"
-      icon="verified"
+      icon="settings_backup_restore"
       confirmLabel="Confirm & Reactivate"
       isSubmitting={isSubmitting}
       onConfirm={onConfirm}
@@ -44,7 +44,7 @@ export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, on
           {hasElapsed && ` (${pluralize(prosumer.daysElapsed, 'day')} ago)`}
         </div>
         <div>
-          <strong className="text-on-surface">Declared reason:</strong>{' '}
+          <strong className="text-on-surface">{formatReasonSource(prosumer.deactivatedBy)}:</strong>{' '}
           {prosumer.deactivationReason || 'None given'}
         </div>
         {/* Only present when the prosumer actually asked to come back. 
@@ -59,9 +59,8 @@ export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, on
       </div>
 
       <p className="text-body-sm text-on-surface-variant leading-relaxed">
-        Reactivating restores this account immediately: the prosumer will be able to sign in from
-        the mobile app and create reservations again. Only a Backoffice user can perform this
-        action.
+        Reactivating restores this account immediately. The prosumer will be able to sign in from the mobile app 
+        and create reservations again. Only a Backoffice user can perform this action.
       </p>
     </ConfirmDialog>
   );

@@ -27,7 +27,7 @@ export default function StaffStatusDialog({
   return (
     <ConfirmDialog
       title={isDeactivating ? 'Disable Staff Access' : 'Restore Staff Access'}
-      icon={isDeactivating ? 'block' : 'lock_open'}
+      icon={isDeactivating ? 'block' : 'settings_backup_restore'}
       confirmLabel={isDeactivating ? 'Confirm & Disable' : 'Confirm & Restore'}
       isSubmitting={isSubmitting}
       onConfirm={onConfirm}
@@ -48,15 +48,14 @@ export default function StaffStatusDialog({
       <p className="text-body-sm text-on-surface-variant leading-relaxed">
         {isDeactivating ? (
           <>
-            This account will no longer be able to sign in to the console or the mobile app. The
-            account itself is kept rather than deleted, so any work already recorded against this
-            username stays intact. Another Backoffice user — or you — can restore access at any
-            time.
+            This account will no longer be able to sign in to the console or the mobile app. The account itself 
+            is kept rather than deleted, so any work already recorded against this username stays intact. 
+            Another Backoffice user or you can restore access at any time.
           </>
         ) : (
           <>
-            This account will be able to sign in again straight away, with the same password as
-            before. Nothing else about it changes.
+            This account will be able to sign in again straight away, with the same password as before. 
+            Nothing else about it changes.
           </>
         )}
       </p>

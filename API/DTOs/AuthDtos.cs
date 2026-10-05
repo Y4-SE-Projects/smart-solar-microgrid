@@ -101,6 +101,13 @@ namespace API.DTOs
         public string NewPassword { get; set; } = string.Empty;
     }
 
+    // Body for PUT /api/users/prosumers/{nic}/password - Backoffice resetting a Prosumer's password.
+    // ( The current password is deliberately not required: this is the recovery path for a Prosumer who has forgotten theirs. )
+    public class ResetProsumerPasswordRequest
+    {
+        public string NewPassword { get; set; } = string.Empty;
+    }
+
     // Safe shape returned by profile-related endpoints.
     // Deliberately excludes PasswordHash — that should never leave the server.
     public class UserProfileResponse
@@ -119,6 +126,10 @@ namespace API.DTOs
         // Below are only populated when the account is/was deactivated.
         public string? DeactivationReason { get; set; }
         public DateTime? DeactivatedAt { get; set; }
+
+        // Who deactivated the account: "Prosumer" ( themselves ) or "Backoffice". 
+        // Tells the web whose words DeactivationReason are.
+        public string? DeactivatedBy { get; set; }
 
         // Computed server-side from DeactivatedAt
         // The client doesn't need to do its own date math (or worry about timezones).

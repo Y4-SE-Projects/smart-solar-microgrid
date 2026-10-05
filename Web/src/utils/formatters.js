@@ -4,6 +4,8 @@
  * Author: IT23218512
 */
 
+import { Roles } from '../constants/roles';
+
 
 // Builds a two-letter avatar label from a full name ("Kasun Perera" -> "KP").
 // Falls back to a dash pair, so an avatar circle never renders empty.
@@ -44,4 +46,9 @@ export function pluralize(count, singular, plural = `${singular}s`) {
 export function formatRole(role) {
   if (!role) return '—';
   return role.replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
+// Labels a deactivation reason by who wrote it, from the account's deactivatedBy ( "Backoffice" or "Prosumer" ).
+export function formatReasonSource(deactivatedBy) {
+  return deactivatedBy === Roles.Backoffice ? 'Reason given by Backoffice' : 'Reason given by the Prosumer';
 }

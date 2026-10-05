@@ -113,6 +113,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
+            app:helperText="@string/account_hint_full_name_rule"
             app:startIconDrawable="@drawable/ic_person">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -177,11 +178,12 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
+            app:helperText="@string/account_hint_phone_rule"
             app:startIconDrawable="@drawable/ic_phone">
 
             <com.google.android.material.textfield.TextInputEditText
                 android:id="@+id/phoneInput"
-                android:maxLength="20"
+                android:maxLength="12"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:autofillHints="phone"
@@ -194,7 +196,7 @@
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- Password; the 8-character minimum is shown as a hint but enforced by the API -->
+        <!-- Password, with the live checklist of its requirements underneath -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -210,7 +212,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             app:endIconMode="password_toggle"
-            app:helperText="@string/register_password_helper"
             app:startIconDrawable="@drawable/ic_lock">
 
             <com.google.android.material.textfield.TextInputEditText
@@ -227,6 +228,13 @@
                 android:paddingBottom="12dp"
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
+
+        <com.example.smart_solar_mobile.views.PasswordChecklistView
+            android:id="@+id/passwordChecklist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginTop="2dp" />
 
         <!-- Confirm password: only compared on the phone, never sent -->
         <TextView
@@ -261,7 +269,7 @@
                 android:textSize="14sp" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <!-- API error message (duplicate NIC, invalid NIC or email, short password, no connection, ...) -->
+        <!-- API error message (duplicate NIC, no connection, ...); field rules show under each field instead -->
         <LinearLayout
             android:id="@+id/errorBanner"
             android:layout_width="match_parent"

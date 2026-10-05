@@ -1,26 +1,32 @@
 /* File: ProsumerManagementPage.jsx
  * Purpose: Backoffice screen for reviewing solar prosumer accounts and processing reactivation requests.
+ *          Backoffice can also deactivate a prosumer and reset a prosumer's password from the directory.
  *          This file handles orchestration only.
- *          ( loading the account data, holding the account selected for an action,
- *          sending that request and reporting the result. )
+ *          ( loading the account data, holding the account selected for an action, sending that request and reporting the result. )
+ * 
  * Author: IT23218512
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import {
+  deactivateProsumer,
   getProsumers,
   getReactivationRequests,
   reactivateProsumer,
   rejectReactivation,
+  resetProsumerPassword,
 } from '../services/usersApi';
 import { isThisMonth } from '../utils/formatters';
 import { AccountStatus, resolveAccountStatus } from '../constants/accountStatus';
 import MetricCard from '../components/common/MetricCard';
+import PolicyBanner from '../components/common/PolicyBanner';
 import ReactivationQueue from '../components/prosumers/ReactivationQueue';
 import ProsumerDirectory from '../components/prosumers/ProsumerDirectory';
 import ReactivateDialog from '../components/prosumers/ReactivateDialog';
 import RejectDialog from '../components/prosumers/RejectDialog';
+import DeactivateProsumerDialog from '../components/prosumers/DeactivateProsumerDialog';
+import ProsumerPasswordDialog from '../components/prosumers/ProsumerPasswordDialog';
 
 export default function ProsumerManagementPage() {
   const [prosumers, setProsumers] = useState([]);
@@ -82,7 +88,7 @@ export default function ProsumerManagementPage() {
   const activeRatio = totalCount > 0 ? ((activeCount / totalCount) * 100).toFixed(1) : '0.0';
   const newThisMonth = prosumers.filter((prosumer) => isThisMonth(prosumer.createdAt)).length;
 
-  // Both actions follow the same shape. 
+  // Every action follows the same shape. 
   // Send it, report the outcome, reload both lists; so the queue, the directory row and the metrics move together.
   async function runAction(request, describeSuccess) {
     setIsSubmitting(true);
@@ -118,12 +124,40 @@ export default function ProsumerManagementPage() {
     );
   }
 
+  function handleConfirmDeactivate(reason) {
+    // Deactivates the selected prosumer; the reason is optional and stored with the account
+    if (!action) return;
+    const { prosumer } = action;
+    runAction(
+      () => deactivateProsumer(prosumer.nic, reason),
+      () => `${prosumer.fullName}'s account has been deactivated.`
+    );
+  }
+
+  function handleConfirmResetPassword(newPassword) {
+    // Sets the new password; nothing is sent to the prosumer, so the officer passes it on
+    if (!action) return;
+    const { prosumer } = action;
+    runAction(
+      () => resetProsumerPassword(prosumer.nic, newPassword),
+      () => `${prosumer.fullName}'s password has been reset. Share the new password with them.`
+    );
+  }
+
   function handleSelectProsumer(prosumer) {
     setAction({ prosumer, mode: 'reactivate' });
   }
 
   function handleRejectProsumer(prosumer) {
     setAction({ prosumer, mode: 'reject' });
+  }
+
+  function handleDeactivateProsumer(prosumer) {
+    setAction({ prosumer, mode: 'deactivate' });
+  }
+
+  function handleResetProsumerPassword(prosumer) {
+    setAction({ prosumer, mode: 'password' });
   }
 
   function handleCancelAction() {
@@ -138,6 +172,13 @@ export default function ProsumerManagementPage() {
           Review account activity and reactivation requests.
         </p>
       </div>
+
+      {/* Rules this screen operates under */}
+      <PolicyBanner title="Prosumer Account Policy">
+        Prosumers register themselves from the mobile app, so prosumer accounts are not created here. 
+        A signed-in Backoffice user can reset a prosumer&apos;s password and deactivate or reactivate their 
+        account. A deactivated prosumer require a Backoffice user to reactivate them.
+      </PolicyBanner>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         <MetricCard
@@ -183,6 +224,8 @@ export default function ProsumerManagementPage() {
           loadError={loadError}
           onRetry={loadAccounts}
           onReactivate={handleSelectProsumer}
+          onResetPassword={handleResetProsumerPassword}
+          onDeactivate={handleDeactivateProsumer}
         />
       </section>
 
@@ -193,10 +236,27 @@ export default function ProsumerManagementPage() {
         onCancel={handleCancelAction}
       />
 
+      {/* key starts each reason dialog fresh for every account, so typed text never carries over to another prosumer. */}
       <RejectDialog
+        key={`reject-${action?.prosumer?.nic}`}
         prosumer={action?.mode === 'reject' ? action.prosumer : null}
         isSubmitting={isSubmitting}
         onConfirm={handleConfirmReject}
+        onCancel={handleCancelAction}
+      />
+
+      <DeactivateProsumerDialog
+        key={`deactivate-${action?.prosumer?.nic}`}
+        prosumer={action?.mode === 'deactivate' ? action.prosumer : null}
+        isSubmitting={isSubmitting}
+        onConfirm={handleConfirmDeactivate}
+        onCancel={handleCancelAction}
+      />
+
+      <ProsumerPasswordDialog
+        prosumer={action?.mode === 'password' ? action.prosumer : null}
+        isSubmitting={isSubmitting}
+        onConfirm={handleConfirmResetPassword}
         onCancel={handleCancelAction}
       />
     </div>

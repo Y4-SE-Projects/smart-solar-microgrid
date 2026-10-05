@@ -44,7 +44,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = "Role must be Backoffice, GridOperator, or Prosumer." });
             }
 
-            // At least 8 characters, not only spaces, at most 72 bytes (see AccountRules.ValidateNewPassword).
+            // 8–72 characters, no spaces, with an uppercase letter, a lowercase letter, a number and a special character.
             var passwordError = AccountRules.ValidateNewPassword(request.Password);
             if (passwordError != null)
             {
@@ -209,12 +209,24 @@ namespace API.Controllers
             {
                 if (user.Role == Roles.Prosumer)
                 {
+                    // Accounts deactivated before DeactivatedBy existed were all self-deactivations.
+                    var deactivatedBy = user.DeactivatedBy ?? Roles.Prosumer;
+
                     return Unauthorized(new
                     {
                         success = false,
                         code = "ACCOUNT_DEACTIVATED",
                         reactivationRequested = user.ReactivationRequestedAt.HasValue,
+
+                        // True whenever the last request was declined, even without a reason, so the app can always say so.
+                        reactivationDeclined = user.ReactivationRejectedAt.HasValue,
                         rejectionReason = user.ReactivationRejectionReason,
+
+                        // Who switched the account off. 
+                        // The reason is only sent when Backoffice gave it because a Prosumer who deactivated themselves gains nothing from seeing their own reason again.
+                        deactivatedBy,
+                        deactivationReason = deactivatedBy == Roles.Backoffice ? user.DeactivationReason : null,
+
                         message = "This account has been deactivated."
                     });
                 }
@@ -359,7 +371,7 @@ namespace API.Controllers
                 return BadRequest(new { success = false, message = $"Reason must be at most {MaximumReasonLength} characters." });
             }
 
-            await _userService.DeactivateAsync(nic, NormalizeReason(request?.Reason));
+            await _userService.DeactivateAsync(nic, NormalizeReason(request?.Reason), Roles.Prosumer);
 
             return Ok(new { success = true, message = "Account deactivated. A Backoffice user must reactivate it." });
         }
@@ -462,6 +474,58 @@ namespace API.Controllers
             await _userService.RejectReactivationAsync(nic, NormalizeReason(request?.Reason));
 
             return Ok(new { success = true, message = "Reactivation request rejected." });
+        }
+
+        // Switches off a Prosumer's access on Backoffice's decision, with an optional reason. ( Backoffice only )
+        // ( Uses the same deactivation as a Prosumer's own, so afterwards the account behaves identically. )
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("prosumers/{nic}/deactivate")]
+        public async Task<IActionResult> DeactivateProsumer(string nic, [FromBody] DeactivateAccountRequest? request)
+        {
+            var user = await _userService.FindByNicAsync(nic);
+            if (user == null || user.Role != Roles.Prosumer)
+            {
+                return NotFound(new { success = false, message = "Prosumer account not found." });
+            }
+
+            if (!user.IsActive)
+            {
+                return BadRequest(new { success = false, message = "This account is already deactivated." });
+            }
+
+            if (request?.Reason?.Trim().Length > MaximumReasonLength)
+            {
+                return BadRequest(new { success = false, message = $"Reason must be at most {MaximumReasonLength} characters." });
+            }
+
+            await _userService.DeactivateAsync(user.Nic!, NormalizeReason(request?.Reason), Roles.Backoffice);
+
+            return Ok(new { success = true, message = "Prosumer account deactivated." });
+        }
+
+        // Sets a new password on a Prosumer account. ( Backoffice only )
+        // The current password isn't required since this is the recovery path for a Prosumer who has forgotten theirs. 
+        // Works on deactivated accounts too, so access can be restored together with a reactivation.
+        [Authorize(Roles = Roles.Backoffice)]
+        [HttpPut("prosumers/{nic}/password")]
+        public async Task<IActionResult> ResetProsumerPassword(string nic, [FromBody] ResetProsumerPasswordRequest request)
+        {
+            var user = await _userService.FindByNicAsync(nic);
+            if (user == null || user.Role != Roles.Prosumer)
+            {
+                return NotFound(new { success = false, message = "Prosumer account not found." });
+            }
+
+            // Same rule as every other new password: 8–72 characters, no spaces, with an uppercase letter, a lowercase letter, a number and a special character.
+            var newPasswordError = AccountRules.ValidateNewPassword(request.NewPassword);
+            if (newPasswordError != null)
+            {
+                return BadRequest(new { success = false, message = newPasswordError });
+            }
+
+            await _userService.SetProsumerPasswordAsync(user.Nic!, BCrypt.Net.BCrypt.HashPassword(request.NewPassword));
+
+            return Ok(new { success = true, message = "Password reset. Share the new password with the account holder." });
         }
 
         // Lists the deactivated Prosumer accounts that asked restore, for the Backoffice queue. 
@@ -674,6 +738,8 @@ namespace API.Controllers
                 Status = ResolveStatus(user),
                 DeactivationReason = user.DeactivationReason,
                 DeactivatedAt = user.DeactivatedAt,
+                // Null while active; accounts deactivated before this field existed were all self-deactivations.
+                DeactivatedBy = user.IsActive ? null : user.DeactivatedBy ?? Roles.Prosumer,
                 DaysElapsed = user.DeactivatedAt.HasValue
                     ? (int)(DateTime.UtcNow - user.DeactivatedAt.Value).TotalDays
                     : null,

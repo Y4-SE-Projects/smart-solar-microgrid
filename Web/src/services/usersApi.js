@@ -32,6 +32,22 @@ export function rejectReactivation(nic, reason) {
     .then((response) => response.data);
 }
 
+// Deactivates a Prosumer account on Backoffice's decision, with an optional reason. ( Backoffice only )
+// The Prosumer is signed out on their next request and can request reactivation from the app.
+export function deactivateProsumer(nic, reason) {
+  return apiClient
+    .put(`/users/prosumers/${encodeURIComponent(nic)}/deactivate`, { reason })
+    .then((response) => response.data);
+}
+
+// Sets a new password on a Prosumer account without the current one. ( Backoffice only )
+// The recovery path for a Prosumer who has forgotten their password.
+export function resetProsumerPassword(nic, newPassword) {
+  return apiClient
+    .put(`/users/prosumers/${encodeURIComponent(nic)}/password`, { newPassword })
+    .then((response) => response.data);
+}
+
 // Lists every Backoffice/GridOperator account. ( Backoffice only )
 export function getStaff() {
   return apiClient.get('/users/staff').then((response) => response.data.data ?? []);

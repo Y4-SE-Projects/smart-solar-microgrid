@@ -347,6 +347,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
+                        app:helperText="@string/account_hint_full_name_rule"
                         app:startIconDrawable="@drawable/ic_person">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -409,11 +410,12 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
+                        app:helperText="@string/account_hint_phone_rule"
                         app:startIconDrawable="@drawable/ic_phone">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/phoneInput"
-                            android:maxLength="20"
+                            android:maxLength="12"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:autofillHints="phone"
@@ -426,7 +428,7 @@
                             android:textSize="14sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- API error from saving (invalid email, missing field, no connection, ...) -->
+                    <!-- API error from saving (no connection, ...); field rules show under each field instead -->
                     <LinearLayout
                         android:id="@+id/saveErrorBanner"
                         android:layout_width="match_parent"
