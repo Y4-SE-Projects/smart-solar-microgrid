@@ -16,7 +16,7 @@
  */
 
 import { useState } from 'react';
-import { getInitials, formatDate, pluralize } from '../../utils/formatters';
+import { getInitials, formatDate, formatReasonSource, pluralize } from '../../utils/formatters';
 
 const QUEUE_PAGE_SIZE = 3;
 
@@ -80,7 +80,7 @@ export default function ReactivationQueue({ pending, isLoading, loadError, onRet
                   <th className="whitespace-nowrap px-5 py-4">Contact</th>
                   <th className="whitespace-nowrap px-5 py-4">Deactivated</th>
                   <th className="whitespace-nowrap px-5 py-4">Requested</th>
-                  <th className="px-5 py-4">Reason</th>
+                  <th className="px-5 py-4">Deactivate Reason</th>
                   <th className="whitespace-nowrap px-5 py-4 text-right">Actions</th>
                 </tr>
               </thead>
@@ -124,7 +124,8 @@ export default function ReactivationQueue({ pending, isLoading, loadError, onRet
                         )}
                     </td>
                     <td className="px-5 py-4">
-                      {/* The reason is optional on the deactivation request, so many rows legitimately have none. */}
+                      {/* The reason is optional on a deactivation, so many rows legitimately have none.
+                          The line underneath says whose words they are, since both the prosumer and Backoffice can deactivate. */}
                       {prosumer.deactivationReason ? (
                         <span className="inline-block px-3 py-1.5 rounded-full bg-surface-container-low text-body-sm text-on-surface-variant font-medium">
                           {prosumer.deactivationReason}
@@ -132,6 +133,9 @@ export default function ReactivationQueue({ pending, isLoading, loadError, onRet
                       ) : (
                         <span className="text-body-sm text-outline italic">No reason given</span>
                       )}
+                      <span className="mt-1 block text-label-sm text-outline">
+                        {formatReasonSource(prosumer.deactivatedBy)}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap px-5 py-4 text-right">
                       <div className="inline-flex items-center gap-2">

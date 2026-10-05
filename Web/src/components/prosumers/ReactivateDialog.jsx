@@ -10,7 +10,7 @@
  */
 
 import ConfirmDialog from '../common/ConfirmDialog';
-import { formatDate, pluralize } from '../../utils/formatters';
+import { formatDate, formatReasonSource, pluralize } from '../../utils/formatters';
 
 export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, onCancel }) {
   if (!prosumer) return null;
@@ -44,7 +44,7 @@ export default function ReactivateDialog({ prosumer, isSubmitting, onConfirm, on
           {hasElapsed && ` (${pluralize(prosumer.daysElapsed, 'day')} ago)`}
         </div>
         <div>
-          <strong className="text-on-surface">Declared reason:</strong>{' '}
+          <strong className="text-on-surface">{formatReasonSource(prosumer.deactivatedBy)}:</strong>{' '}
           {prosumer.deactivationReason || 'None given'}
         </div>
         {/* Only present when the prosumer actually asked to come back. 

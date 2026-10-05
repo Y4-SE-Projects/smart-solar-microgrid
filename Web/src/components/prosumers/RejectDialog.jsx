@@ -15,7 +15,7 @@
 import { useState } from 'react';
 import ConfirmDialog from '../common/ConfirmDialog';
 import ReasonField from '../common/ReasonField';
-import { formatDate, pluralize } from '../../utils/formatters';
+import { formatDate, formatReasonSource, pluralize } from '../../utils/formatters';
 
 export default function RejectDialog({ prosumer, isSubmitting, onConfirm, onCancel }) {
   const [reason, setReason] = useState('');
@@ -47,7 +47,7 @@ export default function RejectDialog({ prosumer, isSubmitting, onConfirm, onCanc
           {isWaiting && ` (${pluralize(prosumer.daysSinceRequest, 'day')} waiting)`}
         </div>
         <div>
-          <strong className="text-on-surface">Declared reason for leaving:</strong>{' '}
+          <strong className="text-on-surface">{formatReasonSource(prosumer.deactivatedBy)}:</strong>{' '}
           {prosumer.deactivationReason || 'None given'}
         </div>
       </div>
