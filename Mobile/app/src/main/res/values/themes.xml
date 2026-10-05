@@ -47,6 +47,17 @@
         <item name="errorIconDrawable">@null</item>
     </style>
 
+    <!-- One row of the password checklist under a new-password field -->
+    <style name="Widget.SmartSolar.ChecklistItem" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">2dp</item>
+        <item name="android:drawablePadding">6dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">@color/on_surface_variant</item>
+    </style>
+
     <!-- Field label above a text field -->
     <style name="TextAppearance.SmartSolar.FieldLabel" parent="">
         <item name="android:textSize">12sp</item>

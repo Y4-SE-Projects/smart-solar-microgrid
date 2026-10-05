@@ -49,7 +49,6 @@
     <string name="register_hint_email">e.g. kamal@example.com</string>
     <string name="register_label_phone">Phone</string>
     <string name="register_hint_phone">e.g. 0771234567</string>
-    <string name="register_password_helper">At least 8 characters</string>
     <string name="register_label_confirm_password">Confirm password</string>
     <string name="register_hint_confirm_password">Re-enter your password</string>
     <string name="register_submit">Create Account</string>
@@ -59,10 +58,28 @@
     <string name="register_error_phone_required">Enter your phone number.</string>
     <string name="register_error_confirm_required">Re-enter your password.</string>
     <string name="register_error_password_mismatch">Passwords don\'t match.</string>
-    <!-- Same wording as the API's new-password rule -->
-    <string name="password_error_only_spaces">Password can\'t be only spaces.</string>
     <string name="register_have_account">Already have an account?</string>
     <string name="register_sign_in_link">Sign in</string>
+
+    <!-- Account field rules ( AccountRules.java ), shared by registration, the profile and the change-password dialog.
+         Format messages use the API's wording; "required" messages reuse the register_* and login_* strings -->
+    <string name="account_hint_full_name_rule">Letters and spaces only</string>
+    <string name="account_hint_phone_rule">Sri Lankan mobile: 07XXXXXXXX or +947XXXXXXXX</string>
+    <string name="account_error_nic_format">NIC must be 9 digits followed by V or X, or 12 digits.</string>
+    <string name="account_error_full_name_characters">Full name can only contain letters and spaces.</string>
+    <string name="account_error_full_name_short">Full name must be at least %1$d letters.</string>
+    <string name="account_error_email_format">Enter a valid email address.</string>
+    <string name="account_error_phone_format">Enter a valid Sri Lankan mobile number: 07XXXXXXXX or +947XXXXXXXX, with no spaces.</string>
+    <string name="account_error_password_rules">Your password doesn\'t meet every requirement below yet.</string>
+
+    <!-- Password checklist ( PasswordChecklistView ), same items as the web -->
+    <string name="password_rule_length">8–72 characters</string>
+    <string name="password_rule_uppercase">An uppercase letter</string>
+    <string name="password_rule_lowercase">A lowercase letter</string>
+    <string name="password_rule_number">A number</string>
+    <string name="password_rule_special">A special character (e.g. ! @ # $)</string>
+    <string name="password_rule_met">%1$s, done</string>
+    <string name="password_rule_missing">%1$s, missing</string>
 
     <!-- Profile ("My Account"). Field labels, hints and "required" errors reuse the register_* and login_* strings -->
     <string name="profile_title">My Account</string>

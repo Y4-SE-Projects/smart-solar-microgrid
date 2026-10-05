@@ -29,16 +29,18 @@ import com.example.smart_solar_mobile.models.UserProfile;
 import com.example.smart_solar_mobile.network.ApiErrorParser;
 import com.example.smart_solar_mobile.network.ApiResponse;
 import com.example.smart_solar_mobile.network.NetworkManager;
+import com.example.smart_solar_mobile.utils.AccountRules;
+import com.example.smart_solar_mobile.utils.AllowedInput;
 import com.example.smart_solar_mobile.utils.DialogUtils;
-import com.example.smart_solar_mobile.utils.FieldChecks;
 import com.example.smart_solar_mobile.utils.InsetsHelper;
+import com.example.smart_solar_mobile.utils.LiveValidation;
 import com.example.smart_solar_mobile.utils.NameUtils;
 import com.example.smart_solar_mobile.utils.TimeUtils;
+import com.example.smart_solar_mobile.views.PasswordChecklistView;
 import com.example.smart_solar_mobile.views.ProsumerBottomNavigation;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.Date;
 
@@ -61,12 +63,10 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView nicText;
     private View accountStatusChip;
     private TextView memberSinceText;
-    private TextInputLayout fullNameLayout;
-    private TextInputLayout emailLayout;
-    private TextInputLayout phoneLayout;
     private TextInputEditText fullNameInput;
     private TextInputEditText emailInput;
     private TextInputEditText phoneInput;
+    private LiveValidation[] detailChecks;
     private View saveErrorBanner;
     private TextView saveErrorText;
     private MaterialButton saveButton;
@@ -172,18 +172,29 @@ public class ProfileActivity extends AppCompatActivity {
         nicText = findViewById(R.id.nicText);
         accountStatusChip = findViewById(R.id.accountStatusChip);
         memberSinceText = findViewById(R.id.memberSinceText);
-        fullNameLayout = findViewById(R.id.fullNameLayout);
-        emailLayout = findViewById(R.id.emailLayout);
-        phoneLayout = findViewById(R.id.phoneLayout);
         fullNameInput = findViewById(R.id.fullNameInput);
         emailInput = findViewById(R.id.emailInput);
         phoneInput = findViewById(R.id.phoneInput);
         saveErrorBanner = findViewById(R.id.saveErrorBanner);
         saveErrorText = findViewById(R.id.saveErrorText);
         saveButton = findViewById(R.id.saveButton);
+        setUpDetailChecks();
     }
 
-    // ---------------------------------------------------------------- Load
+    private void setUpDetailChecks() {
+        // Blocks characters each field doesn't accept, and shows each field's message once it has been left, then live as it changes.
+        AllowedInput.restrict(fullNameInput, AllowedInput.FULL_NAME);
+        AllowedInput.restrict(emailInput, AllowedInput.NO_SPACES);
+        AllowedInput.restrict(phoneInput, AllowedInput.PHONE);
+
+        detailChecks = new LiveValidation[]{
+                new LiveValidation(findViewById(R.id.fullNameLayout), value -> AccountRules.fullNameError(this, value)),
+                new LiveValidation(findViewById(R.id.emailLayout), value -> AccountRules.emailError(this, value)),
+                new LiveValidation(findViewById(R.id.phoneLayout), value -> AccountRules.phoneError(this, value))
+        };
+    }
+
+    // LOAD 
 
     private void loadProfile() {
         // Reads the live profile; the form is only filled the first time, so edits survive a retry or rotation
@@ -258,7 +269,7 @@ public class ProfileActivity extends AppCompatActivity {
         loadErrorBanner.setVisibility(View.VISIBLE);
     }
 
-    // ---------------------------------------------------------------- Save
+    // SAVE 
 
     private void updateSaveButton() {
         // Save is only offered when a field differs from what was last saved and nothing is in flight
@@ -273,23 +284,16 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void saveProfile() {
-        // Checks nothing is left empty, then sends the three editable fields to the API
+        // Checks the three editable fields against the account rules, then sends them to the API
+        saveErrorBanner.setVisibility(View.GONE);
+        // These checks only save a round trip; the API applies the same rules
+        if (!LiveValidation.validateAll(detailChecks)) {
+            return;
+        }
+
         String fullName = textOf(fullNameInput).trim();
         String email = textOf(emailInput).trim();
         String phone = textOf(phoneInput).trim();
-
-        fullNameLayout.setError(null);
-        emailLayout.setError(null);
-        phoneLayout.setError(null);
-        saveErrorBanner.setVisibility(View.GONE);
-
-        // Empty-field checks only save a round trip; the API validates the email format and the rest
-        boolean valid = requireFilled(fullNameLayout, fullName, R.string.register_error_full_name_required);
-        valid &= requireFilled(emailLayout, email, R.string.register_error_email_required);
-        valid &= requireFilled(phoneLayout, phone, R.string.register_error_phone_required);
-        if (!valid) {
-            return;
-        }
 
         setSaving(true);
         saveCall = NetworkManager.getInstance().getApiService()
@@ -345,17 +349,29 @@ public class ProfileActivity extends AppCompatActivity {
         saveErrorBanner.setVisibility(View.VISIBLE);
     }
 
-    // ---------------------------------------------------------------- Change password
+    // CHANGE PASSWORD
 
     private void showChangePasswordDialog() {
         // Asks for the current password plus the new one twice; errors stay inside the dialog so it can be corrected
         View content = LayoutInflater.from(this).inflate(R.layout.dialog_change_password, null);
-        TextInputLayout currentLayout = content.findViewById(R.id.currentPasswordLayout);
-        TextInputLayout newLayout = content.findViewById(R.id.newPasswordLayout);
-        TextInputLayout confirmLayout = content.findViewById(R.id.confirmNewPasswordLayout);
         TextInputEditText currentInput = content.findViewById(R.id.currentPasswordInput);
         TextInputEditText newInput = content.findViewById(R.id.newPasswordInput);
         TextInputEditText confirmInput = content.findViewById(R.id.confirmNewPasswordInput);
+
+        // The current password is only checked for being filled in, and still accepts spaces.
+        AllowedInput.restrict(newInput, AllowedInput.NO_SPACES);
+        AllowedInput.restrict(confirmInput, AllowedInput.NO_SPACES);
+        LiveValidation newCheck = new LiveValidation(content.findViewById(R.id.newPasswordLayout),
+                value -> AccountRules.newPasswordError(this, value, R.string.password_error_new_required));
+        ((PasswordChecklistView) content.findViewById(R.id.newPasswordChecklist)).follow(newInput, newCheck);
+        LiveValidation[] passwordChecks = {
+                new LiveValidation(content.findViewById(R.id.currentPasswordLayout),
+                        value -> value.isEmpty() ? getString(R.string.password_error_current_required) : null),
+                newCheck,
+                new LiveValidation(content.findViewById(R.id.confirmNewPasswordLayout),
+                        value -> AccountRules.confirmPasswordError(this, value, textOf(newInput)))
+                        .alsoFollow(newInput)
+        };
 
         AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(R.string.profile_change_password)
@@ -365,30 +381,10 @@ public class ProfileActivity extends AppCompatActivity {
                 .create();
         // Replaces the default click handling so a failed attempt doesn't close the dialog
         dialog.setOnShowListener(d -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
-            String current = textOf(currentInput);
-            String next = textOf(newInput);
-            String confirm = textOf(confirmInput);
-            currentLayout.setError(null);
-            newLayout.setError(null);
-            confirmLayout.setError(null);
             DialogUtils.hideError(content);
-
-            // Local checks only save a round trip; the 8-character minimum, "different from current" and
-            // the current-password check all belong to the API
-            boolean valid = requireFilled(currentLayout, current, R.string.password_error_current_required);
-            // A new password of only spaces counts as missing too, with the API's own wording
-            valid &= requireFilled(newLayout, next, R.string.password_error_new_required)
-                    && FieldChecks.requireNotOnlySpaces(newLayout, next);
-            if (requireFilled(confirmLayout, confirm, R.string.register_error_confirm_required)) {
-                if (!confirm.equals(next)) {
-                    confirmLayout.setError(getString(R.string.register_error_password_mismatch));
-                    valid = false;
-                }
-            } else {
-                valid = false;
-            }
-            if (valid) {
-                changePassword(dialog, content, current, next);
+            // Local checks only save a round trip; "different from current" and the current-password check belong to the API
+            if (LiveValidation.validateAll(passwordChecks)) {
+                changePassword(dialog, content, textOf(currentInput), textOf(newInput));
             }
         }));
         dialog.show();
@@ -493,15 +489,6 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     // ---------------------------------------------------------------- General helpers
-
-    private boolean requireFilled(TextInputLayout layout, String value, int errorRes) {
-        // Marks an empty field under its box and reports whether it had a value
-        if (value.isEmpty()) {
-            layout.setError(getString(errorRes));
-            return false;
-        }
-        return true;
-    }
 
     private boolean isStale(Call<?> call, Call<?> latest) {
         // True when the screen is closing or a newer request has replaced this one
